@@ -1,0 +1,58 @@
+# --- Секреты и локальная конфигурация ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# --- Данные (дампы Википедии/Wikidata сюда не коммитим) ---
+data/
+dumps/
+*.bz2
+*.gz
+*.7z
+*.sql
+*.ndjson
+*.parquet
+
+# --- IDE и редакторы ---
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Java / Gradle ---
+build/
+out/
+target/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- Node / фронтенд ---
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Python / пайплайн ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Прочее ---
+tmp/
+.tmp/

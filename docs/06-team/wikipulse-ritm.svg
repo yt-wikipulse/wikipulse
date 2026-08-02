@@ -1,0 +1,107 @@
+<svg viewBox="0 0 900 580" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9AA3AF"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="580" fill="#FFFFFF"/>
+
+  <!-- ================= ПАНЕЛЬ 1: РИТМ НЕДЕЛИ ================= -->
+  <text x="30" y="34" font-size="21" font-weight="600" fill="#16161A">Ритм недели</text>
+  <text x="30" y="56" font-size="13" fill="#6B6B72">спринт = одна неделя · граница спринта — суббота утром</text>
+
+  <!-- дни: выходные -->
+  <rect x="30" y="76" width="140" height="84" rx="10" fill="#E8EFFA" stroke="#2B5FA8" stroke-width="1.5"/>
+  <text x="100" y="114" font-size="22" font-weight="600" fill="#1B3F72" text-anchor="middle">СБ</text>
+  <text x="100" y="136" font-size="12" fill="#2B5FA8" text-anchor="middle">вместе</text>
+
+  <rect x="180" y="76" width="140" height="84" rx="10" fill="#E8EFFA" stroke="#2B5FA8" stroke-width="1.5"/>
+  <text x="250" y="114" font-size="22" font-weight="600" fill="#1B3F72" text-anchor="middle">ВС</text>
+  <text x="250" y="136" font-size="12" fill="#2B5FA8" text-anchor="middle">вместе</text>
+
+  <!-- дни: будни -->
+  <rect x="340" y="76" width="98" height="84" rx="10" fill="#F5F5F3" stroke="#D3D3CD"/>
+  <text x="389" y="114" font-size="18" font-weight="600" fill="#4A4A52" text-anchor="middle">ПН</text>
+
+  <rect x="448" y="76" width="98" height="84" rx="10" fill="#F5F5F3" stroke="#D3D3CD"/>
+  <text x="497" y="114" font-size="18" font-weight="600" fill="#4A4A52" text-anchor="middle">ВТ</text>
+
+  <rect x="556" y="76" width="98" height="84" rx="10" fill="#F5F5F3" stroke="#D3D3CD"/>
+  <text x="605" y="114" font-size="18" font-weight="600" fill="#4A4A52" text-anchor="middle">СР</text>
+  <circle cx="605" cy="136" r="4.5" fill="#C2410C"/>
+
+  <rect x="664" y="76" width="98" height="84" rx="10" fill="#F5F5F3" stroke="#D3D3CD"/>
+  <text x="713" y="114" font-size="18" font-weight="600" fill="#4A4A52" text-anchor="middle">ЧТ</text>
+
+  <rect x="772" y="76" width="98" height="84" rx="10" fill="#F5F5F3" stroke="#D3D3CD"/>
+  <text x="821" y="114" font-size="18" font-weight="600" fill="#4A4A52" text-anchor="middle">ПТ</text>
+
+  <!-- пояснения -->
+  <rect x="30" y="176" width="290" height="96" rx="10" fill="none" stroke="#C9D6EA"/>
+  <text x="46" y="200" font-size="12.5" font-weight="600" fill="#1B3F72">СБ — граница спринта</text>
+  <text x="46" y="220" font-size="12" fill="#3A3A42">демо → ретро → планирование, потом работа</text>
+  <text x="46" y="246" font-size="12.5" font-weight="600" fill="#1B3F72">ВС — длинный рабочий день</text>
+  <text x="46" y="266" font-size="12" fill="#3A3A42">в конце — прогон и раскладка на будни</text>
+
+  <rect x="340" y="176" width="530" height="96" rx="10" fill="none" stroke="#D3D3CD"/>
+  <text x="356" y="200" font-size="12.5" font-weight="600" fill="#4A4A52">ПН–ПТ — параллельная работа по трекам</text>
+  <text x="356" y="222" font-size="12" fill="#3A3A42">каждый в своей зоне, дейли текстом в чат</text>
+  <text x="356" y="244" font-size="12" fill="#3A3A42">созвон в середине недели — только блокеры</text>
+  <text x="356" y="266" font-size="12" fill="#C2410C">правило часа: застрял больше часа — пиши в общий канал</text>
+
+  <!-- петля спринта -->
+  <path d="M 850 286 L 850 312 L 100 312 L 100 292" fill="none" stroke="#9AA3AF" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="475" y="332" font-size="11.5" fill="#6B6B72" text-anchor="middle">следующий спринт</text>
+
+  <!-- ================= ПАНЕЛЬ 2: СОВМЕСТНЫЙ ДЕНЬ ================= -->
+  <line x1="30" y1="362" x2="870" y2="362" stroke="#E6E6E1"/>
+
+  <text x="30" y="398" font-size="21" font-weight="600" fill="#16161A">Совместный день — пять стадий</text>
+  <text x="30" y="420" font-size="13" fill="#6B6B72">одинаково устроены и суббота, и воскресенье</text>
+
+  <rect x="30" y="440" width="152" height="60" rx="10" fill="#FBFBF9" stroke="#D3D3CD"/>
+  <circle cx="56" cy="470" r="13" fill="#1B3F72"/>
+  <text x="56" y="475" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">1</text>
+  <text x="78" y="475" font-size="14.5" font-weight="600" fill="#16161A">Разогрев</text>
+  <text x="106" y="522" font-size="11" fill="#5A5A62" text-anchor="middle">сверяем курс,</text>
+  <text x="106" y="538" font-size="11" fill="#5A5A62" text-anchor="middle">берём задачи на день</text>
+
+  <path d="M 187 464 L 197 470 L 187 476 Z" fill="#9AA3AF"/>
+
+  <rect x="202" y="440" width="152" height="60" rx="10" fill="#FBFBF9" stroke="#D3D3CD"/>
+  <circle cx="228" cy="470" r="13" fill="#1B3F72"/>
+  <text x="228" y="475" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">2</text>
+  <text x="250" y="475" font-size="14.5" font-weight="600" fill="#16161A">Сложное</text>
+  <text x="278" y="522" font-size="11" fill="#5A5A62" text-anchor="middle">самая тяжёлая задача,</text>
+  <text x="278" y="538" font-size="11" fill="#5A5A62" text-anchor="middle">каждый в своей зоне</text>
+
+  <path d="M 359 464 L 369 470 L 359 476 Z" fill="#9AA3AF"/>
+
+  <rect x="374" y="440" width="152" height="60" rx="10" fill="#FBFBF9" stroke="#D3D3CD"/>
+  <circle cx="400" cy="470" r="13" fill="#1B3F72"/>
+  <text x="400" y="475" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">3</text>
+  <text x="422" y="475" font-size="14.5" font-weight="600" fill="#16161A">Стыки</text>
+  <text x="450" y="522" font-size="11" fill="#5A5A62" text-anchor="middle">парная работа там,</text>
+  <text x="450" y="538" font-size="11" fill="#5A5A62" text-anchor="middle">где встречаются треки</text>
+
+  <path d="M 531 464 L 541 470 L 531 476 Z" fill="#9AA3AF"/>
+
+  <rect x="546" y="440" width="152" height="60" rx="10" fill="#FDF2EC" stroke="#C2410C"/>
+  <circle cx="572" cy="470" r="13" fill="#C2410C"/>
+  <text x="572" y="475" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">4</text>
+  <text x="594" y="475" font-size="14.5" font-weight="600" fill="#16161A">Интеграция</text>
+  <text x="622" y="522" font-size="11" fill="#5A5A62" text-anchor="middle">стоп фичам: мержим,</text>
+  <text x="622" y="538" font-size="11" fill="#5A5A62" text-anchor="middle">чиним, гоняем сквозь</text>
+
+  <path d="M 703 464 L 713 470 L 703 476 Z" fill="#9AA3AF"/>
+
+  <rect x="718" y="440" width="152" height="60" rx="10" fill="#FBFBF9" stroke="#D3D3CD"/>
+  <circle cx="744" cy="470" r="13" fill="#1B3F72"/>
+  <text x="744" y="475" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">5</text>
+  <text x="766" y="475" font-size="14.5" font-weight="600" fill="#16161A">Закрытие</text>
+  <text x="794" y="522" font-size="11" fill="#5A5A62" text-anchor="middle">прогон и кто что</text>
+  <text x="794" y="538" font-size="11" fill="#5A5A62" text-anchor="middle">берёт дальше</text>
+
+  <text x="30" y="568" font-size="12" fill="#6B6B72">Общие дни — для стыков. Будни — для своего кода.</text>
+</svg>
