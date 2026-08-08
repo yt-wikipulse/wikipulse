@@ -5,6 +5,9 @@ spring:
     default: mock     # пока на моках - подключим YTsaurus сменим на yt
   jackson:
     property-naming-strategy: SNAKE_CASE
+  mvc:
+    problemdetails:
+      enabled: true
 
 app:
   live-window-minutes: 10   # окно живой карты - 10 минут
