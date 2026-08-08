@@ -51,6 +51,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.0.4
         version: 6.0.5(vite@8.2.1(@types/node@24.13.3)(sass-embedded@1.100.0)(sass@1.100.0))
+      '@yandex/ymaps3-types':
+        specifier: 1.0.20315584
+        version: 1.0.20315584(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)
       eslint:
         specifier: ^10.8.0
         version: 10.8.0
@@ -799,6 +802,20 @@ packages:
       '@rolldown/plugin-babel':
         optional: true
       babel-plugin-react-compiler:
+        optional: true
+
+  '@yandex/ymaps3-types@1.0.20315584':
+    resolution: {integrity: sha512-fJ6K8uat1RYt9ASE1wMlcg2IpPQDHdQBDtcRKHvLrWHhQRTRnFGbvYY8XVo5rTYRN9Mr94X7f2BZOMtrxN16ag==}
+    peerDependencies:
+      '@types/react': ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      '@types/react-dom': ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      '@vue/runtime-core': '3'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+      '@vue/runtime-core':
         optional: true
 
   a5-js@0.7.3:
@@ -2652,6 +2669,11 @@ snapshots:
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.2.1(@types/node@24.13.3)(sass-embedded@1.100.0)(sass@1.100.0)
+
+  '@yandex/ymaps3-types@1.0.20315584(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)':
+    optionalDependencies:
+      '@types/react': 19.2.18
+      '@types/react-dom': 19.2.4(@types/react@19.2.18)
 
   a5-js@0.7.3:
     dependencies:

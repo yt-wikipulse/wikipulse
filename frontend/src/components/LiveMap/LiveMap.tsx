@@ -1,96 +1,137 @@
-import type { MapViewState } from "@deck.gl/core";
-import { H3HexagonLayer } from "@deck.gl/geo-layers";
-import DeckGL from "@deck.gl/react";
+import { useEffect, useRef, useState } from "react";
+import { cellToBoundary } from "h3-js";
+import type { LngLat } from "@yandex/ymaps3-types";
+
 import type { Hotspot } from "../../types/hotspot";
-import Map from "react-map-gl/maplibre";
 
 import styles from "./LiveMap.module.scss";
 
-type RgbaColor = [number, number, number, number];
-
 type LiveMapProps = {
-    hotspots: Hotspot[];
-    selectedH3: string | null;
-    onSelectedH3Change: (h3: string) => void;
+  hotspots: Hotspot[];
+  selectedH3: string | null;
+  onSelectedH3Change: (h3: string) => void;
 };
 
-const INITIAL_VIEW_STATE: MapViewState = {
-    longitude: 37.6176,
-    latitude: 55.7558,
-    zoom: 7,
-    pitch: 0,
-    bearing: 0,
+const INITIAL_LOCATION = {
+  center: [37.6176, 55.7558] as LngLat,
+  zoom: 7,
 };
 
-const MAP_STYLE =
-  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+function h3ToPolygon(h3: string): LngLat[] {
+  const boundary = cellToBoundary(h3).map(
+    ([latitude, longitude]) => [longitude, latitude] as LngLat,
+  );
 
-  export function LiveMap({
+  return boundary.length > 0 ? [...boundary, boundary[0]] : boundary;
+}
+
+function getFillColor(
+  hotspot: Hotspot,
+  maxEdits: number,
+  selectedH3: string | null,
+) {
+  if (hotspot.h3 === selectedH3) {
+    return "#ff5f1fe6";
+  }
+
+  const intensity = hotspot.edits_count / maxEdits;
+  const alpha = Math.round(90 + intensity * 150)
+    .toString(16)
+    .padStart(2, "0");
+
+  return `#0075ff${alpha}`;
+}
+
+export function LiveMap({
   hotspots,
   selectedH3,
   onSelectedH3Change,
 }: LiveMapProps) {
-  const maxEdits = hotspots.reduce(
-    (maximum, hotspot) => Math.max(maximum, hotspot.edits_count),
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<InstanceType<typeof ymaps3.YMap> | null>(null);
+  const featuresRef = useRef<
+    InstanceType<typeof ymaps3.YMapFeature>[]
+  >([]);
+  const [mapVersion, setMapVersion] = useState(0);
+
+  const maxEdits = Math.max(
     1,
+    ...hotspots.map((hotspot) => hotspot.edits_count),
   );
 
-  const layer = new H3HexagonLayer<Hotspot>({
-    // ID должен оставаться одинаковым между render.
-    // По нему deck.gl сопоставляет старый и новый слой.
-    id: "live-hotspots-resolution-6",
+  useEffect(() => {
+    let disposed = false;
 
-    data: hotspots,
-
-    // Как достать H3-индекс из объекта.
-    getHexagon: (hotspot) => hotspot.h3,
-
-    filled: true,
-    stroked: true,
-    pickable: true,
-    autoHighlight: true,
-
-    coverage: 0.88,
-
-    getFillColor: (hotspot): RgbaColor => {
-      if (hotspot.h3 === selectedH3) {
-        return [255, 95, 31, 230];
-      }
-
-      const intensity = hotspot.edits_count / maxEdits;
-      const alpha = Math.round(90 + intensity * 150);
-
-      return [0, 117, 255, alpha];
-    },
-
-    getLineColor: [255, 255, 255, 210] as RgbaColor,
-    lineWidthMinPixels: 1,
-
-    highlightColor: [255, 255, 255, 100] as RgbaColor,
-
-    onClick: ({ object }) => {
-      if (!object) {
+    void ymaps3.ready.then(() => {
+      if (disposed || !containerRef.current) {
         return;
       }
 
-      onSelectedH3Change(object.h3);
-    },
+      const map = new ymaps3.YMap(containerRef.current, {
+        location: INITIAL_LOCATION,
+      });
 
-    // Явно сообщаем, от чего зависит цвет.
-    updateTriggers: {
-      getFillColor: [selectedH3, maxEdits],
-    },
-  });
+      map.addChild(new ymaps3.YMapDefaultSchemeLayer({}));
+      map.addChild(new ymaps3.YMapDefaultFeaturesLayer({}));
 
-  return (
-    <div className={styles.root}>
-      <DeckGL
-        controller
-        initialViewState={INITIAL_VIEW_STATE}
-        layers={[layer]}
-      >
-        <Map mapStyle={MAP_STYLE} />
-      </DeckGL>
-    </div>
-  );
+      mapRef.current = map;
+      setMapVersion((version) => version + 1);
+    });
+
+    return () => {
+      disposed = true;
+      featuresRef.current = [];
+      mapRef.current?.destroy();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map) {
+      return;
+    }
+
+    for (const feature of featuresRef.current) {
+      map.removeChild(feature);
+    }
+
+    const features = hotspots.map((hotspot) => {
+      const feature = new ymaps3.YMapFeature({
+        id: hotspot.h3,
+        geometry: {
+          type: "Polygon",
+          coordinates: [h3ToPolygon(hotspot.h3)],
+        },
+        style: {
+          cursor: "pointer",
+          fill: getFillColor(hotspot, maxEdits, selectedH3),
+          stroke: [
+            {
+              color: "#ffffffd2",
+              width: 1,
+            },
+          ],
+        },
+        onClick: () => {
+          onSelectedH3Change(hotspot.h3);
+        },
+      });
+
+      map.addChild(feature);
+
+      return feature;
+    });
+
+    featuresRef.current = features;
+  }, [
+    hotspots,
+    selectedH3,
+    maxEdits,
+    mapVersion,
+    onSelectedH3Change,
+  ]);
+
+  return <div ref={containerRef} className={styles.root} />;
 }
