@@ -1,0 +1,36 @@
+base_dir: "//home/wikipulse"
+
+subdirs:
+  dict:       "dict"
+  history:    "history"
+  marts:      "marts"
+  consumers:  "consumers"
+  checkpoints: "checkpoints"
+  src:        "src"
+
+
+table_names:
+
+  q_raw:      "q_raw"
+  q_enriched: "q_enriched"
+
+  dict_coords:    "coords"
+  dict_countries: "countries"
+
+  mart_top_countries: "top_countries"
+  mart_by_language:   "by_language"
+  mart_trends:        "trends"
+
+  consumer_enrich:    "c_enrich"
+
+  checkpoint_enrich:  "c_enrich"
+
+target_wikis:
+  - enwiki
+  - ruwiki
+  - dewiki
+  - frwiki
+
+sse_url: "https://stream.wikimedia.org/v2/stream/recentchange"
+
+batch_size: 100
