@@ -59,8 +59,8 @@ H3-ячеек в ответе. Другие значения возвращаю�
 | `title` | string | заголовок статьи |
 | `url` | string | ссылка на статью, собирается бэком из `domain` + `title` |
 | `lang` | string | языковой раздел (`en`, `ru`, ...) |
-| `country_qid` | string \| null | Wikidata QID страны места, без резолва в название |
-| `place_type_qid` | string \| null | Wikidata QID типа места (бэк: `type_qid`), без резолва |
+| `country_code` | string \| null | ISO 3166-1 alpha-2 код страны места, например `FR` |
+| `place_type` | `city` \| `landmark` \| `mountain` \| `river` \| `other` \| null | нормализованная продуктовая категория места |
 | `type` | `"edit"` | значение всегда `edit` |
 | `bot` | boolean | правка от бота |
 | `delta_len` | number | `length_new - length_old`, байт |
@@ -154,8 +154,8 @@ Query: `lang`, `include_bots`.
       "title": "Eiffel Tower",
       "url": "https://en.wikipedia.org/wiki/Eiffel_Tower",
       "lang": "en",
-      "country_qid": "Q142",
-      "place_type_qid": "Q570116",
+      "country_code": "FR",
+      "place_type": "landmark",
       "type": "edit",
       "bot": false,
       "delta_len": 42,
@@ -182,7 +182,8 @@ Query: `lang`, `include_bots`.
 ## 5. Дашборд
 
 Строится поверх батч-витрин бэка (`T_MART_top_country`, `T_MART_top_wiki`,
-`T_MART_edits_per_hour`) – обновляются раз в час.
+`T_MART_edits_per_hour`) – обновляются раз в час. Витрина может хранить
+Wikidata QID, но frontend получает нормализованный `country_code`.
 
 ### `GET /api/dashboard/summary`
 
@@ -195,7 +196,7 @@ Query: `window`.
   "meta": { "window": "24h", "generated_at": "2026-08-04T13:54:37Z" },
   "data": {
     "total_edits": 50211,
-    "top_country": { "country_qid": "Q30", "edits_count": 12000 },
+    "top_country": { "country_code": "US", "edits_count": 12000 },
     "top_wiki": { "wiki": "enwiki", "edits_count": 28000 }
   }
 }
@@ -212,8 +213,8 @@ Query: `window`, `limit`.
 {
   "meta": { "window": "24h", "generated_at": "2026-08-04T13:54:37Z" },
   "data": [
-    { "country_qid": "Q30", "edits_count": 12000 },
-    { "country_qid": "Q142", "edits_count": 8400 }
+    { "country_code": "US", "edits_count": 12000 },
+    { "country_code": "FR", "edits_count": 8400 }
   ]
 }
 ```
