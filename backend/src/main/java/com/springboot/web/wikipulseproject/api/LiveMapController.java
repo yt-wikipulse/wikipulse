@@ -11,26 +11,39 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/** ВРЕМЕННАЯ ЗАГЛУШКА: фейковые данные строго по контракту rest-api.md. */
+/** ВРЕМЕННАЯ ЗАГЛУШКА по новому контракту docs_03. */
 @RestController
 @RequestMapping("/api")
 public class LiveMapController {
 
     private static final String NOW = "2026-08-08T12:00:00Z";
+    private static final int WINDOW_SECONDS = 60;
+
+    // Валидные H3: каноническая цепочка из H3 docs (r3⊃r6⊃r9, Сан-Франциско)
+    // + подтверждённый фронтом Париж (r6)
+    private static final Map<Integer, List<Map<String, Object>>> CELLS = Map.of(
+        3, List.of(cell("832830fffffffff", 3, 37.77, -122.42, 1240, 610)),
+        6, List.of(cell("86283082fffffff", 6, 37.77, -122.42, 98, 54),
+            cell("861c1c97fffffff", 6, 48.858, 2.294, 142, 88)),
+        9, List.of(cell("8928308280fffff", 9, 37.7749, -122.4194, 37, 21)));
+
+    private static final Set<String> KNOWN_H3 = Set.of(
+        "832830fffffffff", "86283082fffffff", "861c1c97fffffff", "8928308280fffff");
 
     @GetMapping("/hotspots")
     public Map<String, Object> hotspots(
         @RequestParam(defaultValue = "6") int resolution,
-        @RequestParam(required = false) List<String> lang,
+        @RequestParam(required = false) List<String> lang,   // мок: принимаем, фильтр придёт с сервисами
         @RequestParam(name = "include_bots", defaultValue = "false") boolean includeBots) {
-
-        if (resolution != 3 && resolution != 6 && resolution != 9) {
-            throw new BadRequestException("resolution must be 3, 6 or 9"); // → 400
+        if (!CELLS.containsKey(resolution)) {
+            throw new BadRequestException("resolution must be one of 3, 6, 9");
         }
         return Map.of(
-            "meta", Map.of("generated_at", NOW, "window_minutes", 10, "resolution", resolution),
-            "data", cellsFor(resolution, lang, includeBots));
+            "meta", Map.of("generated_at", NOW, "window_seconds", WINDOW_SECONDS,
+                "resolution", resolution),
+            "data", CELLS.get(resolution));
     }
 
     @GetMapping("/hotspots/{h3}")
@@ -44,8 +57,8 @@ public class LiveMapController {
             .filter(e -> includeBots || !((Boolean) e.get("bot")))
             .toList();
 
-        if (edits.isEmpty()) {
-            throw new HotspotNotFoundException(h3); // 404 по контракту
+        if (!KNOWN_H3.contains(h3) || edits.isEmpty()) {
+            throw new HotspotNotFoundException(h3);   // → 404 с текстом из контракта
         }
 
         return Map.of(
@@ -54,65 +67,44 @@ public class LiveMapController {
             "generated_at", NOW,
             "edits_count", edits.size(),
             "users_count", edits.stream().map(e -> e.get("user")).distinct().count(),
-            "top_pages", List.of(
-                Map.of("title", "Eiffel Tower",
-                    "url", "https://en.wikipedia.org/wiki/Eiffel_Tower",
-                    "lang", "en", "edits_count", edits.size())),
+            "top_pages", List.of(Map.of(
+                "title", "Eiffel Tower",
+                "url", "https://en.wikipedia.org/wiki/Eiffel_Tower",
+                "lang", "en",
+                "edits_count", 142)),
             "recent_edits", edits.stream().limit(20).toList());
     }
 
-    private record Cell(String h3, int resolution, double lat, double lon,
-                        List<String> langs, long totalEdits, long humanEdits, long users) {}
-
-    private List<Map<String, Object>> cellsFor(int resolution, List<String> lang, boolean includeBots) {
-        List<Cell> cells = switch (resolution) {
-            case 3 -> List.of(
-                new Cell("832830fffffffff", 3, 48.858, 2.294, List.of("en", "ru", "fr"), 1240, 610, 610),
-                new Cell("831f4afffffffff", 3, 52.52, 13.405, List.of("en", "ru", "de"), 980, 470, 470),
-                new Cell("83289afffffffff", 3, 55.7558, 37.6173, List.of("ru"), 730, 350, 350));
-            case 6 -> List.of(
-                new Cell("861c1c97fffffff", 6, 48.858, 2.294, List.of("en", "ru", "fr"), 142, 88, 88),
-                new Cell("861f4a8b7ffffff", 6, 52.52, 13.405, List.of("en", "ru", "de"), 98, 54, 54),
-                new Cell("861fb2a17ffffff", 6, 55.7558, 37.6173, List.of("ru"), 76, 40, 40));
-            default -> List.of(
-                new Cell("891c1c97fffffff", 9, 48.8583, 2.2945, List.of("en", "fr"), 37, 21, 21),
-                new Cell("891f4a8b7ffffff", 9, 52.5201, 13.4051, List.of("en", "de"), 25, 14, 14),
-                new Cell("891fb2a17ffffff", 9, 55.7559, 37.6174, List.of("ru"), 18, 9, 9));
-        };
-        return cells.stream()
-            .filter(c -> lang == null || lang.isEmpty()
-                || c.langs().stream().anyMatch(lang::contains))
-            .map(c -> cellJson(c, includeBots))
-            .toList();
-    }
-
-    private Map<String, Object> cellJson(Cell c, boolean includeBots) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("h3", c.h3());
-        m.put("resolution", c.resolution());
-        m.put("center", Map.of("lat", c.lat(), "lon", c.lon()));
-        m.put("edits_count", includeBots ? c.totalEdits() : c.humanEdits());
-        m.put("users_count", c.users());
-        m.put("last_event_at", NOW);
-        return m;
+    private static Map<String, Object> cell(String h3, int resolution, double lat, double lon,
+                                            long editsCount, long usersCount) {
+        return Map.of(
+            "h3", h3,
+            "resolution", resolution,
+            "center", Map.of("lat", lat, "lon", lon),
+            "edits_count", editsCount,
+            "users_count", usersCount,
+            "last_event_at", NOW);
     }
 
     private List<Map<String, Object>> mockEdits() {
         return List.of(
-            edit("enwiki|1234567890", "Eiffel Tower", "en", false, 42, "ExampleUser"),
-            edit("ruwiki|987654321", "Эйфелева башня", "ru", false, 17, "IvanP"),
-            edit("enwiki|1234567891", "Eiffel Tower", "en", true, 5, "BotCleaner"));
+            edit("enwiki|1234567890", "Eiffel Tower", "en", false, 42, "ExampleUser",
+                "https://en.wikipedia.org/wiki/Eiffel_Tower"),
+            edit("ruwiki|987654321", "Эйфелева башня", "ru", false, 17, "IvanP",
+                "https://ru.wikipedia.org/wiki/%D0%AD%D0%B9%D1%84%D0%B5%D0%BB%D0%B5%D0%B2%D0%B0_%D0%B1%D0%B0%D1%88%D0%BD%D1%8F"),
+            edit("enwiki|1234567891", "Eiffel Tower", "en", true, 5, "BotCleaner",
+                "https://en.wikipedia.org/wiki/Eiffel_Tower"));
     }
 
-    private Map<String, Object> edit(String id, String title, String lang,
-                                     boolean bot, int deltaLen, String user) {
+    private Map<String, Object> edit(String id, String title, String lang, boolean bot,
+                                     int deltaLen, String user, String url) {
         Map<String, Object> m = new HashMap<>();
         m.put("edit_id", id);
         m.put("title", title);
-        m.put("url", "https://" + lang + ".wikipedia.org/wiki/" + title.replace(" ", "_"));
+        m.put("url", url);
         m.put("lang", lang);
-        m.put("country", "FR");
-        m.put("place_type", "landmark");
+        m.put("country_qid", "Q142");
+        m.put("place_type_qid", "Q570116");
         m.put("type", "edit");
         m.put("bot", bot);
         m.put("delta_len", deltaLen);
@@ -121,6 +113,7 @@ public class LiveMapController {
         return m;
     }
 
+    /** Резолюция зашита во втором hex-символе H3-индекса: 83…→3, 86…→6, 89…→9. */
     private int resolutionOf(String h3) {
         if (h3 != null && h3.length() > 1) {
             int r = Character.getNumericValue(h3.charAt(1));

@@ -2,7 +2,7 @@ spring:
   application:
     name: wiki-pulse-project
   profiles:
-    default: mock     # пока на моках - подключим YTsaurus сменим на yt
+    default: mock
   jackson:
     property-naming-strategy: SNAKE_CASE
   mvc:
@@ -10,8 +10,8 @@ spring:
       enabled: true
 
 app:
-  live-window-minutes: 10   # окно живой карты - 10 минут
-  yt:                           # здесь все имена для yt(можно легко изменить)
+  live-window-seconds: 60
+  yt:
     proxy-url: ${YT_PROXY:http://localhost:8000}
     token: ${YT_TOKEN:}
     queue-path: ${YT_QUEUE_PATH://home/wikpulse/Q_ENRICHED}
