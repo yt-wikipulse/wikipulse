@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: wiki-pulse-project
+  profiles:
+    default: mock     # пока на моках - подключим YTsaurus сменим на yt
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+app:
+  live-window-minutes: 10   # окно живой карты - 10 минут
+  yt:                           # здесь все имена для yt(можно легко изменить)
+    proxy-url: ${YT_PROXY:http://localhost:8000}
+    token: ${YT_TOKEN:}
+    queue-path: ${YT_QUEUE_PATH://home/wikpulse/Q_ENRICHED}
+    consumer: ${YT_CONSUMER:c_rt}
+    aggregates-path: ${YT_AGGREGATES_PATH://home/wikpulse/aggregates}
