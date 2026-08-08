@@ -21,6 +21,7 @@ public record EnrichedEdit(
         Double lon,
         String placeType,    // city | landmark | ... (может быть null)
         String country,      // ISO-код страны (может быть null)
+        String h3R3,         // h3 ячейка уровня страны
         String h3R6,         // H3-ячейка уровня города
         String h3R9,         // H3-ячейка уровня квартала
         String url           // СЕЙЧАС null (колонки нет); в будущем придёт из YT
