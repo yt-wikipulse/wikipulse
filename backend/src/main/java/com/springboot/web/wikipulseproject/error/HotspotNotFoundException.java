@@ -1,6 +1,5 @@
 package com.springboot.web.wikipulseproject.error;
 
-/** Кидаем, когда в текущем окне нет активности по ячейке h3 (контракт требует 404). */
 public class HotspotNotFoundException extends RuntimeException {
     private final String h3;
 

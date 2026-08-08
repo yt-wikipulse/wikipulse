@@ -103,8 +103,8 @@ public class LiveMapController {
         m.put("title", title);
         m.put("url", url);
         m.put("lang", lang);
-        m.put("country_qid", "Q142");
-        m.put("place_type_qid", "Q570116");
+        m.put("country_code", "FR");
+        m.put("place_type", "landmark");
         m.put("type", "edit");
         m.put("bot", bot);
         m.put("delta_len", deltaLen);

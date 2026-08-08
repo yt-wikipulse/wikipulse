@@ -22,7 +22,7 @@ public class DashboardController {
             "meta", Map.of("window", checkWindow(window), "generated_at", NOW),
             "data", Map.of(
                 "total_edits", 50211,
-                "top_country", Map.of("country_qid", "Q30", "edits_count", 12000),
+                "top_country", Map.of("country_code", "US", "edits_count", 12000),
                 "top_wiki", Map.of("wiki", "enwiki", "edits_count", 28000)));
     }
 
@@ -31,9 +31,9 @@ public class DashboardController {
                                          @RequestParam(defaultValue = "20") int limit) {
         checkWindow(window);
         List<Map<String, Object>> places = List.of(
-            Map.of("country_qid", "Q30", "edits_count", 12000),
-            Map.of("country_qid", "Q142", "edits_count", 8400),
-            Map.of("country_qid", "Q183", "edits_count", 6100));
+            Map.of("country_code", "US", "edits_count", 12000),
+            Map.of("country_code", "FR", "edits_count", 8400),
+            Map.of("country_code", "DE", "edits_count", 6100));
         return Map.of(
             "meta", Map.of("window", window, "generated_at", NOW),
             "data", places.stream().limit(limit).toList());

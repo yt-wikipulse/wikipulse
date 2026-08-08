@@ -5,10 +5,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Перехватывает исключения ИЗ ЛЮБОГО контроллера и превращает их
- * в Problem Details (RFC 7807), как требует контракт.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
