@@ -1,0 +1,26 @@
+:root {
+  font-family:
+    Inter, Arial, Helvetica, sans-serif;
+  color: #101828;
+  background: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+}
