@@ -6,6 +6,6 @@ public record AggregateRow(
     String granularity,
     Instant bucketStart,
     String wiki,
-    String countryCode,
+    String countryQid,
     long editsCount
 ) {}
