@@ -1,0 +1,7 @@
+ytsaurus-client
+ytsaurus-spyt==2.11.0
+pyspark==4.2.0
+
+requests>=2.31
+h3>=4.0
+PyYAML>=6.0
