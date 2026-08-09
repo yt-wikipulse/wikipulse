@@ -9,9 +9,12 @@ import java.io.IOException;
 @Configuration
 public class H3Config {
 
-    /** H3Core потокобезопасен, экземпляр один на приложение. */
     @Bean
-    public H3Core h3Core() throws IOException {
-        return H3Core.newInstance();
+    public H3Core h3Core() {
+        try {
+            return H3Core.newInstance();
+        } catch (IOException e) {
+            throw new IllegalStateException("Не удалось загрузить нативную библиотеку H3", e);
+        }
     }
 }
