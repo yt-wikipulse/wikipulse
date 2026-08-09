@@ -17,40 +17,40 @@ export function LiveMapPage() {
     }
 
     return (
-        <main className={styles.page}>
-            <section className={styles.mapPane}>
-                <div className={styles.toolbar}>
+        <main className={styles.liveMapPage}>
+            <section className={styles.liveMapPage__map}>
+                <div className={styles.liveMapPage__toolbar}>
                     <div>
                         <strong>Snapshot {snapshotIndex + 1}</strong>
                         <span>{hotspots.length} ячейки</span>
                     </div>
-                    <button className={styles.button} type="button" onClick={toggleSnapshot}>
+                    <button className={styles.liveMapPage__button} type="button" onClick={toggleSnapshot}>
                         Заменить Snapshot
                     </button>
                 </div>
                 <LiveMap hotspots={hotspots} selectedH3={selectedH3} onSelectedH3Change={setSelectedH3} />
             </section>
-            <aside className={styles.sidebar}>
+            <aside className={styles.liveMapPage__sidebar}>
                 <h1>WikiPulse Spike</h1>
                 {!selectedH3 && (
-                    <p className={styles.secondary}></p>
+                    <p className={styles.liveMapPage__secondary}></p>
                 )}
                 {selectedH3 && !selectedHotspot && (
                 <>
-                    <p className={styles.warning}>
+                    <p className={styles.liveMapPage__warning}>
                     Выбранная ячейка отсутствует в текущем snapshot.
                     </p>
-                    <code className={styles.h3}>{selectedH3}</code>
+                    <code className={styles.liveMapPage__h3}>{selectedH3}</code>
                 </>
                 )}
 
                 {selectedHotspot && (
                 <>
-                    <dl className={styles.details}>
+                    <dl className={styles.liveMapPage__details}>
                     <div>
                         <dt>H3</dt>
                         <dd>
-                        <code className={styles.h3}>
+                        <code className={styles.liveMapPage__h3}>
                             {selectedHotspot.h3}
                         </code>
                         </dd>
@@ -82,7 +82,7 @@ export function LiveMapPage() {
                     </dl>
 
                     <button
-                    className={styles.secondaryButton}
+                    className={`${styles.liveMapPage__button} ${styles["liveMapPage__button--secondary"]}`}
                     type="button"
                     onClick={() => setSelectedH3(null)}
                     >

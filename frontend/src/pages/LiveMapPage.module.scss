@@ -1,12 +1,4 @@
-.app {
-  display: flex;
-  flex-direction: column;
-
-  width: 100%;
-  height: 100%;
-}
-
-.page {
+.liveMapPage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
 
@@ -14,153 +6,133 @@
   min-height: 0;
   width: 100%;
   background: #ffffff;
-}
 
-.dashboardStub {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  &__map {
+    position: relative;
 
-  flex: 1;
-  min-height: 0;
-  padding: 24px;
+    min-width: 0;
+    min-height: 0;
+  }
 
-  color: #515151;
-  font-size: 1.25rem;
-  text-align: center;
-}
+  &__toolbar {
+    position: absolute;
+    z-index: 10;
+    top: 16px;
+    left: 16px;
 
-.mapPane {
-  position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
 
-  min-width: 0;
-  min-height: 0;
-}
+    padding: 12px;
 
-.toolbar {
-  position: absolute;
-  z-index: 10;
-  top: 16px;
-  left: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
 
-  display: flex;
-  align-items: center;
-  gap: 16px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 
-  padding: 12px;
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+    span {
+      color: #667085;
+      font-size: 13px;
+    }
+  }
 
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  &__button {
+    min-height: 36px;
+    padding: 0 14px;
 
-  > div {
+    border: 0;
+    border-radius: 8px;
+
+    color: #ffffff;
+    background: #0075ff;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: #0068e6;
+    }
+
+    &--secondary {
+      color: #1d2939;
+      background: #f2f4f7;
+
+      &:hover {
+        background: #eaecf0;
+      }
+    }
+  }
+
+  &__sidebar {
+    padding: 24px;
+    overflow-y: auto;
+
+    border-left: 1px solid #eaecf0;
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 24px;
+    }
+  }
+
+  &__details {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-  }
+    gap: 20px;
 
-  span {
-    color: #667085;
-    font-size: 13px;
-  }
-}
-
-.button,
-.secondaryButton {
-  min-height: 36px;
-  padding: 0 14px;
-
-  border: 0;
-  border-radius: 8px;
-
-  font: inherit;
-  cursor: pointer;
-}
-
-.button {
-  color: #ffffff;
-  background: #0075ff;
-
-  &:hover {
-    background: #0068e6;
-  }
-}
-
-.secondaryButton {
-  color: #1d2939;
-  background: #f2f4f7;
-
-  &:hover {
-    background: #eaecf0;
-  }
-}
-
-.sidebar {
-  padding: 24px;
-  overflow-y: auto;
-
-  border-left: 1px solid #eaecf0;
-
-  h1 {
     margin: 0 0 24px;
-    font-size: 24px;
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    dt {
+      color: #667085;
+      font-size: 13px;
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 500;
+    }
   }
-}
 
-.details {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  &__h3 {
+    display: block;
 
-  margin: 0 0 24px;
+    max-width: 100%;
+    padding: 8px;
 
-  > div {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    overflow-wrap: anywhere;
+
+    border-radius: 6px;
+    background: #f2f4f7;
   }
 
-  dt {
+  &__secondary {
     color: #667085;
-    font-size: 13px;
   }
 
-  dd {
-    margin: 0;
-    font-weight: 500;
+  &__warning {
+    color: #b54708;
   }
-}
 
-.h3 {
-  display: block;
-
-  max-width: 100%;
-  padding: 8px;
-
-  overflow-wrap: anywhere;
-
-  border-radius: 6px;
-  background: #f2f4f7;
-}
-
-.secondary {
-  color: #667085;
-}
-
-.warning {
-  color: #b54708;
-}
-
-@media (max-width: 800px) {
-  .page {
+  @media (max-width: 800px) {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(500px, 1fr) auto;
-  }
 
-  .sidebar {
-    border-top: 1px solid #eaecf0;
-    border-left: 0;
+    &__sidebar {
+      border-top: 1px solid #eaecf0;
+      border-left: 0;
+    }
   }
 }
