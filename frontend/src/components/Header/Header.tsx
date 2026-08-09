@@ -9,14 +9,14 @@ const TABS = [
 
 export function Header() {
   return (
-    <header className={styles.root}>
-      <div className={styles.brand}>
-        <span className={styles.dot} />
-        <span className={styles.brandName}>WikiPulse</span>
+    <header className={styles.header}>
+      <div className={styles.header__brand}>
+        <span className={styles.header__dot} />
+        <span className={styles.header__brandName}>WikiPulse</span>
       </div>
-      <nav className={styles.nav}>
+      <nav className={styles.header__nav}>
         {TABS.map((tab) => (
-          <NavLink key={tab.to} to={tab.to} className={styles.tab}>
+          <NavLink key={tab.to} to={tab.to} className={styles.header__tab}>
             {tab.label}
           </NavLink>
         ))}

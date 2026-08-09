@@ -133,5 +133,5 @@ export function LiveMap({
     onSelectedH3Change,
   ]);
 
-  return <div ref={containerRef} className={styles.root} />;
+  return <div ref={containerRef} className={styles.liveMap} />;
 }
