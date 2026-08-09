@@ -10,7 +10,11 @@ import java.io.IOException;
 public class H3Config {
 
     @Bean
-    H3Core h3Core() throws IOException {
-        return H3Core.newInstance();
+    public H3Core h3Core() {
+        try {
+            return H3Core.newInstance();
+        } catch (IOException e) {
+            throw new IllegalStateException("Не удалось загрузить нативную библиотеку H3", e);
+        }
     }
 }
