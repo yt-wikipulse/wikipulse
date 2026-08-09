@@ -18,7 +18,7 @@ MVP v1 — только живая карта. Дашборд отложен, с
 }
 ```
 
-## `GET /api/v1/hexagons`
+## `GET /api/v1/hexagons/active`
 
 Активность в видимой части карты. Фронт присылает прямоугольник экрана
 и текущий зум, бэкенд сам выбирает резолюцию H3.
@@ -34,7 +34,7 @@ MVP v1 — только живая карта. Дашборд отложен, с
 Пример:
 
 ```
-GET /api/v1/hexagons?min_lng=37.31&min_lat=55.57&max_lng=37.85&max_lat=55.91&zoom=10
+GET /api/v1/hexagons/active?min_lng=37.31&min_lat=55.57&max_lng=37.85&max_lat=55.91&zoom=10
 ```
 
 Ответ:
@@ -43,7 +43,7 @@ GET /api/v1/hexagons?min_lng=37.31&min_lat=55.57&max_lng=37.85&max_lat=55.91&zoo
 {
   "hexagons": [
     {
-      "h3_index": "8611aa4affffff",
+      "h3_index": "8611aa7afffffff",
       "events_count": 1,
       "events": [
         {

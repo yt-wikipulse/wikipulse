@@ -53,19 +53,20 @@ public class LiveMapController {
         return 9;
     }
 
-    // Валидные H3: каноническая цепочка из H3-доков (r3 ⊃ r6 ⊃ r9, Сан-Франциско)
-    // + подтверждённый ранее Париж (r6) — cellToBoundary на фронте не упадёт
+    // Валидные H3 для координат городов из мок-событий — cellToBoundary на фронте не упадёт.
     private List<HexagonDto> mockHexagons(int resolution) {
         return switch (resolution) {
-            case 3 -> List.of(hexagon("832830fffffffff",
-                event("1234567890", "Москва", "https://ru.wikipedia.org/wiki/Москва"),
-                event("1234567891", "Berlin", "https://en.wikipedia.org/wiki/Berlin")));
+            case 3 -> List.of(
+                hexagon("8311aafffffffff",
+                    event("1234567890", "Москва", "https://ru.wikipedia.org/wiki/Москва")),
+                hexagon("831f1dfffffffff",
+                    event("1234567891", "Berlin", "https://en.wikipedia.org/wiki/Berlin")));
             case 6 -> List.of(
                 hexagon("86283082fffffff",
                     event("2234567890", "San Francisco", "https://en.wikipedia.org/wiki/San_Francisco")),
-                hexagon("861c1c97fffffff",
+                hexagon("861fb4677ffffff",
                     event("3234567890", "Eiffel Tower", "https://en.wikipedia.org/wiki/Eiffel_Tower")));
-            default -> List.of(hexagon("8928308280fffff",
+            default -> List.of(hexagon("8911aa7abd3ffff",
                 event("4234567890", "Москва", "https://ru.wikipedia.org/wiki/Москва")));
         };
     }
