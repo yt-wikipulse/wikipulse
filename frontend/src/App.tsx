@@ -1,10 +1,32 @@
 import { useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 
+import { Header } from "./components/Header/Header";
 import { LiveMap } from "./components/LiveMap/LiveMap";
 import { hotspotSnapshots } from "./mocks/hotspots";
 import styles from "./App.module.scss";
 
 export default function App() {
+  return (
+    <div className={styles.app}>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Navigate to="/map" replace />} />
+        <Route path="/map" element={<MapView />} />
+        <Route
+          path="/dashboard"
+          element={
+            <div className={styles.dashboardStub}>
+              Здесь будет дашборд
+            </div>
+          }
+        />
+      </Routes>
+    </div>
+  );
+}
+
+function MapView() {
   const [snapshotIndex, setSnapshotIndex] = useState<0 | 1>(0);
   const [selectedH3, setSelectedH3] = useState<string | null>(null);
 
