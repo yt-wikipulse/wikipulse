@@ -1,4 +1,4 @@
-.root {
+.header {
   display: flex;
   align-items: center;
   gap: 28px;
@@ -9,54 +9,54 @@
 
   border-bottom: 1px solid #e7e4de;
   background: #ffffff;
-}
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
-}
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-shrink: 0;
+  }
 
-.dot {
-  width: 9px;
-  height: 9px;
+  &__dot {
+    width: 9px;
+    height: 9px;
 
-  border-radius: 4.5px;
-  background: #e8620c;
-}
+    border-radius: 4.5px;
+    background: #e8620c;
+  }
 
-.brandName {
-  font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.15px;
-  color: #1b1a18;
-}
-
-.nav {
-  display: flex;
-  gap: 4px;
-}
-
-.tab {
-  padding: 7px 13px;
-
-  border-radius: 7px;
-
-  font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-  color: #6b6862;
-  text-decoration: none;
-
-  &:hover {
-    background: #f2f0ec;
+  &__brandName {
+    font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.15px;
     color: #1b1a18;
   }
 
-  &[aria-current="page"] {
-    background: #fbe9dc;
-    color: #a8450a;
+  &__nav {
+    display: flex;
+    gap: 4px;
+  }
+
+  &__tab {
+    padding: 7px 13px;
+
+    border-radius: 7px;
+
+    font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: #6b6862;
+    text-decoration: none;
+
+    &:hover {
+      background: #f2f0ec;
+      color: #1b1a18;
+    }
+
+    &[aria-current="page"] {
+      background: #fbe9dc;
+      color: #a8450a;
+    }
   }
 }

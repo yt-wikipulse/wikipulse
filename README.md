@@ -10,8 +10,9 @@
 
 ## Статус
 
-Проектирование. Кода пока нет — идёт неделя контрактов и архитектуры
-(см. [дорожную карту](docs/01-product/roadmap.md)).
+Разрабатывается MVP v1 живой карты. В репозитории уже есть frontend, web-backend
+и BigData-каркас; текущий REST-скоуп и отложенные возможности описаны в
+[контракте](docs/03-contracts/rest-api.md).
 
 ## С чего начать
 
@@ -33,20 +34,21 @@ Scrum, недельные спринты. Роли, цикл задачи, git, 
 .
 ├── process/       # как работает команда: роли, задачи, git, документация
 ├── docs/          # документация проекта: ТЗ, архитектура, контракты, решения
-├── frontend/      # (позже) веб-клиент: карта + дашборд
-├── backend/       # (позже) REST API на Java / Spring Boot + Gradle
-├── pipeline/      # (позже) SPYT-джобы и загрузчики данных
-└── deploy/        # (позже) docker-compose с локальным YTsaurus, конфиги
+├── frontend/      # React-клиент: карта и route-заглушка дашборда
+├── backend/       # REST API на Java / Spring Boot + Maven
+├── bigdata/       # подготовка YT-таблиц и BigData/SPYT-каркас
+└── setup/         # заметки по окружению и SPYT
 ```
-
-Папки сервисов создаются, когда зафиксированы контракты, — чтобы не переделывать
-скелет под изменившиеся схемы.
 
 ## Запуск
 
-Инструкция появится вместе с первым работающим срезом системы.
-Черновик — в [docs/05-runbooks/local-setup.md](docs/05-runbooks/local-setup.md).
+- Frontend: [frontend/README.md](frontend/README.md).
+- BigData: [bigdata/README.md](bigdata/README.md).
+- Общий runbook пока дополняется в
+  [docs/05-runbooks/local-setup.md](docs/05-runbooks/local-setup.md).
 
 ## Definition of Done
 
-Критерии готовности проекта — в [docs/01-product/definition-of-done.md](docs/01-product/definition-of-done.md).
+Общий критерий готовности задачи описан в разделе
+[«Задача готова, если»](process/workflow.md#задача-готова-если). Продуктовые
+критерии задаёт исходное [ТЗ](docs/00-brief/tz.md).
