@@ -42,9 +42,4 @@ public class H3GeoService {
         LatLng center = h3.cellToLatLng(h3.stringToH3(h3Index));
         return center.lat >= minLat && center.lat <= maxLat && center.lng >= minLng && center.lng <= maxLng;
     }
-
-    /** точка (lat, lng) строковая R9 клетка понадобится поллеру */
-    public String latLngToR9(double lat, double lng) {
-        return h3.h3ToString(h3.latLngToCell(lat, lng, 9));
-    }
 }
