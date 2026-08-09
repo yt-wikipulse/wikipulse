@@ -15,12 +15,12 @@ spring:
 app:
   live:
     window-minutes: 30
-    # Таблица маппинга zoom -> резолюция H3 (ПОКА ПРЕДВАРИТЕЛЬНО, уточнить у команды):
+    # Таблица маппинга zoom -> резолюция H3:
     # zoom <= zoom-r3-max        -> r3
     # zoom-r3-max < zoom <= zoom-r6-max -> r6
     # zoom > zoom-r6-max         -> r9
-    zoom-r3-max: 5
-    zoom-r6-max: 11
+    zoom-r3-max: 7
+    zoom-r6-max: 12
 
   yt:
     proxy-url: ${YT_PROXY:http://localhost:8000}
