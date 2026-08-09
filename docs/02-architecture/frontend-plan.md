@@ -21,6 +21,8 @@
   [`../03-contracts/rest-api.md`](../03-contracts/rest-api.md).
 - Архитектура frontend:
   [`frontend.md`](frontend.md).
+- Правила написания frontend-стилей:
+  [`frontend-styles.md`](frontend-styles.md).
 - Командный процесс: [`../../process/workflow.md`](../../process/workflow.md) и
   [`../../process/roles.md`](../../process/roles.md).
 - UI-макет:
@@ -490,7 +492,9 @@ Responsive minimum:
 - изменение находится в `main`;
 - PR отревьюен не автором;
 - build, lint и релевантные тесты зелёные;
-- route и responsive-поведение проверены вручную;
+- route и основной desktop MVP viewport проверены вручную;
+- новые и существенно изменённые SCSS Modules соответствуют
+  [`frontend-styles.md`](frontend-styles.md);
 - loading/error/empty/success состояния не скрыты;
 - API DTO совпадает с утверждённым контрактом;
 - frontend не маскирует backend/pipeline проблему выдуманным fallback;

@@ -42,6 +42,9 @@
   событий, поведение при разрыве связи.
 - [frontend-plan.md](02-architecture/frontend-plan.md) — этапы реализации
   frontend, foundation, разделение работы двух разработчиков и критерии приёмки.
+- [frontend-styles.md](02-architecture/frontend-styles.md) — обязательные
+  правила SCSS Modules, BEM, tokens и интерактивных состояний; адаптивность
+  вынесена в отложенный этап после desktop MVP.
 - `diagrams/` — исходники картинок, если текстом диаграмму не выразить.
 
 ## 03-contracts — границы между компонентами
