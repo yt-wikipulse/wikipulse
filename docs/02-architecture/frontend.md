@@ -102,6 +102,20 @@ API-модуль знает:
 API-модуль не знает JSX, состояние выбранной ячейки и визуальное представление
 данных.
 
+### Асинхронный код
+
+Promise-based операции во frontend пишутся через `async` / `await` и
+`try` / `catch`. Цепочки `.then()` / `.catch()` не используются: единый стиль
+проще читать и поддерживать.
+
+Callback самого `useEffect` не объявляется `async`, потому что effect должен
+синхронно вернуть cleanup или `undefined`. Асинхронная функция объявляется
+внутри effect и запускается через `void`; cleanup отменяет внешний ресурс.
+
+Это правило не относится к событийным callbacks (`onClick`, callback props,
+listeners Яндекс.Карт): они являются контрактом соответствующего API, а не
+способом обработки Promise.
+
 ### `features/`
 
 Отдельная feature-папка появляется, когда у сценария возникает собственная
@@ -110,26 +124,30 @@ orchestration: polling, cancellation, loading/error state или несколь�
 
 ## Текущий поток данных карты
 
-Карта пока является integration spike на локальных fixtures:
+Карта получает данные из текущего backend endpoint через REST adapter:
 
 ```text
-hotspotSnapshots
+Yandex Map viewport: bbox + zoom
     ↓
-LiveMapPage: snapshotIndex + selectedH3
+LiveMapPage: viewport + selectedH3
     ↓
-LiveMap: H3 → polygon → Yandex Map features
+useLiveMapData: request + cancellation + loading/error
     ↓
-sidebar выбранной ячейки
+api/hexagons.ts → backend
+    ↓
+ActiveHexagon[]
+    ├──→ LiveMap: H3 → polygon → Yandex Map features
+    └──→ sidebar выбранной ячейки и ссылки на статьи
 ```
 
-В `api/hexagons.ts` уже есть отдельный REST adapter, но он ещё не подключён к
-странице. Его transport DTO отличается от временной модели `Hotspot`, которую
-использует map spike. При включении сети это различие решается явно:
+Frontend fixtures удалены. Текущий UI использует только поля утверждённого
+`ActiveHexagon`, поэтому отдельная visual model пока не нужна. Явный mapper
+добавляется только если форма или ответственность UI-модели действительно
+разойдётся с transport DTO.
 
-- либо transport DTO преобразуется в visual model;
-- либо публичные props карты переводятся на утверждённый DTO/domain model.
-
-Нельзя незаметно дополнять REST-ответ полями из старых fixtures.
+Текущий срез делает запрос после получения нового viewport и отменяет
+предыдущий при следующем изменении или unmount. Polling и отдельный debounce
+добавляются следующим этапом.
 
 ## Целевой поток MVP v1
 
@@ -162,7 +180,6 @@ adapter или внешняя схема расходятся, стороны B 
 | Полученные ячейки и async state | feature orchestration |
 | Экземпляр Яндекс.Карт и features | refs внутри `LiveMap` |
 | Выбранная ячейка целиком | вычисляется из cells + selected H3 |
-| Временные mock snapshots | map page до подключения REST |
 
 Derived data не хранится вторым state. Глобальный store не нужен, пока одно
 client state не используется несколькими независимыми ветками интерфейса.
