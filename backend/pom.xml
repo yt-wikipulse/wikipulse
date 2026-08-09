@@ -67,6 +67,11 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.uber</groupId>
+            <artifactId>h3</artifactId>
+            <version>4.1.1</version>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>tech.ytsaurus</groupId>-->
 <!--            <artifactId>ytsaurus-client</artifactId>-->

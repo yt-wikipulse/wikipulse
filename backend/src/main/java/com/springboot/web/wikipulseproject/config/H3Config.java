@@ -1,4 +1,4 @@
 package com.springboot.web.wikipulseproject.config;
 
-public class CacheConfig {
+public class H3Config {
 }

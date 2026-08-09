@@ -1,16 +1,27 @@
 spring:
   application:
     name: wiki-pulse-project
+
   profiles:
     default: mock
+
   jackson:
     property-naming-strategy: SNAKE_CASE
+
   mvc:
     problemdetails:
       enabled: true
 
 app:
-  live-window-seconds: 60
+  live:
+    window-minutes: 30
+    # Таблица маппинга zoom -> резолюция H3 (ПОКА ПРЕДВАРИТЕЛЬНО, уточнить у команды):
+    # zoom <= zoom-r3-max        -> r3
+    # zoom-r3-max < zoom <= zoom-r6-max -> r6
+    # zoom > zoom-r6-max         -> r9
+    zoom-r3-max: 5
+    zoom-r6-max: 11
+
   yt:
     proxy-url: ${YT_PROXY:http://localhost:8000}
     token: ${YT_TOKEN:}
