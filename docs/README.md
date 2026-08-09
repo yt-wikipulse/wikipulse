@@ -38,8 +38,11 @@
   что работает постоянно, что по расписанию, что будет при падении.
 - [backend.md](02-architecture/backend.md) — устройство REST-сервиса,
   как события доезжают до фронта, конфигурация.
-- [frontend.md](02-architecture/frontend.md) — карта и дашборд, работа с потоком
-  событий, поведение при разрыве связи.
+- [frontend.md](02-architecture/frontend.md) — описание frontend:
+  маршруты, слои, поток данных, state ownership и границы интеграции.
+- [frontend-styles.md](02-architecture/frontend-styles.md) — обязательные
+  правила SCSS Modules, BEM, tokens и интерактивных состояний; адаптивность
+  вынесена в отложенный этап после desktop MVP.
 - `diagrams/` — исходники картинок, если текстом диаграмму не выразить.
 
 ## 03-contracts — границы между компонентами

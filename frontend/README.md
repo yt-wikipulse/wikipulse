@@ -1,75 +1,56 @@
-# React + TypeScript + Vite
+# WikiPulse frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React SPA с живой картой правок Википедии.
 
-Currently, two official plugins are available:
+## Локальный запуск
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Установить зависимости:
 
-## React Compiler
+   ```bash
+   pnpm install
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2. Создать `.env` на основе `.env.example` и указать ключ Яндекс.Карт:
 
-## Expanding the ESLint configuration
+   ```dotenv
+   VITE_YMAPS_API_KEY=<YOUR_KEY>
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+3. Запустить dev server:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+   ```bash
+   pnpm dev
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Vite проксирует `/api` на `http://localhost:8080`, поэтому для HTTP-интеграции
+backend должен быть доступен на этом адресе. Карта пока использует локальные
+fixtures; REST adapter существует отдельно и ещё не подключён к странице.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Маршруты
 
-```
+- `/map` — живая карта;
+- `/dashboard` — заглушка до появления исторического REST-контракта;
+- `/` — redirect на `/map`;
+- неизвестный URL — страница «Не найдено».
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Production hosting для `BrowserRouter` должен возвращать `index.html` при
+прямом открытии frontend-маршрута.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Команды
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Команда | Назначение |
+|---|---|
+| `pnpm dev` | Vite dev server |
+| `pnpm build` | TypeScript build и production bundle |
+| `pnpm lint` | ESLint |
+| `pnpm preview` | локальный preview production bundle |
 
-```
+Frontend test runner пока не настроен.
+
+## Документация
+
+- [Архитектура фронтенда](../docs/02-architecture/frontend.md)
+- [Дорожная карта frontend MVP](../docs/01-product/roadmap.md)
+- [REST-контракт](../docs/03-contracts/rest-api.md)
+- [Правила написания стилей](../docs/02-architecture/frontend-styles.md)
+- [Общий локальный запуск](../docs/05-runbooks/local-setup.md)
