@@ -2,7 +2,7 @@ package com.springboot.web.wikipulseproject.controller;
 
 import com.springboot.web.wikipulseproject.model.dto.ActiveHexagonsResponse;
 import com.springboot.web.wikipulseproject.error.BadRequestException;
-import com.springboot.web.wikipulseproject.service.H3GeoService;
+import com.springboot.web.wikipulseproject.service.DemoHexagonService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,12 +19,12 @@ public class LiveMapController {
 
     private final int zoomR3Max;
     private final int zoomR6Max;
-    private final H3GeoService h3GeoService;
+    private final DemoHexagonService demoHexagonService;
 
-    public LiveMapController(H3GeoService h3GeoService,
+    public LiveMapController(DemoHexagonService demoHexagonService,
                              @Value("${app.live.zoom-r3-max:7}") int zoomR3Max,
-                             @Value("${app.live.zoom-r6-max:12}") int zoomR6Max) {
-        this.h3GeoService = h3GeoService;
+                             @Value("${app.live.zoom-r6-max:13}") int zoomR6Max) {
+        this.demoHexagonService = demoHexagonService;
         this.zoomR3Max = zoomR3Max;
         this.zoomR6Max = zoomR6Max;
     }
@@ -43,7 +43,7 @@ public class LiveMapController {
         if (zoom < 0 || zoom > 30) {
             throw new BadRequestException("zoom must be between 0 and 30");
         }
-        return new ActiveHexagonsResponse(h3GeoService.demoHexagons(
+        return new ActiveHexagonsResponse(demoHexagonService.getHexagons(
             minLng, minLat, maxLng, maxLat, resolutionForZoom(zoom)));
     }
 

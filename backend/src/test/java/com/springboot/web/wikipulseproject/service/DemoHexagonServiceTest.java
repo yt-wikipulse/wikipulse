@@ -13,23 +13,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class H3GeoServiceTest {
+class DemoHexagonServiceTest {
 
     private final H3Core h3 = h3Core();
-    private final H3GeoService service = new H3GeoService(h3);
+    private final DemoHexagonService service = new DemoHexagonService(h3);
 
     @Test
     void returnsStableSparseHexagonsThatTouchBbox() {
-        List<HexagonDto> hexagons = service.demoHexagons(37.2, 55.4, 38.0, 56.1, 6);
+        List<HexagonDto> hexagons = service.getHexagons(37.2, 55.4, 38.0, 56.1, 6);
 
         assertFalse(hexagons.isEmpty());
         assertTrue(hexagons.size() < 37);
-        assertEquals(hexagons, service.demoHexagons(37.2, 55.4, 38.0, 56.1, 6));
+        assertEquals(hexagons, service.getHexagons(37.2, 55.4, 38.0, 56.1, 6));
 
         String h3Index = hexagons.get(0).h3Index();
         List<LatLng> boundary = h3.cellToBoundary(h3Index);
         LatLng vertex = boundary.get(0);
-        List<HexagonDto> touchingVertex = service.demoHexagons(
+        List<HexagonDto> touchingVertex = service.getHexagons(
             vertex.lng - 0.0001,
             vertex.lat - 0.0001,
             vertex.lng + 0.0001,
@@ -45,7 +45,7 @@ class H3GeoServiceTest {
             && center.lat <= vertex.lat + 0.0001);
 
         double cellMaxLng = boundary.stream().mapToDouble(point -> point.lng).max().orElseThrow();
-        List<HexagonDto> fullyOutside = service.demoHexagons(
+        List<HexagonDto> fullyOutside = service.getHexagons(
             cellMaxLng + 0.001,
             center.lat - 0.0001,
             cellMaxLng + 0.002,
