@@ -7,4 +7,19 @@
 
   overflow: hidden;
   background: #e9eef4;
+
+  &__error {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    margin: 0;
+    padding: 24px;
+
+    color: #b54708;
+    background: #ffffff;
+  }
 }

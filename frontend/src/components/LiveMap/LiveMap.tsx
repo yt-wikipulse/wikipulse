@@ -1,15 +1,27 @@
 import { useEffect, useRef, useState } from "react";
+import type {
+  LngLat,
+  LngLatBounds,
+} from "@yandex/ymaps3-types";
 import { cellToBoundary } from "h3-js";
-import type { LngLat } from "@yandex/ymaps3-types";
 
-import type { Hotspot } from "../../types/hotspot";
+import type { ActiveHexagon } from "../../api/hexagons";
 
 import styles from "./LiveMap.module.scss";
 
+export type MapViewport = {
+  minLng: number;
+  minLat: number;
+  maxLng: number;
+  maxLat: number;
+  zoom: number;
+};
+
 type LiveMapProps = {
-  hotspots: Hotspot[];
+  hexagons: ActiveHexagon[];
   selectedH3: string | null;
   onSelectedH3Change: (h3: string) => void;
+  onViewportChange: (viewport: MapViewport) => void;
 };
 
 const INITIAL_LOCATION = {
@@ -19,22 +31,43 @@ const INITIAL_LOCATION = {
 
 function h3ToPolygon(h3: string): LngLat[] {
   const boundary = cellToBoundary(h3).map(
-    ([latitude, longitude]) => [longitude, latitude] as LngLat,
+    ([latitude, longitude]) =>
+      [longitude, latitude] as LngLat,
   );
 
-  return boundary.length > 0 ? [...boundary, boundary[0]] : boundary;
+  return boundary.length > 0
+    ? [...boundary, boundary[0]]
+    : boundary;
+}
+
+function toViewport(
+  bounds: LngLatBounds,
+  zoom: number,
+): MapViewport {
+  const [[firstLng, firstLat], [secondLng, secondLat]] =
+    bounds;
+
+  return {
+    minLng: Math.min(firstLng, secondLng),
+    minLat: Math.min(firstLat, secondLat),
+    maxLng: Math.max(firstLng, secondLng),
+    maxLat: Math.max(firstLat, secondLat),
+    zoom: Math.floor(zoom),
+  };
 }
 
 function getFillColor(
-  hotspot: Hotspot,
-  maxEdits: number,
+  hexagon: ActiveHexagon,
+  maxEvents: number,
   selectedH3: string | null,
 ) {
-  if (hotspot.h3 === selectedH3) {
+  if (hexagon.h3_index === selectedH3) {
     return "#ff5f1fe6";
   }
 
-  const intensity = hotspot.edits_count / maxEdits;
+  const intensity =
+    hexagon.events_count / maxEvents;
+
   const alpha = Math.round(90 + intensity * 150)
     .toString(16)
     .padStart(2, "0");
@@ -43,40 +76,89 @@ function getFillColor(
 }
 
 export function LiveMap({
-  hotspots,
+  hexagons,
   selectedH3,
   onSelectedH3Change,
+  onViewportChange,
 }: LiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<InstanceType<typeof ymaps3.YMap> | null>(null);
+
+  const mapRef = useRef<
+    InstanceType<typeof ymaps3.YMap> | null
+  >(null);
+
   const featuresRef = useRef<
     InstanceType<typeof ymaps3.YMapFeature>[]
   >([]);
-  const [mapVersion, setMapVersion] = useState(0);
 
-  const maxEdits = Math.max(
+  const [mapVersion, setMapVersion] = useState(0);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const maxEvents = Math.max(
     1,
-    ...hotspots.map((hotspot) => hotspot.edits_count),
+    ...hexagons.map(
+      (hexagon) => hexagon.events_count,
+    ),
   );
 
   useEffect(() => {
     let disposed = false;
 
-    void ymaps3.ready.then(() => {
-      if (disposed || !containerRef.current) {
-        return;
+    async function createMap() {
+      try {
+        await ymaps3.ready;
+
+        if (disposed || !containerRef.current) {
+          return;
+        }
+
+        const map = new ymaps3.YMap(
+          containerRef.current,
+          {
+            location: INITIAL_LOCATION,
+          },
+        );
+
+        map.addChild(
+          new ymaps3.YMapDefaultSchemeLayer({}),
+        );
+
+        map.addChild(
+          new ymaps3.YMapDefaultFeaturesLayer({}),
+        );
+
+        map.addChild(
+          new ymaps3.YMapListener({
+            onUpdate: ({ location, mapInAction }) => {
+              if (mapInAction) {
+                return;
+              }
+
+              onViewportChange(
+                toViewport(
+                  location.bounds,
+                  location.zoom,
+                ),
+              );
+            },
+          }),
+        );
+
+        mapRef.current = map;
+
+        onViewportChange(
+          toViewport(map.bounds, map.zoom),
+        );
+
+        setMapVersion((version) => version + 1);
+      } catch {
+        if (!disposed) {
+          setMapError("Не удалось загрузить карту");
+        }
       }
+    }
 
-      const map = new ymaps3.YMap(containerRef.current, {
-        location: INITIAL_LOCATION,
-      });
-
-      map.addChild(new ymaps3.YMapDefaultSchemeLayer({}));
-      map.addChild(new ymaps3.YMapDefaultFeaturesLayer({}));
-
-      mapRef.current = map;
-      setMapVersion((version) => version + 1);
-    });
+    void createMap();
 
     return () => {
       disposed = true;
@@ -84,7 +166,7 @@ export function LiveMap({
       mapRef.current?.destroy();
       mapRef.current = null;
     };
-  }, []);
+  }, [onViewportChange]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -97,16 +179,26 @@ export function LiveMap({
       map.removeChild(feature);
     }
 
-    const features = hotspots.map((hotspot) => {
+    const features = hexagons.map((hexagon) => {
       const feature = new ymaps3.YMapFeature({
-        id: hotspot.h3,
+        id: hexagon.h3_index,
+
         geometry: {
           type: "Polygon",
-          coordinates: [h3ToPolygon(hotspot.h3)],
+          coordinates: [
+            h3ToPolygon(hexagon.h3_index),
+          ],
         },
+
         style: {
           cursor: "pointer",
-          fill: getFillColor(hotspot, maxEdits, selectedH3),
+
+          fill: getFillColor(
+            hexagon,
+            maxEvents,
+            selectedH3,
+          ),
+
           stroke: [
             {
               color: "#ffffffd2",
@@ -114,8 +206,11 @@ export function LiveMap({
             },
           ],
         },
+
         onClick: () => {
-          onSelectedH3Change(hotspot.h3);
+          onSelectedH3Change(
+            hexagon.h3_index,
+          );
         },
       });
 
@@ -126,12 +221,26 @@ export function LiveMap({
 
     featuresRef.current = features;
   }, [
-    hotspots,
+    hexagons,
     selectedH3,
-    maxEdits,
+    maxEvents,
     mapVersion,
     onSelectedH3Change,
   ]);
 
-  return <div ref={containerRef} className={styles.liveMap} />;
+  return (
+    <div
+      ref={containerRef}
+      className={styles.liveMap}
+    >
+      {mapError && (
+        <p
+          className={styles.liveMap__error}
+          role="alert"
+        >
+          {mapError}
+        </p>
+      )}
+    </div>
+  );
 }
