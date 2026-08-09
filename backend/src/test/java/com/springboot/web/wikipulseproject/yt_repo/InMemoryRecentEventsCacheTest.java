@@ -1,0 +1,160 @@
+package com.springboot.web.wikipulseproject.yt_repo;
+
+import com.springboot.web.wikipulseproject.model.EnrichedEvent;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class InMemoryRecentEventsCacheTest {
+
+    private static final long WINDOW_MINUTES = 30;
+    private static final String CELL_A = "8928308280fffff";
+    private static final String CELL_B = "89283082807ffff";
+
+    private MutableClock clock;
+    private InMemoryRecentEventsCache cache;
+
+    @BeforeEach
+    void setUp() {
+        clock = new MutableClock(Instant.parse("2026-08-09T12:00:00Z"));
+        cache = new InMemoryRecentEventsCache(clock, WINDOW_MINUTES);
+    }
+
+    @Test
+    void одно_и_то_же_событие_дважды_попадает_в_снимок_один_раз() {
+        cache.put(event("e1", CELL_A));
+        cache.put(event("e1", CELL_A));
+
+        assertEquals(1, cache.snapshot().get(CELL_A).size());
+    }
+
+    @Test
+    void событие_старше_окна_в_снимок_не_попадает() {
+        cache.put(event("e1", CELL_A));
+        clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
+
+        assertTrue(cache.snapshot().isEmpty());
+    }
+
+    @Test
+    void ячейка_без_свежих_событий_из_снимка_исчезает() {
+        cache.put(event("old", CELL_A));
+        clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
+        cache.put(event("new", CELL_B));
+
+        Map<String, List<EnrichedEvent>> snapshot = cache.snapshot();
+
+        assertNull(snapshot.get(CELL_A));
+        assertEquals(1, snapshot.get(CELL_B).size());
+    }
+
+    @Test
+    void последнее_положенное_событие_идёт_первым() {
+        cache.put(event("e1", CELL_A));
+        cache.put(event("e2", CELL_A));
+
+        List<EnrichedEvent> events = cache.snapshot().get(CELL_A);
+
+        assertEquals("e2", events.get(0).eventId());
+        assertEquals("e1", events.get(1).eventId());
+    }
+
+    @Test
+    void снимок_нельзя_изменить_снаружи() {
+        cache.put(event("e1", CELL_A));
+        Map<String, List<EnrichedEvent>> snapshot = cache.snapshot();
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.get(CELL_A).add(event("e2", CELL_A)));
+        assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.remove(CELL_A));
+    }
+
+    @Test
+    void evict_снимает_протухшие_события_но_оставляет_свежие() {
+        cache.put(event("old", CELL_A));
+        clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
+        cache.put(event("new", CELL_A));
+
+        cache.evictExpired();
+
+        List<EnrichedEvent> events = cache.snapshot().get(CELL_A);
+        assertEquals(1, events.size());
+        assertEquals("new", events.get(0).eventId());
+    }
+
+    @Test
+    void snapshot_не_падает_при_параллельной_записи() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        Thread writer = new Thread(() -> {
+            started.countDown();
+            for (int i = 0; i < 5_000; i++) {
+                cache.put(event("e" + i, i % 2 == 0 ? CELL_A : CELL_B));
+            }
+        });
+        writer.start();
+        assertTrue(started.await(1, TimeUnit.SECONDS));
+
+        try {
+            for (int i = 0; i < 200; i++) {
+                cache.snapshot();
+            }
+        } catch (Throwable t) {
+            failure.set(t);
+        }
+        writer.join(5_000);
+
+        assertNull(failure.get());
+        assertFalse(cache.snapshot().isEmpty());
+    }
+
+    private EnrichedEvent event(String id, String cell) {
+        return new EnrichedEvent(id, "Заголовок " + id, "https://example.org/" + id, cell);
+    }
+
+    /** Часы, которые можно двигать руками — иначе окно не проверить без sleep. */
+    private static final class MutableClock extends Clock {
+        private Instant now;
+
+        private MutableClock(Instant now) {
+            this.now = now;
+        }
+
+        void advance(Duration duration) {
+            now = now.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
+    }
+}
