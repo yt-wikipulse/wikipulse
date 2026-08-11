@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * ВРЕМЕННЫЙ МОК живой карты по MVP-контракту.
- * Отдаёт захардкоженные, но ВАЛИДНЫЕ H3-клетки, чтобы фронт работал прямо сейчас.
+ * Отдаёт захардкоженные, но ВАЛИДНЫЕ H3-клетки, чтобы фронт работал прямо сейчас
  */
 @RestController
 @RequestMapping("/api/v1/hexagons")
@@ -52,7 +52,7 @@ public class LiveMapController {
         return 9;
     }
 
-    // Валидные H3 для координат городов из мок-событий — cellToBoundary на фронте не упадёт.
+    // Валидные H3 для координат городов из мок-событий — cellToBoundary на фронте не упадёт
     private List<HexagonDto> mockHexagons(int resolution) {
         return switch (resolution) {
             case 3 -> List.of(

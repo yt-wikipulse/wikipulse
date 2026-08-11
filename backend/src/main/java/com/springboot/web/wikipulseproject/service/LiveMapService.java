@@ -48,7 +48,7 @@ public class LiveMapService {
                 String parent = h3Geo.cellToParent(r9Key, resolution);
                 buckets.computeIfAbsent(parent, key -> new ArrayList<>()).addAll(events);
             } catch (IllegalArgumentException ex) {
-                //страховка - если встретится плохой ключ все не упадет
+                //страховка  если встретится плохой ключ все не упадет
                 log.warn("пропускаем невалидный h3_r9 ключ = {}", r9Key);
             }
         }
