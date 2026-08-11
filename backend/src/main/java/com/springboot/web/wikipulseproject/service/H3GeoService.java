@@ -2,6 +2,7 @@ package com.springboot.web.wikipulseproject.service;
 
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.LatLng;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,21 +21,21 @@ public class H3GeoService {
         this.zoomR6Max = zoomR6Max;
     }
 
-    /** зум нашей карты - чем сильне мы приблизили тем меньше шестиугольник видим */
+    //зум нашей карты - чем сильне мы приблизили тем меньше шестиугольник видим
     public int resolutionZoom(int zoom) {
         if (zoom <= zoomR3Max) return 3;
         if (zoom <= zoomR6Max) return 6;
         return 9;
     }
 
-    /** в какой клетке resolution лежит R9 клетка? */
+    //в какой клетке resolution лежит R9 клетка?
     public String cellToParent(String h3R9, int resolution) {
         long cell = h3.stringToH3(h3R9);
         long parent = h3.cellToParent(cell, resolution);
         return h3.h3ToString(parent);
     }
 
-    /** попадает ли центр */
+    // попадает ли в центр экрана на фронте
     public boolean centerInBox(String h3Index,
                                double minLng, double minLat,
                                double maxLng, double maxLat) {
