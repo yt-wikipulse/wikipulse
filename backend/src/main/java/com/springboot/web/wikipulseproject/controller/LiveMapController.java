@@ -15,7 +15,6 @@ import java.util.List;
 /**
  * ВРЕМЕННЫЙ МОК живой карты по MVP-контракту.
  * Отдаёт захардкоженные, но ВАЛИДНЫЕ H3-клетки, чтобы фронт работал прямо сейчас.
- * Реальная логика (bbox -> polygonToCells -> RecentEventsCache) придёт в LiveMapService.
  */
 @RestController
 @RequestMapping("/api/v1/hexagons")
