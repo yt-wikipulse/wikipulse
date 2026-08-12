@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Profile("mock")
 public class MockPoller {
 
-    private record Place(String title, String url, double centerLat, double centerLon) {}
+    private record Place(String title, String url, double lat, double lon) {}
 
     private static final List<Place> PLACES = List.of(
         new Place("Москва", "https://ru.wikipedia.org/wiki/Москва", 55.7558, 37.6173),
@@ -31,30 +31,26 @@ public class MockPoller {
     );
 
     private final RecentEventsCache cache;
-    private final H3Core h3;
+    /** «Готовые» h3_r9 по одному на место — как если бы их прислала очередь. */
+    private final List<String> cellKeys;
     private final AtomicLong counter = new AtomicLong();
 
     public MockPoller(RecentEventsCache cache, H3Core h3) {
         this.cache = cache;
-        this.h3 = h3;   // сохраняем h3 чтобы считать клетки в emit()
+        this.cellKeys = PLACES.stream()
+            .map(p -> h3.latLngToCellAddress(p.lat(), p.lon(), 9))
+            .toList();
     }
 
     @Scheduled(fixedDelay = 2_000)
     void emit() {
-        Place place = PLACES.get(ThreadLocalRandom.current().nextInt(PLACES.size()));
-
-        //  небольшой рандом вокруг центра (примерно +-500 м) — разные события одного
-        //    места попадают в разные r9-клетки, как в реальности
-        double lat = place.centerLat() + (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.01;
-        double lon = place.centerLon() + (ThreadLocalRandom.current().nextDouble() - 0.5) * 0.01;
-
-        String h3R9 = h3.latLngToCellAddress(lat, lon, 9);
-
+        int i = ThreadLocalRandom.current().nextInt(PLACES.size());
+        Place place = PLACES.get(i);
         cache.put(new EnrichedEvent(
             "mock-" + counter.incrementAndGet(),
             place.title(),
             place.url(),
-            h3R9
+            cellKeys.get(i)
         ));
     }
 }
