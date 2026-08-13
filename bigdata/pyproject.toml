@@ -1,27 +1,19 @@
 [project]
 name = "bigdata"
 version = "0.1.0"
-description = "WikiPulse YTsaurus pipeline — ingestr, SPYT jobs, aggregation"
+description = "WikiPulse YTsaurus pipeline"
 requires-python = ">=3.12"
 dependencies = [
-    "h3>=4.5.0",
     "requests>=2.34.2",
     "ytsaurus-client>=0.13.53",
-    "pyyaml>=6.0",
     "ytsaurus-yson>=0.4.10",
-    "config-loader>=1.0.0",
-]
-
-[project.optional-dependencies]
-spark = [
-    "pyspark>=4.2.0",
-    "ytsaurus-spyt>=2.11.0",
+    "orjson>=3.10.0",
 ]
 
 [project.scripts]
-init-tables       = "bigdata.scripts.init_tables:main"
-load-dict-coords  = "bigdata.scripts.load_dict_coords:main"
-ingestor          = "bigdata.jobs.ingestor:main"
+init-tables           = "bigdata.scripts.init_tables:main"
+load-dict-coords-full = "bigdata.scripts.load_dict_coords_full:main"
+ingestor              = "bigdata.jobs.ingestor:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -29,6 +21,3 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bigdata"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/bigdata/config" = "bigdata/config"

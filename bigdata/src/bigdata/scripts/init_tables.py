@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
     source ~/a-summer-school
-    uv run python -m bigdata.scripts.init_tables
+    uv run init-tables
 """
 import sys
 import os
 
 import yt.wrapper as yt
 
-from bigdata.config_loader import paths
+BASE = "//home/wikipulse"
+Q_RAW      = f"{BASE}/q_raw"
+Q_ENRICHED = f"{BASE}/q_enriched"
+DICT_COORDS = f"{BASE}/dict/coords"
+CONSUMER   = f"{BASE}/consumers/c_enrich"
 
 
 def check_env():
@@ -21,127 +25,38 @@ def check_env():
     print(f"Пользователь: {yt.get_user_name()}")
     print()
 
+
 Q_RAW_SCHEMA = [
     {"name": "$timestamp", "type": "uint64"},
     {"name": "event_id",   "type": "string"},
     {"name": "wiki",       "type": "string"},
-    {"name": "lang",       "type": "string"},
     {"name": "title",      "type": "string"},
-    {"name": "type",       "type": "string"},
-    {"name": "user",       "type": "string"},
-    {"name": "bot",        "type": "boolean"},
-    {"name": "minor",      "type": "boolean"},
-    {"name": "comment",    "type": "string"},
-    {"name": "rev_new",    "type": "int64"},
-    {"name": "rev_old",    "type": "int64"},
-    {"name": "length_new", "type": "int64"},
-    {"name": "length_old", "type": "int64"},
+    {"name": "url",        "type": "string"},
     {"name": "event_ts",   "type": "uint64"},
-    {"name": "domain",     "type": "string"},
-    {"name": "source_id",  "type": "string"},
 ]
 
 Q_ENRICHED_SCHEMA = [
-    {"name": "$timestamp", "type": "uint64"},
-    {"name": "event_id",    "type": "string"},
-    {"name": "wiki",        "type": "string"},
-    {"name": "lang",        "type": "string"},
-    {"name": "title",       "type": "string"},
-    {"name": "type",        "type": "string"},
-    {"name": "user",        "type": "string"},
-    {"name": "bot",         "type": "boolean"},
-    {"name": "minor",       "type": "boolean"},
-    {"name": "comment",     "type": "string"},
-    {"name": "rev_new",     "type": "int64"},
-    {"name": "rev_old",     "type": "int64"},
-    {"name": "length_new",  "type": "int64"},
-    {"name": "length_old",  "type": "int64"},
-    {"name": "event_ts",    "type": "uint64"},
-    {"name": "domain",      "type": "string"},
-    {"name": "has_geo",     "type": "boolean"},
-    {"name": "lat",         "type": "double"},
-    {"name": "lon",         "type": "double"},
-    {"name": "country_qid", "type": "string"},
-    {"name": "type_qid",    "type": "string"},
-    {"name": "qid",         "type": "string"},
-    {"name": "h3_r3",       "type": "string"},
-    {"name": "h3_r6",       "type": "string"},
-    {"name": "h3_r9",       "type": "string"},
-    {"name": "delta_len",   "type": "int64"},
+    {"name": "event_id", "type": "string"},
+    {"name": "title",    "type": "string"},
+    {"name": "url",      "type": "string"},
+    {"name": "h3_r9",    "type": "string"},
+    {"name": "event_ts", "type": "uint64"},
 ]
 
 DICT_COORDS_SCHEMA = [
-    {"name": "wiki",        "type": "string", "sort_order": "ascending"},
-    {"name": "title",       "type": "string", "sort_order": "ascending"},
-    {"name": "qid",         "type": "string"},
-    {"name": "lat",         "type": "double"},
-    {"name": "lon",         "type": "double"},
-    {"name": "country_qid", "type": "string"},
-    {"name": "type_qid",    "type": "string"},
-    {"name": "precision",   "type": "double"},
-    {"name": "source",      "type": "string"},
+    {"name": "wiki",  "type": "string", "sort_order": "ascending"},
+    {"name": "title", "type": "string", "sort_order": "ascending"},
+    {"name": "lat",   "type": "double"},
+    {"name": "lon",   "type": "double"},
 ]
 
-DICT_COUNTRIES_SCHEMA = [
-    {"name": "qid",     "type": "string", "sort_order": "ascending"},
-    {"name": "name",    "type": "string"},
-    {"name": "iso",     "type": "string"},
-]
 
-T_HISTORY_SCHEMA = [
-    {"name": "event_id",   "type": "string"},
-    {"name": "event_ts",   "type": "uint64"},
-    {"name": "wiki",       "type": "string"},
-    {"name": "lang",       "type": "string"},
-    {"name": "title",      "type": "string"},
-    {"name": "type",       "type": "string"},
-    {"name": "bot",        "type": "boolean"},
-    {"name": "minor",      "type": "boolean"},
-    {"name": "length_new", "type": "int64"},
-    {"name": "length_old", "type": "int64"},
-    {"name": "delta_len",  "type": "int64"},
-    {"name": "has_geo",    "type": "boolean"},
-    {"name": "lat",        "type": "double"},
-    {"name": "lon",        "type": "double"},
-    {"name": "country_qid","type": "string"},
-    {"name": "h3_r6",      "type": "string"},
-]
-
-MART_TOP_COUNTRIES_SCHEMA = [
-    {"name": "period_bucket", "type": "uint64", "sort_order": "ascending"},
-    {"name": "period",        "type": "string", "sort_order": "ascending"},
-    {"name": "country_qid",   "type": "string", "sort_order": "ascending"},
-    {"name": "country_name",  "type": "string"},
-    {"name": "edits_count",   "type": "int64"},
-    {"name": "users_count",   "type": "int64"},
-    {"name": "delta_total",   "type": "int64"},
-]
-
-MART_BY_LANGUAGE_SCHEMA = [
-    {"name": "period_bucket", "type": "uint64", "sort_order": "ascending"},
-    {"name": "period",        "type": "string", "sort_order": "ascending"},
-    {"name": "lang",          "type": "string", "sort_order": "ascending"},
-    {"name": "edits_count",   "type": "int64"},
-    {"name": "new_articles",  "type": "int64"},
-    {"name": "bots_count",   "type": "int64"},
-    {"name": "humans_count",  "type": "int64"},
-    {"name": "total_delta",   "type": "int64"},
-]
-
-MART_TRENDS_SCHEMA = [
-    {"name": "bucket_ts",  "type": "uint64", "sort_order": "ascending"},
-    {"name": "edits_count","type": "int64"},
-]
-
-def create_dir(path: str):
-    try:
-        yt.create("map_node", path, recursive=True, ignore_existing=True)
-        print(f"  📁 {path}")
-    except yt.YtError as e:
-        print(f"  ⚠️  Не удалось создать папку {path}: {e}")
+def create_dir(path):
+    yt.create("map_node", path, recursive=True, ignore_existing=True)
+    print(f"  📁 {path}")
 
 
-def create_static_table(path: str, schema: list, description: str):
+def create_static_table(path, schema, description):
     if yt.exists(path):
         print(f"  ✓ {path} (уже существует) — {description}")
         return
@@ -149,7 +64,7 @@ def create_static_table(path: str, schema: list, description: str):
     print(f"  ✚ {path} — {description}")
 
 
-def create_dynamic_table(path: str, schema: list, description: str):
+def create_dynamic_table(path, schema, description):
     if yt.exists(path):
         mounted = yt.get(f"{path}/@tablet_count") > 0
         if mounted:
@@ -159,53 +74,52 @@ def create_dynamic_table(path: str, schema: list, description: str):
             yt.mount_table(path, sync=True)
             print(f"  ✓ {path} смонтирована — {description}")
         return
-
-    yt.create("table", path, attributes={
-        "dynamic": True,
-        "schema": schema,
-    }, recursive=True)
+    yt.create("table", path, attributes={"dynamic": True, "schema": schema}, recursive=True)
     yt.mount_table(path, sync=True)
     print(f"  ✚ {path} (создана + смонтирована) — {description}")
 
 
+def create_consumer(consumer_path, queue_path, description):
+    if yt.exists(consumer_path):
+        registered = any(
+            reg.get("consumer_path", "").endswith(consumer_path.split("/")[-1])
+            for reg in yt.list_queue_consumer_registrations(queue_path=queue_path)
+        )
+        if registered:
+            print(f"  ✓ {consumer_path} (существует, зарегистрирован) — {description}")
+            return
+        print(f"  ⚠️  {consumer_path} (существует, НЕ зарегистрирован) — регистрирую...")
+    else:
+        yt.create("queue_consumer", consumer_path, recursive=True)
+        yt.mount_table(consumer_path, sync=True)
+        print(f"  ✚ {consumer_path} (создан) — {description}")
+    yt.register_queue_consumer(queue_path, consumer_path, vital=True)
+    print(f"  🔗 {consumer_path} → {queue_path} (vital)")
+
+
 def main():
     check_env()
-
-    print(f"Создание таблиц в {paths.base_dir}")
+    print(f"Создание таблиц в {BASE}")
     print("=" * 60)
 
-    # Папки
     print("\n📂 Папки:")
-    create_dir(paths.base_dir)
-    create_dir(f"{paths.base_dir}/dict")
-    create_dir(f"{paths.base_dir}/history")
-    create_dir(f"{paths.base_dir}/marts")
-    create_dir(f"{paths.base_dir}/consumers")
-    create_dir(f"{paths.base_dir}/checkpoints")
+    create_dir(BASE)
+    create_dir(f"{BASE}/dict")
+    create_dir(f"{BASE}/consumers")
+    create_dir(f"{BASE}/checkpoints")
 
-    # Очереди
     print("\n🔄 Очереди (dynamic tables):")
-    create_dynamic_table(paths.q_raw,      Q_RAW_SCHEMA,      "сырые события SSE")
-    create_dynamic_table(paths.q_enriched, Q_ENRICHED_SCHEMA, "обогащённые события")
+    create_dynamic_table(Q_RAW,      Q_RAW_SCHEMA,      "сырые события SSE")
+    create_dynamic_table(Q_ENRICHED, Q_ENRICHED_SCHEMA, "обогащённые события")
 
-    # Справочники
-    print("\n📚 Справочники (static tables):")
-    create_static_table(paths.dict_coords,    DICT_COORDS_SCHEMA,    "координаты статей")
-    create_static_table(paths.dict_countries, DICT_COUNTRIES_SCHEMA, "Q-id → название страны")
+    print("\n📬 Consumer:")
+    create_consumer(CONSUMER, Q_RAW, "consumer для enrich-стрима")
 
-    # История
-    print("\n📜 История:")
-    create_static_table(paths.t_history, T_HISTORY_SCHEMA, "накопленная история enriched-событий")
-
-    # Витрины
-    print("\n📊 Витрины (dynamic tables):")
-    create_dynamic_table(paths.mart_top_countries, MART_TOP_COUNTRIES_SCHEMA, "топ стран по правкам")
-    create_dynamic_table(paths.mart_by_language,   MART_BY_LANGUAGE_SCHEMA,   "разрез по языкам")
-    create_dynamic_table(paths.mart_trends,        MART_TRENDS_SCHEMA,        "кол-во правок по часам")
+    print("\n📚 Справочник (static table):")
+    create_static_table(DICT_COORDS, DICT_COORDS_SCHEMA, "координаты статей")
 
     print("\n" + "=" * 60)
     print("✅ Все таблицы готовы.")
-    print(f"\nПроверь: yt list {paths.base_dir}")
 
 
 if __name__ == "__main__":
