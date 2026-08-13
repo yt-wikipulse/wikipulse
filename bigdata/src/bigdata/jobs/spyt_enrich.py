@@ -120,7 +120,7 @@ def main():
     )
 
     safe_stream = raw_stream.select(
-        F.col("event_id").cast(T.LongType()).alias("event_id"),
+        F.col("event_id").cast(T.StringType()).alias("event_id"),
         F.col("event_ts").cast(T.LongType()).alias("event_ts"),
         F.col("wiki").cast(T.StringType()).alias("wiki"),
         F.col("title").cast(T.StringType()).alias("title"),
