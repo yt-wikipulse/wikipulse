@@ -11,7 +11,10 @@ import logging
 import requests
 import yt.wrapper as yt
 
-from bigdata.config_loader import paths, load_config
+BASE = "//home/wikipulse"
+Q_RAW = f"{BASE}/q_raw"
+SSE_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
+BATCH_SIZE = 100
 
 
 logging.basicConfig(
@@ -24,13 +27,16 @@ def normalize_title(title: str) -> str:
     return title.replace("_", " ").strip()
 
 def event_to_row(evt: dict) -> dict | None:
-    """
-    Превращает сырое SSE-событие в строку для Q_RAW (MVP).
-    Возвращает None, если событие не проходит фильтр.
-    """
     wiki = evt.get("wiki", "")
 
-    # Только статьи (namespace 0), не категории/обсуждения/файлы
+    if not wiki.endswith("wiki"):
+        return None
+    if wiki in ("wikidatawiki", "commonswiki", "metawiki", "abstractwiki"):
+        return None
+    lang_part = wiki[:-4]
+    if not lang_part:
+        return None
+
     if evt.get("namespace") != 0:
         return None
 
@@ -48,6 +54,7 @@ def event_to_row(evt: dict) -> dict | None:
         "wiki":     wiki,
         "title":    normalize_title(evt.get("title", "")),
         "url":      evt.get("title_url", ""),
+        "event_ts": int(evt.get("timestamp", 0)),
     }
 
 
@@ -68,7 +75,6 @@ def stream_sse(url: str, last_event_id: str | None = None):
             if line is None:
                 continue
             if line == "":
-                # пустая строка = конец события
                 if data_lines:
                     payload = "\n".join(data_lines)
                     try:
@@ -85,10 +91,9 @@ def stream_sse(url: str, last_event_id: str | None = None):
 
 
 def main():
-    cfg = load_config()
-    sse_url = cfg["sse_url"]
-    q_raw = paths.q_raw
-    batch_size = cfg["batch_size"]
+    sse_url = SSE_URL
+    q_raw = Q_RAW
+    batch_size = BATCH_SIZE
 
     last_event_id = None
     batch = []
@@ -115,8 +120,6 @@ def main():
                 stats["out"] += 1
 
                 if len(batch) >= batch_size:
-                    # durability="sync". кластер хакатона требует sync
-                    # для tablet-транзакций с full atomicity.
                     yt.insert_rows(q_raw, batch, durability="sync")
                     log.info(
                         "записано %d | in=%d out=%d filtered=%d | last=%s",

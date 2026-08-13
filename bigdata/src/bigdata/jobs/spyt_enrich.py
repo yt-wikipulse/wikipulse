@@ -1,117 +1,143 @@
 #!/usr/bin/env python3
 """
-WikiPulse MVP SPYT-enrich: Q_RAW → JOIN dict/coords → Q_ENRICHED.
+spark-submit \
+  --master ytsaurus://https://your-cluster.example.com \
+  --deploy-mode cluster \
+  --num-executors 1 --executor-memory 1g --executor-cores 1 \
+  --driver-memory 2g \
+  --conf spark.hadoop.yt.proxy.role=http \
+  --conf spark.yarn.appMasterEnv.YT_TOKEN=$YT_TOKEN \
+  --conf spark.yarn.appMasterEnv.YT_PROXY=your-cluster.example.com \
+  --conf spark.pyspark.python=/usr/bin/python3.11 \
+  --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
+  --files yt:///home/wikipulse/lib/h3.zip \
+  yt:///home/wikipulse/src/spyt_enrich.py
 
-Запускается НА кластере через spark-submit:
-    spark-submit \\
-      --master ytsaurus://https://your-cluster.example.com \\
-      --deploy-mode cluster \\
-      --num-executors 2 \\
-      --conf spark.pyspark.python=/usr/bin/python3.11 \\
-      --py-files yt:///home/wikipulse/lib/spyt_deps.zip \\
-      jobs/spyt_enrich.py
-
-Гарантия: idempotent receiver. event_id — ключ в Q_ENRICHED,
-дубликаты перетираются (видимый exactly-once).
 """
+
+
+
 import os
 import sys
+import zipfile
 
-# ─── Загружаем config_loader из py-files (zip на кластере) ───
-for p in sys.path:
-    if p.endswith(".zip"):
-        sys.path.insert(0, p)
+if not os.path.exists("/tmp/h3_extracted"):
+    if os.path.exists("h3.zip"):
+        with zipfile.ZipFile("h3.zip", 'r') as zip_ref:
+            zip_ref.extractall("/tmp/h3_extracted")
 
-try:
-    # Локальная разработка (через uv run)
-    from bigdata.config_loader import paths
-except ImportError:
-    # На кластере (из zip через --py-files)
-    from config_loader import paths
+sys.path.insert(0, "/tmp/h3_extracted")
 
-# Пути из единого конфига
-Q_RAW           = paths.q_raw
-Q_ENRICHED      = paths.q_enriched
-DICT_COORDS     = paths.dict_coords
-CONSUMER_PATH   = paths.consumer_enrich
-CHECKPOINT_PATH = paths.checkpoint_enrich
+import h3
+import yt.wrapper as yt
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
 
-# ВАЖНО: import spyt ДО pyspark — регистрирует .yt расширения
-import spyt
-from spyt import spark_session
+BASE = "//home/wikipulse"
+Q_RAW       = f"{BASE}/q_raw"
+Q_ENRICHED  = f"{BASE}/q_enriched"
+DICT_COORDS = f"{BASE}/dict/coords_dyn"
+CONSUMER_PATH   = f"{BASE}/consumers/c_enrich"
+CHECKPOINT_PATH = f"yt:///{BASE.lstrip('/')}/checkpoints/c_enrich"
+PROXY = "https://ytsaurus.tech"
 
-from pyspark.sql.functions import col, lit, when, isnull, expr
+_batch_count = 0
+_yt_client = None
+
+PROXY = "https://your-cluster.example.com/"
+
+def get_yt_client():
+    global _yt_client
+    if _yt_client is None:
+        token = os.environ.get("YT_TOKEN") or os.environ.get("YT_SECURE_VAULT_YT_TOKEN") or ""
+
+        current_proxy = os.environ.get("YT_PROXY") or PROXY
+        if not current_proxy.startswith("http"):
+            current_proxy = f"https://{current_proxy}"
+
+        _yt_client = yt.YtClient(proxy=current_proxy, token=token)
+    return _yt_client
+
+def enrich_batch(batch_df, batch_id):
+    global _batch_count
+    client = get_yt_client()
+
+    rows = batch_df.collect()
+    if not rows:
+        return
+
+    keys = [{"wiki": r["wiki"], "title": r["title"]} for r in rows]
+    try:
+        found = list(client.lookup_rows(DICT_COORDS, keys, format="json"))
+    except Exception as e:
+        print(f"[batch {batch_id}] lookup error: {e}")
+        return
+
+    coord_map = {}
+    for c in found:
+        if c:
+            coord_map[(c["wiki"], c["title"])] = (c["lat"], c["lon"])
+
+    enriched = []
+    for r in rows:
+        pair = coord_map.get((r["wiki"], r["title"]))
+        if pair:
+            lat, lon = pair
+            h3_index = h3.latlng_to_cell(lat, lon, 9)
+            enriched.append({
+                "event_id": r["event_id"],
+                "title": r["title"],
+                "url": r["url"],
+                "h3_r9": h3_index,
+                "event_ts": r["event_ts"],
+            })
+
+    if enriched:
+        try:
+            CHUNK = 50000
+            for i in range(0, len(enriched), CHUNK):
+                client.insert_rows(Q_ENRICHED, enriched[i:i+CHUNK],
+                                   durability="sync", format="json")
+        except Exception as e:
+            print(f"[batch {batch_id}] insert error: {e}")
+            return
+
+    _batch_count += 1
+
+    hit = len(enriched) / max(len(rows), 1) * 100
+    print(f"[batch {batch_id}] Обработано строк: in={len(rows)} enriched={len(enriched)} hit={hit:.0f}%")
 
 
 def main():
-    with spark_session(
-        num_executors=2,
-        app_name="wikpulse-enrich-mvp",
-        spark_conf_args={
-            "spark.yt.streaming.transactional": "true",
-            "spark.yt.streaming.transactional.ping_timeout": "30",
-            "spark.yt.streaming.transactional.ping_interval": "10",
-            "spark.streaming.stopGracefullyOnShutdown": "true",
-            "spark.sql.adaptive.enabled": "false",
-            "spark.memory.fraction": "0.5",
-            "spark.memory.storageFraction": "0.2",
-        },
-    ) as spark:
+    spark = SparkSession.builder.appName("wikpulse-enrich").getOrCreate()
 
-        # 1. ЗАГРУЖАЕМ СПРАВОЧНИК (один раз, broadcast для быстрого JOIN)
-        coords_df = spark.read.yt(DICT_COORDS)
+    raw_stream = (
+        spark.readStream
+        .format("yt")
+        .option("consumer_path", CONSUMER_PATH)
+        .load(Q_RAW)
+    )
 
-        # 2. ЧИТАЕМ ОЧЕРЕДЬ Q_RAW (streaming)
-        raw_stream = (
-            spark.readStream
-            .format("yt")
-            .option("consumer_path", CONSUMER_PATH)
-            .option("parsing_type_v3", "true")
-            .load(Q_RAW)
-        )
+    safe_stream = raw_stream.select(
+        F.col("event_id").cast(T.LongType()).alias("event_id"),
+        F.col("event_ts").cast(T.LongType()).alias("event_ts"),
+        F.col("wiki").cast(T.StringType()).alias("wiki"),
+        F.col("title").cast(T.StringType()).alias("title"),
+        F.col("url").cast(T.StringType()).alias("url")
+    )
 
-        # 3. JOIN: поток × справочник (LEFT — события без гео сохраняем)
-        enriched = (
-            raw_stream.alias("r")
-            .join(
-                spyt.broadcast(coords_df).alias("c"),
-                (col("r.wiki") == col("c.wiki"))
-                & (col("r.title") == col("c.title")),
-                how="left",
-            )
-        )
+    query = (
+        safe_stream.writeStream
+        .foreachBatch(enrich_batch)
+        .trigger(processingTime="5 seconds")
+        .option("checkpointLocation", CHECKPOINT_PATH)
+        .start()
+    )
+    print(f"Стабильный Streaming запущен")
+    print("-" * 60)
 
-        # 4. ВЫЧИСЛЯЕМ h3_r9 (упрощённый через round, без UDF)
-        #    r9 ≈ 3 знака после запятой (~0.1° ≈ квартал)
-        #    lat/lon участвуют в вычислении, но НЕ сохраняются —
-        #    центр ячейки фронтенд вычислит сам из h3_r9 через h3-js.
-        #    TODO: заменить на настоящий h3.latlng_to_h3(lat, lon, 9)
-        enriched = (
-            enriched
-            .withColumn("h3_r9",
-                when(col("c.lat").isNotNull(),
-                     expr("concat(round(lat, 3), ',', round(lon, 3))"))
-                .otherwise(lit(None)))
-            .select(
-                col("r.event_id"),
-                col("r.title"),
-                col("r.url"),
-                col("h3_r9"),
-            )
-        )
-
-        # 5. ПИШЕМ В Q_ENRICHED (streaming, idempotent)
-        query = (
-            enriched.writeStream
-            .outputMode("append")
-            .format("yt")
-            .option("write_type_v3", True)
-            .option("checkpointLocation", CHECKPOINT_PATH)
-            .option("path", Q_ENRICHED)
-            .start()
-        )
-
-        query.awaitTermination()
+    query.awaitTermination()
 
 
 if __name__ == "__main__":

@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-Запуск:
     source ~/a-summer-school
     uv run load-dict-coords-full
-
-Ограничить для теста:
-    uv run load-dict-coords-full --max-rows 10000
+    uv run load-dict-coords-full --max-rows 10000   # тест
 """
 import json
 import time
@@ -15,16 +12,28 @@ import argparse
 import requests
 import yt.wrapper as yt
 
-from bigdata.config_loader import paths
+BASE = "//home/wikipulse"
+DICT_COORDS = f"{BASE}/dict/coords"
 
 DUMP_URL = "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz"
-BATCH_SIZE = 10000
+BATCH_SIZE = 50000
+UA = "WikiPulse/0.1 (https://github.com/wikpulse; contact@wikpulse.org)"
+
+try:
+    import orjson
+    _loads = orjson.loads
+    _JSON_LIB = "orjson"
+except ImportError:
+    _loads = json.loads
+    _JSON_LIB = "stdlib"
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-log = logging.getLogger("load_coords_full")
+log = logging.getLogger("load_coords")
+
+_P625 = b'"P625"'
 
 
 def get_coords(claims: dict) -> tuple[float, float] | None:
@@ -44,8 +53,8 @@ def parse_entity(line: str) -> list[dict]:
         return []
 
     try:
-        entity = json.loads(line)
-    except json.JSONDecodeError:
+        entity = _loads(line)
+    except (ValueError, json.JSONDecodeError):
         return []
 
     claims = entity.get("claims", {})
@@ -69,24 +78,17 @@ def parse_entity(line: str) -> list[dict]:
         if not title:
             continue
 
-        rows.append({
-            "wiki":  wiki,
-            "title": title,
-            "lat":   lat,
-            "lon":   lon,
-        })
+        rows.append({"wiki": wiki, "title": title, "lat": lat, "lon": lon})
 
     return rows
 
-
 def stream_dump(max_rows: int | None = None):
     log.info("Открываю поток: %s", DUMP_URL)
+    log.info("JSON парсер: %s", _JSON_LIB)
 
-    headers = {
-        "User-Agent": "WikiPulse/0.1 (https://github.com/wikpulse; contact@wikpulse.org)",
-    }
+    headers = {"User-Agent": UA}
     import gzip
-    response = requests.get(DUMP_URL, headers=headers, stream=True, timeout=60)
+    response = requests.get(DUMP_URL, headers=headers, stream=True, timeout=120)
     response.raise_for_status()
     decompressed = gzip.GzipFile(fileobj=response.raw)
 
@@ -94,21 +96,30 @@ def stream_dump(max_rows: int | None = None):
     total_in = 0
     total_out = 0
     total_skipped = 0
+    total_p625 = 0
 
     for raw_line in decompressed:
         total_in += 1
 
+        if _P625 not in raw_line:
+            total_skipped += 1
+            continue
+
+        total_p625 += 1
+
         rows = parse_entity(raw_line.decode("utf-8", errors="ignore"))
         if not rows:
             total_skipped += 1
-        else:
-            batch.extend(rows)
-            total_out += len(rows)
+            continue
 
-        if total_in % 100000 == 0:
+        batch.extend(rows)
+        total_out += len(rows)
+
+        if total_in % 500000 == 0:
+            hit_rate = total_p625 / total_in * 100 if total_in else 0
             log.info(
-                "прочитано %d элементов | строк: %d | пропущено без гео: %d",
-                total_in, total_out, total_skipped,
+                "сущностей: %dK | P625: %d (%.1f%%) | строк: %d",
+                total_in // 1000, total_p625, hit_rate, total_out,
             )
 
         if len(batch) >= BATCH_SIZE:
@@ -116,7 +127,7 @@ def stream_dump(max_rows: int | None = None):
             batch = []
 
         if max_rows and total_out >= max_rows:
-            log.info("Достигнут лимит --max-rows %d, останавливаюсь", max_rows)
+            log.info("Лимит --max-rows %d достигнут", max_rows)
             if batch:
                 yield batch, total_in, total_out, total_skipped
             return
@@ -126,13 +137,15 @@ def stream_dump(max_rows: int | None = None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Загрузка всех координат из дампа Wikidata")
+    parser = argparse.ArgumentParser(
+        description="Загрузка координат из дампа Wikidata"
+    )
     parser.add_argument("--max-rows", type=int, default=None,
                         help="Максимум строк (для теста). Без лимита — весь дамп.")
     args = parser.parse_args()
 
-    dict_coords_path = paths.dict_coords
-    tmp_path = f"{paths.base_dir}/dict/coords_tmp"
+    dict_coords_path = DICT_COORDS
+    tmp_path = f"{BASE}/dict/coords_tmp"
 
     log.info("Создаю временную таблицу: %s", tmp_path)
     tmp_schema = [
@@ -162,16 +175,17 @@ def main():
         if now - last_log > 10:
             elapsed = now - start_time
             rate = total_out / elapsed if elapsed > 0 else 0
+            entity_rate = total_in / elapsed if elapsed > 0 else 0
             log.info(
-                "записано %d строк во tmp | элементов: %d | скорость: %.0f строк/сек | время: %ds",
-                total_out, total_in, rate, int(elapsed),
+                "записано %d строк | сущностей: %d (%.0f/сек) | скорость: %.0f строк/сек | %ds",
+                total_out, total_in, entity_rate, rate, int(elapsed),
             )
             last_log = now
 
     elapsed = time.time() - start_time
     log.info("=" * 60)
-    log.info("Стрим завершён. Строк во временной таблице: %d", total_written)
-    log.info("Время стрима: %d сек (%.1f мин)", int(elapsed), elapsed / 60)
+    log.info("Стрим завершён. Строк: %d | Время: %d сек (%.1f мин)",
+             total_written, int(elapsed), elapsed / 60)
 
     log.info("-" * 60)
     log.info("Сортировка %s → %s (на кластере)...", tmp_path, dict_coords_path)
@@ -188,12 +202,10 @@ def main():
     yt.create("table", dict_coords_path, attributes={"schema": sorted_schema}, recursive=True)
 
     yt.run_sort(tmp_path, dict_coords_path, sort_by=["wiki", "title"])
-
     yt.remove(tmp_path)
 
     final_count = yt.get(f"{dict_coords_path}/@row_count")
     log.info("✅ Готово! Строк в dict/coords: %s", final_count)
-    log.info("Проверь: yt read-table %s --format json", dict_coords_path)
 
 
 if __name__ == "__main__":
