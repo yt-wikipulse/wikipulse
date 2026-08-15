@@ -39,7 +39,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void первое_чтение_начинается_с_конца_очереди() {
+    void firstReadStartsFromQueueTail() {
         when(repository.skipToLatest()).thenReturn(100L);
         when(repository.fetchAfter(100L)).thenReturn(page(List.of(), 100L, false));
 
@@ -50,7 +50,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void конец_очереди_запрашивается_только_один_раз() {
+    void queueTailIsRequestedOnlyOnce() {
         when(repository.skipToLatest()).thenReturn(100L);
         when(repository.fetchAfter(anyLong())).thenReturn(page(List.of(), 100L, false));
 
@@ -61,7 +61,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void курсор_двигается_на_индекс_из_ответа_а_не_на_размер_списка() {
+    void cursorAdvancesToReturnedIndexNotByBatchSize() {
         when(repository.skipToLatest()).thenReturn(0L);
         when(repository.fetchAfter(0L))
                 .thenReturn(page(List.of(event(1), event(2)), 57L, false));
@@ -75,7 +75,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void страницы_дочитываются_пока_есть_ещё() {
+    void pagesAreDrainedWhileMoreAvailable() {
         when(repository.skipToLatest()).thenReturn(0L);
         when(repository.fetchAfter(0L)).thenReturn(page(List.of(event(1)), 10L, true));
         when(repository.fetchAfter(10L)).thenReturn(page(List.of(event(2)), 20L, false));
@@ -87,7 +87,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void за_один_тик_читается_не_больше_потолка_страниц() {
+    void oneTickReadsNoMoreThanPageLimit() {
         when(repository.skipToLatest()).thenReturn(0L);
         when(repository.fetchAfter(anyLong())).thenAnswer(call -> {
             long from = call.getArgument(0);
@@ -100,7 +100,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void прочитанные_события_попадают_в_кэш() {
+    void polledEventsGoToCache() {
         when(repository.skipToLatest()).thenReturn(0L);
         when(repository.fetchAfter(0L))
                 .thenReturn(page(List.of(event(1), event(2)), 5L, false));
@@ -111,7 +111,7 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void ошибка_репозитория_не_ломает_тик() {
+    void repositoryFailureDoesNotBreakTick() {
         when(repository.skipToLatest()).thenThrow(new IllegalStateException("YT недоступен"));
 
         assertDoesNotThrow(() -> poller.writeCache());

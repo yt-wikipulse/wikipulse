@@ -40,7 +40,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void одно_и_то_же_событие_дважды_попадает_в_снимок_один_раз() {
+    void duplicateEventAppearsOnceInSnapshot() {
         cache.put(event("e1", CELL_A));
         cache.put(event("e1", CELL_A));
 
@@ -48,7 +48,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void событие_старше_окна_в_снимок_не_попадает() {
+    void eventOlderThanWindowIsNotInSnapshot() {
         cache.put(event("e1", CELL_A));
         clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
 
@@ -56,7 +56,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void ячейка_без_свежих_событий_из_снимка_исчезает() {
+    void cellWithoutFreshEventsDisappearsFromSnapshot() {
         cache.put(event("old", CELL_A));
         clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
         cache.put(event("new", CELL_B));
@@ -68,7 +68,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void последнее_положенное_событие_идёт_первым() {
+    void newestEventComesFirst() {
         cache.put(event("e1", CELL_A));
         cache.put(event("e2", CELL_A));
 
@@ -79,7 +79,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void снимок_нельзя_изменить_снаружи() {
+    void snapshotIsImmutable() {
         cache.put(event("e1", CELL_A));
         Map<String, List<EnrichedEvent>> snapshot = cache.snapshot();
 
@@ -90,7 +90,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void evict_снимает_протухшие_события_но_оставляет_свежие() {
+    void evictRemovesExpiredAndKeepsFresh() {
         cache.put(event("old", CELL_A));
         clock.advance(Duration.ofMinutes(WINDOW_MINUTES + 1));
         cache.put(event("new", CELL_A));
@@ -103,7 +103,7 @@ class InMemoryRecentEventsCacheTest {
     }
 
     @Test
-    void snapshot_не_падает_при_параллельной_записи() throws Exception {
+    void snapshotSurvivesConcurrentWrites() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();
 
