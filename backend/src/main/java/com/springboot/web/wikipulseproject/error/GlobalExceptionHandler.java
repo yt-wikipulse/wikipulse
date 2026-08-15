@@ -18,8 +18,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(YtReadException.class)
     public ProblemDetail handleYtRead(YtReadException e) {
         log.error("Не удалось прочитать YT", e);
-
-        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "data source temporarily unavailable, try again");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
 
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception e) {
+        log.error("неожиданная ошибка в запросе", e);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
 }

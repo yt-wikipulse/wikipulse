@@ -1,5 +1,6 @@
 package com.springboot.web.wikipulseproject.service.poller;
 
+import com.springboot.web.wikipulseproject.error.YtReadException;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import com.springboot.web.wikipulseproject.yt_repo.QEnrichedRepository;
 import com.springboot.web.wikipulseproject.yt_repo.RecentEventsCache;
@@ -8,9 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
 @Profile("yt")
@@ -23,6 +21,7 @@ public class YtQueuePoller {
 
     /** Курсор очереди. null — ещё не знаем, где начинать. */
     private Long lastSeenRowIndex = null;
+    private int ytFailStreak = 0;
 
     public YtQueuePoller(QEnrichedRepository repository,
                          RecentEventsCache cache,
@@ -32,33 +31,45 @@ public class YtQueuePoller {
         this.maxPagesPerTick = maxPagesPerTick;
     }
 
-    @Scheduled(fixedDelayString = "${app.poller.interval-ms:2500}")
+    @Scheduled(fixedDelayString = "${app.poller.interval-ms:500}")
     void writeCache() {
         try {
-            for (EnrichedEvent event : poll()) {
-                cache.put(event);
+            tick();
+            ytFailStreak = 0;//успех - сбросили серию
+        } catch (YtReadException e) {
+
+            ytFailStreak++;
+            if (ytFailStreak >= 5) {
+                log.error("YT недоступен {} тиков подряд, курсор={}", ytFailStreak, lastSeenRowIndex, e);
+            } else {
+                log.warn("не прочитал порцию из очереди, курсор={}", lastSeenRowIndex, e);
             }
+
         } catch (RuntimeException e) {
-            log.warn("не прочитал порцию из очереди, курсор={}", lastSeenRowIndex, e);
+            log.error("баг в поллере, курсор={}", lastSeenRowIndex, e);
         }
     }
 
-    List<EnrichedEvent> poll() {
-        List<EnrichedEvent> polled = new ArrayList<>();
-
+    //один тик: страница едет в кэш до сдвига курсора
+    private void tick() {
         if (lastSeenRowIndex == null) {
             lastSeenRowIndex = repository.skipToLatest();
+            return;
         }
 
-        QEnrichedRepository.EventsPage page;
         int pages = 0;
+        QEnrichedRepository.EventsPage page;
+
         do {
             page = repository.fetchAfter(lastSeenRowIndex);
-            lastSeenRowIndex = page.lastRowIndex();
-            polled.addAll(page.events());
-            pages++;
-        } while (page.hasMore() && pages < maxPagesPerTick);
 
-        return polled;
+            for (EnrichedEvent event : page.events()) {
+                cache.put(event);
+            }
+
+            lastSeenRowIndex = page.lastRowIndex();
+            pages++;
+
+        } while (page.hasMore() && pages < maxPagesPerTick);
     }
 }
