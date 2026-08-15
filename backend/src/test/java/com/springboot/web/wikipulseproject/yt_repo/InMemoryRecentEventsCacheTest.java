@@ -27,6 +27,9 @@ class InMemoryRecentEventsCacheTest {
     private static final String CELL_A = "8928308280fffff";
     private static final String CELL_B = "89283082807ffff";
 
+    private final java.util.concurrent.atomic.AtomicLong rowIndex =
+            new java.util.concurrent.atomic.AtomicLong();
+
     private MutableClock clock;
     private InMemoryRecentEventsCache cache;
 
@@ -127,7 +130,13 @@ class InMemoryRecentEventsCacheTest {
     }
 
     private EnrichedEvent event(String id, String cell) {
-        return new EnrichedEvent(id, "Заголовок " + id, "https://example.org/" + id, cell);
+        return new EnrichedEvent(
+                rowIndex.incrementAndGet(),
+                id,
+                "Заголовок " + id,
+                "https://example.org/" + id,
+                cell,
+                clock.millis() / 1000);
     }
 
     /** Часы, которые можно двигать руками — иначе окно не проверить без sleep. */

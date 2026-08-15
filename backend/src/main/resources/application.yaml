@@ -11,6 +11,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  task:
+    scheduling:
+      pool:
+        size: 2
 
 app:
   live:
@@ -21,7 +25,9 @@ app:
     zoom-r3-max: 5
     zoom-r6-max: 11
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
-
+  poller:
+    interval-ms: 2500
+    max-pages-per-tick: 10
 
 yt:
   proxy: "${YT_PROXY}"
