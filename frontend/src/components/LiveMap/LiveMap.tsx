@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   LngLat,
   LngLatBounds,
 } from "@yandex/ymaps3-types";
-import { cellToBoundary } from "h3-js";
+import { cellToBoundary, cellToLatLng } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
+import { CellPopover } from "../CellPopover/CellPopover";
 
 import styles from "./LiveMap.module.scss";
 
@@ -20,7 +22,7 @@ export type MapViewport = {
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
   selectedH3: string | null;
-  onSelectedH3Change: (h3: string) => void;
+  onSelectedH3Change: (h3: string | null) => void;
   onViewportChange: (viewport: MapViewport) => void;
 };
 
@@ -96,6 +98,10 @@ export function LiveMap({
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  const [popoverElement] = useState(() =>
+    document.createElement("div"),
+  );
+
   const viewportDebounceRef = useRef<number | null>(null);
 
   const maxEvents = Math.max(
@@ -104,6 +110,12 @@ export function LiveMap({
       (hexagon) => hexagon.events_count,
     ),
   );
+
+  const selectedHexagon = selectedH3
+    ? (hexagons.find(
+        (hexagon) => hexagon.h3_index === selectedH3,
+      ) ?? null)
+    : null;
 
   useEffect(() => {
     let disposed = false;
@@ -133,6 +145,12 @@ export function LiveMap({
 
         map.addChild(
           new ymaps3.YMapListener({
+            onClick: (object) => {
+              if (!object) {
+                onSelectedH3Change(null);
+              }
+            },
+
             onUpdate: ({ location, mapInAction }) => {
               if (mapInAction) {
                 return;
@@ -183,7 +201,7 @@ export function LiveMap({
       mapRef.current?.destroy();
       mapRef.current = null;
     };
-  }, [onViewportChange]);
+  }, [onViewportChange, onSelectedH3Change]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -245,19 +263,56 @@ export function LiveMap({
     onSelectedH3Change,
   ]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !selectedH3) {
+      return;
+    }
+
+    const [lat, lng] = cellToLatLng(selectedH3);
+
+    const marker = new ymaps3.YMapMarker(
+      {
+        coordinates: [lng, lat] as LngLat,
+        zIndex: 1000,
+      },
+      popoverElement,
+    );
+
+    map.addChild(marker);
+
+    return () => {
+      if (mapRef.current === map) {
+        map.removeChild(marker);
+      }
+    };
+  }, [selectedH3, mapVersion, popoverElement]);
+
   return (
-    <div
-      ref={containerRef}
-      className={styles.liveMap}
-    >
-      {mapError && (
-        <p
-          className={styles.liveMap__error}
-          role="alert"
-        >
-          {mapError}
-        </p>
-      )}
-    </div>
+    <>
+      <div
+        ref={containerRef}
+        className={styles.liveMap}
+      >
+        {mapError && (
+          <p
+            className={styles.liveMap__error}
+            role="alert"
+          >
+            {mapError}
+          </p>
+        )}
+      </div>
+
+      {selectedH3 &&
+        createPortal(
+          <CellPopover
+            hexagon={selectedHexagon}
+            onClose={() => onSelectedH3Change(null)}
+          />,
+          popoverElement,
+        )}
+    </>
   );
 }
