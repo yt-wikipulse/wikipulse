@@ -1,5 +1,6 @@
 package com.springboot.web.wikipulseproject.yt_repo;
 
+import com.springboot.web.wikipulseproject.error.YtReadException;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
@@ -87,7 +88,7 @@ public class QEnrichedRepository {
 
             return new EventsPage(Collections.unmodifiableList(events), maxIdx, hasMore);
         } catch (RuntimeException e) {
-            throw new IllegalStateException(
+            throw new YtReadException(
                     "q_enriched fetch failed (cursor=" + lastSeenRowIndex
                             + ", limit=" + limit + "): " + e.getMessage(), e);
         }
