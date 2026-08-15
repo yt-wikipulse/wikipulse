@@ -1,19 +1,12 @@
 package com.springboot.web.wikipulseproject.controller;
 
 import com.springboot.web.wikipulseproject.model.dto.ActiveHexagonsResponse;
-import com.springboot.web.wikipulseproject.model.dto.HexagonDto;
-import com.springboot.web.wikipulseproject.model.dto.HexagonEventDto;
-import com.springboot.web.wikipulseproject.error.BadRequestException;
 import com.springboot.web.wikipulseproject.service.LiveMapService;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-
-
 
 @RestController
 @RequestMapping("/api/v1/hexagons")
@@ -24,9 +17,8 @@ public class LiveMapController {
         this.liveMapService = liveMapService;
     }
 
-
     @GetMapping("/active")
-    public ActiveHexagonsResponse active(
+    public ResponseEntity<ActiveHexagonsResponse> active(
         @RequestParam("min_lng") double minLng,
         @RequestParam("min_lat") double minLat,
         @RequestParam("max_lng") double maxLng,
@@ -34,14 +26,7 @@ public class LiveMapController {
         @RequestParam("zoom") int zoom
     ) {
 
-        if (minLng >= maxLng || minLat >= maxLat) {
-            throw new BadRequestException("min_lng/min_lat must be less than max_lng/max");
-        }
-        if (zoom < 0 || zoom > 30) {
-            throw new BadRequestException("zoom must be between 0 and 30");
-        }
-
-        return liveMapService.active(minLng, minLat, maxLng, maxLat, zoom);
+        return ResponseEntity.ok(liveMapService.active(minLng, minLat, maxLng, maxLat, zoom));
     }
 }
 
