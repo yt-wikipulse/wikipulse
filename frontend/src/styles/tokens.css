@@ -1,0 +1,47 @@
+/*
+ * Semantic token foundation.
+ *
+ * Здесь живут только значения, выражающие роль интерфейса и повторяющиеся
+ * между компонентами. Уникальная геометрия компонента, размеры иконок и
+ * цвета, вычисляемые из данных карты, остаются локальными.
+ */
+
+:root {
+  /* surfaces */
+  --color-background-page: #ffffff;
+  --color-background-surface: #f7f6f3;
+  --color-background-interactive-hover: #f2f0ec;
+  --color-background-accent-soft: #fbe9dc;
+  --color-background-accent-soft-hover: #f7d8c2;
+
+  /* text */
+  --color-text-primary: #1b1a18;
+  --color-text-secondary: #6b6862;
+  --color-text-accent: #a8450a;
+  --color-text-warning: #b54708;
+
+  /* lines and accent */
+  --color-border-default: #e7e4de;
+  --color-accent: #e8620c;
+
+  /* typography */
+  --font-family-sans: Inter, Arial, Helvetica, sans-serif;
+  --font-family-brand: "Helvetica Neue", Helvetica, "Segoe UI", Arial,
+    sans-serif;
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+
+  /* radii */
+  --radius-small: 7px;
+  --radius-medium: 12px;
+
+  /* focus */
+  --focus-ring: 0 0 0 3px rgb(232 98 12 / 30%);
+}

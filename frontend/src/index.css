@@ -1,8 +1,9 @@
+@import "./styles/tokens.css";
+
 :root {
-  font-family:
-    Inter, Arial, Helvetica, sans-serif;
-  color: #101828;
-  background: #ffffff;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  background: var(--color-background-page);
 }
 
 * {
@@ -23,4 +24,9 @@ body {
 
 button {
   font: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
