@@ -70,6 +70,7 @@ class InMemoryRecentEventsCacheTest {
     @Test
     void newestEventComesFirst() {
         cache.put(event("e1", CELL_A));
+        clock.advance(Duration.ofMinutes(1));
         cache.put(event("e2", CELL_A));
 
         List<EnrichedEvent> events = cache.snapshot().get(CELL_A);
@@ -129,6 +130,29 @@ class InMemoryRecentEventsCacheTest {
         assertFalse(cache.snapshot().isEmpty());
     }
 
+    @Test
+    void eventWithoutTimestampIsRejected() {
+        cache.put(eventAt("no-ts", CELL_A, 0));
+
+        assertTrue(cache.snapshot().isEmpty());
+    }
+
+    @Test
+    void eventFromFutureIsRejected() {
+        long farAhead = clock.instant().getEpochSecond() + Duration.ofHours(1).toSeconds();
+        cache.put(eventAt("future", CELL_A, farAhead));
+
+        assertTrue(cache.snapshot().isEmpty());
+    }
+
+    @Test
+    void smallClockSkewIsTolerated() {
+        long slightlyAhead = clock.instant().getEpochSecond() + 10;
+        cache.put(eventAt("skewed", CELL_A, slightlyAhead));
+
+        assertEquals(1, cache.snapshot().get(CELL_A).size());
+    }
+
     private EnrichedEvent event(String id, String cell) {
         return new EnrichedEvent(
                 rowIndex.incrementAndGet(),
@@ -136,7 +160,17 @@ class InMemoryRecentEventsCacheTest {
                 "Заголовок " + id,
                 "https://example.org/" + id,
                 cell,
-                clock.millis() / 1000);
+                clock.instant().getEpochSecond());
+    }
+
+    private EnrichedEvent eventAt(String id, String cell, long eventTs) {
+        return new EnrichedEvent(
+                rowIndex.incrementAndGet(),
+                id,
+                "Заголовок " + id,
+                "https://example.org/" + id,
+                cell,
+                eventTs);
     }
 
     /** Часы, которые можно двигать руками — иначе окно не проверить без sleep. */
