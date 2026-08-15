@@ -40,12 +40,10 @@ Q_ENRICHED  = f"{BASE}/q_enriched"
 DICT_COORDS = f"{BASE}/dict/coords_dyn"
 CONSUMER_PATH   = f"{BASE}/consumers/c_enrich"
 CHECKPOINT_PATH = f"yt:///{BASE.lstrip('/')}/checkpoints/c_enrich"
-PROXY = "https://ytsaurus.tech"
+PROXY = "https://your-cluster.example.com/"
 
 _batch_count = 0
 _yt_client = None
-
-PROXY = "https://your-cluster.example.com/"
 
 def get_yt_client():
     global _yt_client

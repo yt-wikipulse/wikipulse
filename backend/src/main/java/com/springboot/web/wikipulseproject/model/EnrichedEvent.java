@@ -1,8 +1,9 @@
 package com.springboot.web.wikipulseproject.model;
 
-public record EnrichedEvent (
+public record EnrichedEvent(
+    long rowIndex,
     String eventId,
     String title,
     String url,
-    String h3_r9
-) {}
+    String h3R9,
+    long eventTs) {}

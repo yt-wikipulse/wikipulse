@@ -40,7 +40,7 @@ public class InMemoryRecentEventsCache implements RecentEventsCache {
         if(seen.getIfPresent(event.eventId()) != null) return;
         seen.put(event.eventId(), Boolean.TRUE);
 
-        cells.computeIfAbsent(event.h3_r9(),
+        cells.computeIfAbsent(event.h3R9(),
             k -> new ConcurrentLinkedDeque<>()
          ).addFirst(new TimedEvent(event, clock.millis() ));
     }
