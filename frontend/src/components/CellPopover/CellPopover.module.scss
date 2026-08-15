@@ -1,0 +1,123 @@
+.cellPopover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 322px;
+  transform: translate(-50%, calc(-100% - 14px));
+  padding: 40px 16px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.16);
+
+  &__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #667085;
+    font-size: 18px;
+    line-height: 1;
+    background: transparent;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 3px solid rgb(0 117 255 / 30%);
+      outline-offset: 2px;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: #1d2939;
+        background: #f2f4f7;
+      }
+    }
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+  }
+
+  &__statLabel {
+    color: #667085;
+    font-size: 12px;
+  }
+
+  &__statValue {
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  &__sectionTitle {
+    margin: 0;
+
+    color: #667085;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  &__articles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__article {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+
+    &:focus-visible {
+      outline: 3px solid rgb(0 117 255 / 30%);
+      outline-offset: 2px;
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        border-color: #d0d5dd;
+        background: #f9fafb;
+      }
+    }
+  }
+
+  &__articleTitle {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__articleMeta {
+    color: #667085;
+    font-size: 13px;
+  }
+
+  &__empty {
+    margin: 0;
+
+    color: #667085;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+}
