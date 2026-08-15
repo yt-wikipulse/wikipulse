@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
+  BehaviorType,
   LngLat,
   LngLatBounds,
 } from "@yandex/ymaps3-types";
@@ -8,6 +9,7 @@ import { cellToBoundary, cellToLatLng } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "../CellPopover/CellPopover";
+import { mapCustomization } from "./mapCustomization";
 
 import styles from "./LiveMap.module.scss";
 
@@ -32,6 +34,17 @@ const INITIAL_LOCATION = {
 };
 
 const VIEWPORT_DEBOUNCE_MS = 400;
+
+const MAP_BEHAVIORS: BehaviorType[] = [
+  "drag",
+  "pinchZoom",
+  "scrollZoom",
+  "dblClick",
+  "magnifier",
+  "oneFingerZoom",
+  "mouseTilt",
+  "panTilt",
+];
 
 function h3ToPolygon(h3: string): LngLat[] {
   const boundary = cellToBoundary(h3).map(
@@ -113,8 +126,8 @@ export function LiveMap({
 
   const selectedHexagon = selectedH3
     ? (hexagons.find(
-        (hexagon) => hexagon.h3_index === selectedH3,
-      ) ?? null)
+      (hexagon) => hexagon.h3_index === selectedH3,
+    ) ?? null)
     : null;
 
   useEffect(() => {
@@ -132,16 +145,34 @@ export function LiveMap({
           containerRef.current,
           {
             location: INITIAL_LOCATION,
+            behaviors: MAP_BEHAVIORS,
           },
         );
 
         map.addChild(
-          new ymaps3.YMapDefaultSchemeLayer({}),
+          new ymaps3.YMapDefaultSchemeLayer({
+            customization: mapCustomization,
+          }),
         );
 
         map.addChild(
           new ymaps3.YMapDefaultFeaturesLayer({}),
         );
+
+        const { YMapZoomControl, YMapGeolocationControl } =
+          await ymaps3.import("@yandex/ymaps3-controls@0.0.1");
+
+        if (disposed) {
+          return;
+        }
+
+        const controls = new ymaps3.YMapControls({
+          position: "right",
+        });
+
+        controls.addChild(new YMapZoomControl({}));
+        controls.addChild(new YMapGeolocationControl({}));
+        map.addChild(controls);
 
         map.addChild(
           new ymaps3.YMapListener({
