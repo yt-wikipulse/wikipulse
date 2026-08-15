@@ -1,11 +1,11 @@
 package com.springboot.web.wikipulseproject.service;
 
+import com.springboot.web.wikipulseproject.error.BadRequestException;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import com.springboot.web.wikipulseproject.model.dto.ActiveHexagonsResponse;
 import com.springboot.web.wikipulseproject.model.dto.HexagonDto;
 import com.springboot.web.wikipulseproject.model.dto.HexagonEventDto;
 import com.springboot.web.wikipulseproject.yt_repo.RecentEventsCache;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,16 +22,24 @@ public class LiveMapService {
     private final RecentEventsCache cache;
     private final H3GeoService h3Geo;
     private final int eventsCap;
+    private final int zoomMin;
+    private final int zoomMax;
 
     public LiveMapService(RecentEventsCache cache,
                           H3GeoService h3Geo,
-                          @Value("${app.live.hexagon-events-cap:50}") int eventsCap) {
+                          @Value("${app.live.hexagon-events-cap:50}") int eventsCap,
+                          @Value("${app.live.zoom-min:0}") int zoomMin,
+                          @Value("${app.live.zoom-max:30}") int zoomMax) {
+
         this.cache = cache;
         this.h3Geo = h3Geo;
         this.eventsCap = eventsCap;
+        this.zoomMin = zoomMin;
+        this.zoomMax = zoomMax;
     }
 
     public ActiveHexagonsResponse active(double minLng, double minLat, double maxLng, double maxLat, int zoom) {
+        validateInput(minLng, minLat, maxLng, maxLat, zoom);
 
         //считаем размер шестиугольника
         int resolution = h3Geo.resolutionZoom(zoom);
@@ -59,7 +67,7 @@ public class LiveMapService {
             List<EnrichedEvent> events = bucket.getValue();
 
             //центр клетки вне видимого экрана - скипаем
-            if (!h3Geo.centerInBox(parent, minLng, minLat, maxLng, maxLat)) {
+            if (!h3Geo.intersectsBbox(parent, resolution, minLng, minLat, maxLng, maxLat)) {
                 continue;
             }
 
@@ -74,6 +82,15 @@ public class LiveMapService {
         }
 
         return new ActiveHexagonsResponse(hexagons);
+    }
+
+    private void validateInput(double minLng, double minLat, double maxLng, double maxLat, int zoom) {
+        if (minLng >= maxLng || minLat >= maxLat) {
+            throw new BadRequestException("min_lng/min_lat must be less than max_lng/max_lat");
+        }
+        if (zoom < zoomMin || zoom > zoomMax) {
+            throw new BadRequestException("zoom must be between 0 and 30");
+        }
     }
 
     //внутреннее событие парсим во внешний контракт: id/title/url

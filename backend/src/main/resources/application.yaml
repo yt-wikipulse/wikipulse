@@ -15,10 +15,12 @@ spring:
 app:
   live:
     window-minutes: 30
-    # zoom <= zoom-r3-max        -> r3
-    # zoom-r3-max < zoom <= zoom-r6-max -> r6
-    # zoom > zoom-r6-max         -> r9
-    zoom-r3-max: 5
+    #zoom <= zoom-r3-max  -> r3
+    #zoom-r3-max < zoom <= zoom-r6-max -> r6
+    #zoom > zoom-r6-max   -> r9
+    zoom-min: 0          #карты начинаются с 0 весь мир
+    zoom-max: 30         #потолок
+    zoom-r3-max: 5       #маппинг zoom -> resolution
     zoom-r6-max: 11
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
 
