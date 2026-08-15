@@ -29,6 +29,8 @@ const INITIAL_LOCATION = {
   zoom: 7,
 };
 
+const VIEWPORT_DEBOUNCE_MS = 400;
+
 function h3ToPolygon(h3: string): LngLat[] {
   const boundary = cellToBoundary(h3).map(
     ([latitude, longitude]) =>
@@ -94,6 +96,8 @@ export function LiveMap({
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  const viewportDebounceRef = useRef<number | null>(null);
+
   const maxEvents = Math.max(
     1,
     ...hexagons.map(
@@ -134,12 +138,19 @@ export function LiveMap({
                 return;
               }
 
-              onViewportChange(
-                toViewport(
-                  location.bounds,
-                  location.zoom,
-                ),
+              const nextViewport = toViewport(
+                location.bounds,
+                location.zoom,
               );
+
+              if (viewportDebounceRef.current !== null) {
+                window.clearTimeout(viewportDebounceRef.current);
+              }
+
+              viewportDebounceRef.current = window.setTimeout(() => {
+                viewportDebounceRef.current = null;
+                onViewportChange(nextViewport);
+              }, VIEWPORT_DEBOUNCE_MS);
             },
           }),
         );
@@ -162,6 +173,12 @@ export function LiveMap({
 
     return () => {
       disposed = true;
+
+      if (viewportDebounceRef.current !== null) {
+        window.clearTimeout(viewportDebounceRef.current);
+        viewportDebounceRef.current = null;
+      }
+
       featuresRef.current = [];
       mapRef.current?.destroy();
       mapRef.current = null;

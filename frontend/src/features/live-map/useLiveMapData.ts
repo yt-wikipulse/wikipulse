@@ -6,15 +6,19 @@ import {
   type GetActiveHexagonsParams,
 } from "../../api/hexagons";
 
+const POLL_INTERVAL_MS = 2_500;
+
 type LiveMapDataState = {
   hexagons: ActiveHexagon[];
   loading: boolean;
+  isBackgroundRefreshing: boolean;
   error: string | null;
 };
 
 const INITIAL_STATE: LiveMapDataState = {
   hexagons: [],
   loading: false,
+  isBackgroundRefreshing: false,
   error: null,
 };
 
@@ -30,14 +34,24 @@ export function useLiveMapData(
     }
 
     const requestViewport = viewport;
-    const controller = new AbortController();
     let cancelled = false;
+    let isFetching = false;
+    let hasData = false;
+    let activeController: AbortController | null = null;
 
     async function loadHexagons() {
+      if (isFetching) {
+        return;
+      }
+
+      isFetching = true;
+      const controller = new AbortController();
+      activeController = controller;
+
       setState((current) => ({
         ...current,
-        loading: true,
-        error: null,
+        loading: !hasData,
+        isBackgroundRefreshing: hasData,
       }));
 
       try {
@@ -50,9 +64,12 @@ export function useLiveMapData(
           return;
         }
 
+        hasData = true;
+
         setState({
           hexagons: response.hexagons,
           loading: false,
+          isBackgroundRefreshing: false,
           error: null,
         });
       } catch (error: unknown) {
@@ -63,19 +80,28 @@ export function useLiveMapData(
         setState((current) => ({
           ...current,
           loading: false,
+          isBackgroundRefreshing: false,
           error:
             error instanceof Error
               ? error.message
               : "Не удалось загрузить данные карты",
         }));
+      } finally {
+        isFetching = false;
       }
     }
 
     void loadHexagons();
 
+    const intervalId = window.setInterval(
+      () => void loadHexagons(),
+      POLL_INTERVAL_MS,
+    );
+
     return () => {
       cancelled = true;
-      controller.abort();
+      window.clearInterval(intervalId);
+      activeController?.abort();
     };
   }, [viewport]);
 
