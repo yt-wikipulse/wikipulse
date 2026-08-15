@@ -3,6 +3,7 @@ package com.springboot.web.wikipulseproject.yt_repo;
 import com.springboot.web.wikipulseproject.error.YtReadException;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 import tech.ytsaurus.client.ApiServiceTransaction;
 import tech.ytsaurus.client.YTsaurusClient;
@@ -19,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 
 @Repository
+@Profile("yt")
 public class QEnrichedRepository {
 
     public record EventsPage(List<EnrichedEvent> events, long lastRowIndex, boolean hasMore) {}
