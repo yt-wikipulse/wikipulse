@@ -45,8 +45,8 @@ Production hosting для `BrowserRouter` должен возвращать `ind
 | `pnpm build` | TypeScript build и production bundle |
 | `pnpm lint` | ESLint |
 | `pnpm preview` | локальный preview production bundle |
-
-Frontend test runner пока не настроен.
+| `pnpm test` | Vitest, один прогон |
+| `pnpm test:watch` | Vitest в watch-режиме |
 
 ## Документация
 
