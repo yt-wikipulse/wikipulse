@@ -3,9 +3,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--space-3);
 
-  padding: 24px;
+  padding: var(--space-6);
+
   text-align: center;
 
   h1,
@@ -14,26 +15,21 @@
   }
 
   p {
-    color: #6b6862;
+    color: var(--color-text-secondary);
   }
 
   &__link {
     padding: 8px 14px;
 
-    border-radius: 7px;
-
-    color: #a8450a;
-    background: #fbe9dc;
+    color: var(--color-text-accent);
     text-decoration: none;
 
-    &:focus-visible {
-      outline: 3px solid rgb(232 98 12 / 30%);
-      outline-offset: 2px;
-    }
+    background: var(--color-background-accent-soft);
+    border-radius: var(--radius-small);
 
-    @media (hover: hover) {
+    @media (hover: hover) and (pointer: fine) {
       &:hover {
-        background: #f7d8c2;
+        background: var(--color-background-accent-soft-hover);
       }
     }
   }
