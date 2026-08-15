@@ -46,11 +46,14 @@ public class MockPoller {
     void emit() {
         int i = ThreadLocalRandom.current().nextInt(PLACES.size());
         Place place = PLACES.get(i);
+        long n = counter.incrementAndGet();
         cache.put(new EnrichedEvent(
-            "mock-" + counter.incrementAndGet(),
+            n,
+            "mock-" + n,
             place.title(),
             place.url(),
-            cellKeys.get(i)
+            cellKeys.get(i),
+            System.currentTimeMillis()
         ));
     }
 }

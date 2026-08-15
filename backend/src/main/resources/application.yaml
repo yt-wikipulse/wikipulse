@@ -22,9 +22,12 @@ app:
     zoom-r6-max: 11
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
 
-  yt:
-    proxy-url: ${YT_PROXY:http://localhost:8000}
-    token: ${YT_TOKEN:}
-    queue-path: ${YT_QUEUE_PATH://home/wikpulse/Q_ENRICHED}
-    consumer: ${YT_CONSUMER:c_rt}
-    aggregates-path: ${YT_AGGREGATES_PATH://home/wikpulse/aggregates}
+
+yt:
+  proxy: "${YT_PROXY}"
+  token: "${YT_TOKEN}"
+  timeout:
+    ms: 30000
+
+  table:
+    q_enriched: //home/wikipulse/q_enriched
