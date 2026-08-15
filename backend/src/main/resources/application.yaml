@@ -26,7 +26,7 @@ app:
     zoom-r6-max: 11
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
   poller:
-    interval-ms: 2500
+    interval-ms: 500
     max-pages-per-tick: 10
 
 yt:
