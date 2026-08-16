@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Map;
 
 /**
  * ВРЕМЕННЫЙ МОК дашборда по контракту docs/03-contracts/rest-api.md.
@@ -27,25 +27,37 @@ import java.util.regex.Pattern;
 @RequestMapping("/api/v1/dashboard")
 public class DashboardController {
 
-    private static final Pattern PERIOD_PATTERN = Pattern.compile("^(\\d+)h$");
-    private static final int MAX_TOP = 100;
     private static final long HOUR_SECONDS = 3600L;
+    private static final long DAY_SECONDS = 86400L;
+    private static final int MAX_LIMIT = 100;
+
+    // Окна контракта: сколько часов витрины и с каким шагом рисуется график.
+    private static final Map<String, Window> WINDOWS = Map.of(
+        "24h", new Window(24, HOUR_SECONDS),
+        "7d", new Window(168, HOUR_SECONDS),
+        "30d", new Window(720, DAY_SECONDS));
+
+    private record Window(int hours, long bucketSeconds) {}
 
     @GetMapping
     public ResponseEntity<DashboardResponse> dashboard(
         @RequestParam(name = "period", defaultValue = "24h") String period,
-        @RequestParam(name = "top", defaultValue = "5") int top
+        @RequestParam(name = "limit", defaultValue = "10") int limit
     ) {
-        int hours = requireHours(period);
-        List<TrendPointDto> trends = mockTrends(hours);
+        Window window = requireWindow(period);
+        int top = requireLimit(limit);
+
+        List<TrendPointDto> trends = mockTrends(window);
         long totalEdits = trends.stream().mapToLong(TrendPointDto::editsCount).sum();
 
         // Фикстуры топов написаны под сутки. Масштабируем их вместе с окном,
-        // иначе за час «топ статья» набирает больше правок, чем весь поток.
-        double scale = hours / 24.0;
+        // иначе за сутки «топ статья» наберёт столько же, сколько за месяц.
+        double scale = window.hours() / 24.0;
 
         return ResponseEntity.ok(new DashboardResponse(
             period,
+            Instant.now().getEpochSecond() / HOUR_SECONDS * HOUR_SECONDS,
+            window.bucketSeconds(),
             totalEdits,
             trends,
             trim(MOCK_TOP_ARTICLES, top).stream()
@@ -58,42 +70,66 @@ public class DashboardController {
                 .toList()));
     }
 
+    private static Window requireWindow(String period) {
+        Window window = WINDOWS.get(period);
+        if (window == null) {
+            throw new BadRequestException(
+                "period must be one of 24h, 7d, 30d, got: " + period);
+        }
+        return window;
+    }
+
+    private static int requireLimit(int limit) {
+        if (limit < 1 || limit > MAX_LIMIT) {
+            throw new BadRequestException(
+                "limit must be between 1 and " + MAX_LIMIT + ", got: " + limit);
+        }
+        return limit;
+    }
+
+    // Суточная волна: ночью тихо, днём пик — чтобы график не выглядел ровной
+    // стеной. Привязана к номеру часа, а не к random: цифры не скачут между
+    // запросами. Часы складываются в бакеты того шага, что задал контракт.
+    private static List<TrendPointDto> mockTrends(Window window) {
+        long currentBucket = Instant.now().getEpochSecond() / HOUR_SECONDS * HOUR_SECONDS;
+        List<TrendPointDto> points = new ArrayList<>();
+        long openBucketTs = -1;
+        long openEdits = 0;
+
+        for (int i = window.hours() - 1; i >= 0; i--) {
+            long hourTs = currentBucket - i * HOUR_SECONDS;
+            long bucketTs = hourTs / window.bucketSeconds() * window.bucketSeconds();
+
+            if (bucketTs != openBucketTs) {
+                if (openBucketTs >= 0) {
+                    points.add(new TrendPointDto(openBucketTs, openEdits));
+                }
+                openBucketTs = bucketTs;
+                openEdits = 0;
+            }
+
+            openEdits += hourlyEdits(hourTs);
+        }
+
+        if (openBucketTs >= 0) {
+            points.add(new TrendPointDto(openBucketTs, openEdits));
+        }
+
+        return points;
+    }
+
+    private static long hourlyEdits(long hourTs) {
+        int hourOfDay = (int) (hourTs / HOUR_SECONDS % 24);
+        double wave = Math.sin((hourOfDay - 3) / 24.0 * 2 * Math.PI);
+        return Math.round(3200 + 2400 * wave);
+    }
+
     private static long scaled(long value, double scale) {
         return Math.max(1, Math.round(value * scale));
     }
 
-    private static int requireHours(String period) {
-        var matcher = PERIOD_PATTERN.matcher(period == null ? "" : period);
-        if (!matcher.matches()) {
-            throw new BadRequestException("period must look like \"24h\", got: " + period);
-        }
-        int hours = Integer.parseInt(matcher.group(1));
-        // Потолок — месяц: витрины дальше месяца фронт не запрашивает.
-        if (hours < 1 || hours > 744) {
-            throw new BadRequestException("period must be between 1h and 744h, got: " + period);
-        }
-        return hours;
-    }
-
-    // Суточная волна: ночью тихо, днём пик — чтобы график не выглядел ровной стеной.
-    // Привязана к номеру часа, а не к random: между поллингами цифры не скачут.
-    private static List<TrendPointDto> mockTrends(int hours) {
-        long currentBucket = Instant.now().getEpochSecond() / HOUR_SECONDS * HOUR_SECONDS;
-        List<TrendPointDto> points = new ArrayList<>(hours);
-        for (int i = hours - 1; i >= 0; i--) {
-            long bucketTs = currentBucket - i * HOUR_SECONDS;
-            int hourOfDay = (int) (bucketTs / HOUR_SECONDS % 24);
-            double wave = Math.sin((hourOfDay - 3) / 24.0 * 2 * Math.PI);
-            points.add(new TrendPointDto(bucketTs, Math.round(3200 + 2400 * wave)));
-        }
-        return points;
-    }
-
     private static <T> List<T> trim(List<T> rows, int top) {
-        if (top < 1) {
-            throw new BadRequestException("top must be at least 1, got: " + top);
-        }
-        return rows.subList(0, Math.min(rows.size(), Math.min(top, MAX_TOP)));
+        return rows.subList(0, Math.min(rows.size(), top));
     }
 
     private static final List<TopArticleDto> MOCK_TOP_ARTICLES = List.of(

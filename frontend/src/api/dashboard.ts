@@ -19,6 +19,8 @@ export type TopGeoPlace = {
 
 export type DashboardResponse = {
   period: string;
+  generated_at: number;
+  bucket_seconds: number;
   total_edits: number;
   trends: TrendPoint[];
   top_articles: TopArticle[];
@@ -27,7 +29,7 @@ export type DashboardResponse = {
 
 export type GetDashboardParams = {
   period: string;
-  top: number;
+  limit: number;
 };
 
 export async function getDashboard(
@@ -36,7 +38,7 @@ export async function getDashboard(
 ): Promise<DashboardResponse> {
   const query = new URLSearchParams({
     period: params.period,
-    top: String(params.top),
+    limit: String(params.limit),
   });
 
   const response = await fetch(`/api/v1/dashboard?${query}`, { signal });

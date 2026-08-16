@@ -32,7 +32,7 @@ export function useDashboardData(period: string) {
     let cancelled = false;
     const controller = new AbortController();
 
-    getDashboard({ period, top: TOP_LIMIT }, controller.signal)
+    getDashboard({ period, limit: TOP_LIMIT }, controller.signal)
       .then((data) => {
         if (!cancelled) {
           setResult({ key, data, error: null });
