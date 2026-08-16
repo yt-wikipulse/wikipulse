@@ -1,14 +1,4 @@
-import type { TrendPoint } from "../api/dashboard";
-
-export type ChartBucket = {
-  ts: number;
-  editsCount: number;
-};
-
-// Витрина трендов всегда почасовая. За неделю это 168 столбиков, за месяц —
-// 720: в такой график смотреть невозможно, поэтому длинные периоды
-// схлопываем в дни. Порог — двое суток.
-const HOURLY_CHART_MAX_HOURS = 48;
+const DAY_SECONDS = 86400;
 
 const AXIS_LABELS = 6;
 
@@ -23,36 +13,10 @@ const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   month: "2-digit",
 });
 
-export function parsePeriodHours(period: string): number {
-  const hours = Number.parseInt(period, 10);
-  return Number.isFinite(hours) && hours > 0 ? hours : 0;
-}
-
-export function isDailyChart(hours: number): boolean {
-  return hours > HOURLY_CHART_MAX_HOURS;
-}
-
-export function groupTrends(
-  trends: TrendPoint[],
-  hours: number,
-): ChartBucket[] {
-  if (!isDailyChart(hours)) {
-    return trends.map((point) => ({
-      ts: point.bucket_ts,
-      editsCount: point.edits_count,
-    }));
-  }
-
-  const days = new Map<number, number>();
-
-  for (const point of trends) {
-    const day = startOfLocalDay(point.bucket_ts);
-    days.set(day, (days.get(day) ?? 0) + point.edits_count);
-  }
-
-  return [...days.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([ts, editsCount]) => ({ ts, editsCount }));
+// Шаг графика задаёт бэкенд полем bucket_seconds — фронт только решает,
+// подписывать точку часом или датой.
+export function isDailyChart(bucketSeconds: number): boolean {
+  return bucketSeconds >= DAY_SECONDS;
 }
 
 // Подписи под каждым столбиком не помещаются — оставляем примерно шесть штук
@@ -98,10 +62,4 @@ export function sharePercent(value: number, total: number): string {
   }
 
   return `${((value / total) * 100).toFixed(1).replace(".", ",")}%`;
-}
-
-function startOfLocalDay(ts: number): number {
-  const date = new Date(ts * 1000);
-  date.setHours(0, 0, 0, 0);
-  return Math.floor(date.getTime() / 1000);
 }

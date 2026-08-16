@@ -6,17 +6,15 @@ import {
   axisLabelIndexes,
   formatBucketLabel,
   formatCount,
-  groupTrends,
   isDailyChart,
-  parsePeriodHours,
   pluralizeEdits,
   sharePercent,
 } from "./DashboardPage.helpers";
 
 const PERIODS = [
   { value: "24h", tab: "1 день", caption: "последние сутки" },
-  { value: "168h", tab: "1 неделя", caption: "последняя неделя" },
-  { value: "720h", tab: "1 месяц", caption: "последний месяц" },
+  { value: "7d", tab: "1 неделя", caption: "последняя неделя" },
+  { value: "30d", tab: "1 месяц", caption: "последний месяц" },
 ];
 
 export function DashboardPage() {
@@ -25,10 +23,9 @@ export function DashboardPage() {
 
   const caption =
     PERIODS.find((item) => item.value === period)?.caption ?? period;
-  const hours = parsePeriodHours(period);
-  const daily = isDailyChart(hours);
-  const buckets = groupTrends(data?.trends ?? [], hours);
-  const maxEdits = Math.max(...buckets.map((bucket) => bucket.editsCount), 1);
+  const daily = isDailyChart(data?.bucket_seconds ?? 0);
+  const buckets = data?.trends ?? [];
+  const maxEdits = Math.max(...buckets.map((bucket) => bucket.edits_count), 1);
   const axisLabels = axisLabelIndexes(buckets.length);
 
   const totalEdits = data?.total_edits ?? 0;
@@ -176,22 +173,22 @@ export function DashboardPage() {
             <div className={styles.dashboardPage__chart} role="list">
               {buckets.map((bucket, index) => (
                 <div
-                  key={bucket.ts}
+                  key={bucket.bucket_ts}
                   className={styles.dashboardPage__column}
                   role="listitem"
-                  aria-label={`${formatBucketLabel(bucket.ts, daily)} — ${formatCount(bucket.editsCount)} ${pluralizeEdits(bucket.editsCount)}`}
+                  aria-label={`${formatBucketLabel(bucket.bucket_ts, daily)} — ${formatCount(bucket.edits_count)} ${pluralizeEdits(bucket.edits_count)}`}
                 >
                   <span className={styles.dashboardPage__columnTrack}>
                     <span
                       className={styles.dashboardPage__columnBar}
                       style={{
-                        height: `${(bucket.editsCount / maxEdits) * 100}%`,
+                        height: `${(bucket.edits_count / maxEdits) * 100}%`,
                       }}
                     />
                   </span>
                   <span className={styles.dashboardPage__columnLabel}>
                     {axisLabels.has(index)
-                      ? formatBucketLabel(bucket.ts, daily)
+                      ? formatBucketLabel(bucket.bucket_ts, daily)
                       : ""}
                   </span>
                 </div>
