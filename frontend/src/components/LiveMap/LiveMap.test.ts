@@ -6,23 +6,35 @@ import { getFillColor, h3ToPolygon, toViewport } from "./LiveMap.helpers";
 
 describe("toViewport", () => {
   it("нормализует bbox независимо от порядка углов и floor'ит zoom", () => {
-    expect(toViewport([[10, 20], [5, 15]], 7.9)).toEqual({
-      minLng: 5,
-      minLat: 15,
-      maxLng: 10,
-      maxLat: 20,
-      zoom: 7,
-    });
+    expect(toViewport([[10, 20], [5, 15]], 7.9)).toEqual(
+      toViewport([[5, 15], [10, 20]], 7.9),
+    );
+
+    expect(toViewport([[10, 20], [5, 15]], 7.9).zoom).toBe(7);
   });
 
-  it("работает и когда первый угол уже минимальный", () => {
-    expect(toViewport([[5, 15], [10, 20]], 3)).toEqual({
-      minLng: 5,
-      minLat: 15,
-      maxLng: 10,
-      maxLat: 20,
-      zoom: 3,
-    });
+  it("запрашивает область с запасом за краем экрана", () => {
+    const viewport = toViewport([[37, 57], [41, 55]], 7);
+
+    expect(viewport.minLng).toBeLessThan(37);
+    expect(viewport.maxLng).toBeGreaterThan(41);
+    expect(viewport.minLat).toBeLessThan(55);
+    expect(viewport.maxLat).toBeGreaterThan(57);
+  });
+
+  it("не меняет bbox, пока карта не переехала в соседнюю клетку", () => {
+    expect(toViewport([[37.1, 57.1], [41.1, 55.1]], 7)).toEqual(
+      toViewport([[37.6, 57.3], [41.6, 55.3]], 7),
+    );
+  });
+
+  it("не вылезает за границы координат", () => {
+    const viewport = toViewport([[-179, 89], [179, -89]], 2);
+
+    expect(viewport.minLng).toBeGreaterThanOrEqual(-180);
+    expect(viewport.maxLng).toBeLessThanOrEqual(180);
+    expect(viewport.minLat).toBeGreaterThanOrEqual(-90);
+    expect(viewport.maxLat).toBeLessThanOrEqual(90);
   });
 });
 

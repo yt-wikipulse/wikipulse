@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { BehaviorType, LngLat } from "@yandex/ymaps3-types";
-import { cellToLatLng } from "h3-js";
+import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "../CellPopover/CellPopover";
@@ -28,8 +28,6 @@ const INITIAL_LOCATION = {
   center: [37.6176, 55.7558] as LngLat,
   zoom: 7,
 };
-
-const VIEWPORT_DEBOUNCE_MS = 400;
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -66,13 +64,12 @@ export function LiveMap({
     document.createElement("div"),
   );
 
-  const viewportDebounceRef = useRef<number | null>(null);
+  // Слушатель карты создаётся один раз, данные читает через ref.
+  const hexagonsRef = useRef(hexagons);
 
-  const maxEvents = Math.max(
+  const maxEvents = hexagons.reduce(
+    (max, hexagon) => Math.max(max, hexagon.events_count),
     1,
-    ...hexagons.map(
-      (hexagon) => hexagon.events_count,
-    ),
   );
 
   const selectedHexagon = selectedH3
@@ -133,30 +130,38 @@ export function LiveMap({
 
         map.addChild(
           new ymaps3.YMapListener({
-            onClick: (object) => {
-              if (!object) {
-                onSelectedH3Change(null);
-              }
-            },
+            onClick: (_object, event) => {
+              const active = hexagonsRef.current;
+              const coordinates = event?.coordinates;
 
-            onUpdate: ({ location, mapInAction }) => {
-              if (mapInAction) {
+              if (!coordinates || active.length === 0) {
+                onSelectedH3Change(null);
                 return;
               }
 
-              const nextViewport = toViewport(
-                location.bounds,
-                location.zoom,
+              const [lng, lat] = coordinates;
+
+              const cell = latLngToCell(
+                lat,
+                lng,
+                getResolution(active[0].h3_index),
               );
 
-              if (viewportDebounceRef.current !== null) {
-                window.clearTimeout(viewportDebounceRef.current);
-              }
+              onSelectedH3Change(
+                active.some(
+                  (hexagon) => hexagon.h3_index === cell,
+                )
+                  ? cell
+                  : null,
+              );
+            },
 
-              viewportDebounceRef.current = window.setTimeout(() => {
-                viewportDebounceRef.current = null;
-                onViewportChange(nextViewport);
-              }, VIEWPORT_DEBOUNCE_MS);
+            // Грузим и во время движения: округлённый bbox меняется
+            // раз в четверть экрана, лишних запросов не будет.
+            onUpdate: ({ location }) => {
+              onViewportChange(
+                toViewport(location.bounds, location.zoom),
+              );
             },
           }),
         );
@@ -182,11 +187,6 @@ export function LiveMap({
     return () => {
       disposed = true;
 
-      if (viewportDebounceRef.current !== null) {
-        window.clearTimeout(viewportDebounceRef.current);
-        viewportDebounceRef.current = null;
-      }
-
       featuresRef.current = [];
       mapRef.current?.destroy();
       mapRef.current = null;
@@ -194,55 +194,67 @@ export function LiveMap({
   }, [onViewportChange, onSelectedH3Change]);
 
   useEffect(() => {
+    hexagonsRef.current = hexagons;
+
     const map = mapRef.current;
 
     if (!map) {
       return;
     }
 
+    // Одна фича на цвет, а не на ячейку: тысячи YMapFeature карта не тянет.
+    const groups = new Map<string, LngLat[][][]>();
+
+    for (const hexagon of hexagons) {
+      const fill = getFillColor(
+        hexagon,
+        maxEvents,
+        selectedH3,
+      );
+
+      const polygon = [
+        h3ToPolygon(hexagon.h3_index),
+      ];
+
+      const group = groups.get(fill);
+
+      if (group) {
+        group.push(polygon);
+      } else {
+        groups.set(fill, [polygon]);
+      }
+    }
+
+    const features = [...groups].map(
+      ([fill, coordinates]) => {
+        const feature = new ymaps3.YMapFeature({
+          geometry: {
+            type: "MultiPolygon",
+            coordinates,
+          },
+
+          style: {
+            cursor: "pointer",
+            fill,
+
+            stroke: [
+              {
+                color: "#ffffffd2",
+                width: 1,
+              },
+            ],
+          },
+        });
+
+        map.addChild(feature);
+
+        return feature;
+      },
+    );
+
     for (const feature of featuresRef.current) {
       map.removeChild(feature);
     }
-
-    const features = hexagons.map((hexagon) => {
-      const feature = new ymaps3.YMapFeature({
-        id: hexagon.h3_index,
-
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            h3ToPolygon(hexagon.h3_index),
-          ],
-        },
-
-        style: {
-          cursor: "pointer",
-
-          fill: getFillColor(
-            hexagon,
-            maxEvents,
-            selectedH3,
-          ),
-
-          stroke: [
-            {
-              color: "#ffffffd2",
-              width: 1,
-            },
-          ],
-        },
-
-        onClick: () => {
-          onSelectedH3Change(
-            hexagon.h3_index,
-          );
-        },
-      });
-
-      map.addChild(feature);
-
-      return feature;
-    });
 
     featuresRef.current = features;
   }, [
@@ -250,7 +262,6 @@ export function LiveMap({
     selectedH3,
     maxEvents,
     mapVersion,
-    onSelectedH3Change,
   ]);
 
   useEffect(() => {

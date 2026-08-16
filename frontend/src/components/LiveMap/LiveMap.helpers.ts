@@ -11,14 +11,53 @@ export type MapViewport = {
   zoom: number;
 };
 
+// ponytail: при переполнении чистим кэш целиком, LRU — если начнёт мазать.
+const BOUNDARY_CACHE_CAP = 20_000;
+
+const boundaryCache = new Map<string, LngLat[]>();
+
 export function h3ToPolygon(h3: string): LngLat[] {
+  const cached = boundaryCache.get(h3);
+
+  if (cached) {
+    return cached;
+  }
+
   const boundary = cellToBoundary(h3).map(
     ([latitude, longitude]) => [longitude, latitude] as LngLat,
   );
 
-  return boundary.length > 0
+  const ring = boundary.length > 0
     ? [...boundary, boundary[0]]
     : boundary;
+
+  if (boundaryCache.size >= BOUNDARY_CACHE_CAP) {
+    boundaryCache.clear();
+  }
+
+  boundaryCache.set(h3, ring);
+
+  return ring;
+}
+
+// Доля экрана, которую догружаем за краем. Она же — шаг сетки округления
+// bbox: пока карта не переехала на соседнюю клетку, запрос не меняется.
+const VIEWPORT_PAD = 0.25;
+
+function padAxis(
+  first: number,
+  second: number,
+  limit: number,
+): [number, number] {
+  const min = Math.min(first, second);
+  const max = Math.max(first, second);
+
+  const step = Math.max((max - min) * VIEWPORT_PAD, Number.EPSILON);
+
+  return [
+    Math.max(-limit, Math.floor(min / step) * step - step),
+    Math.min(limit, Math.ceil(max / step) * step + step),
+  ];
 }
 
 export function toViewport(
@@ -27,14 +66,20 @@ export function toViewport(
 ): MapViewport {
   const [[firstLng, firstLat], [secondLng, secondLat]] = bounds;
 
+  const [minLng, maxLng] = padAxis(firstLng, secondLng, 180);
+  const [minLat, maxLat] = padAxis(firstLat, secondLat, 90);
+
   return {
-    minLng: Math.min(firstLng, secondLng),
-    minLat: Math.min(firstLat, secondLat),
-    maxLng: Math.max(firstLng, secondLng),
-    maxLat: Math.max(firstLat, secondLat),
+    minLng,
+    minLat,
+    maxLng,
+    maxLat,
     zoom: Math.floor(zoom),
   };
 }
+
+// Ступеней заливки: чем их меньше, тем меньше MultiPolygon-фич на карте.
+const FILL_LEVELS = 8;
 
 export function getFillColor(
   hexagon: ActiveHexagon,
@@ -45,9 +90,11 @@ export function getFillColor(
     return "#ff5f1fe6";
   }
 
-  const intensity = hexagon.events_count / maxEvents;
+  const level = Math.round(
+    (hexagon.events_count / maxEvents) * (FILL_LEVELS - 1),
+  );
 
-  const alpha = Math.round(90 + intensity * 150)
+  const alpha = Math.round(90 + (level / (FILL_LEVELS - 1)) * 150)
     .toString(16)
     .padStart(2, "0");
 
