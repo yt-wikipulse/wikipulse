@@ -14,14 +14,13 @@ import {
 } from "./DashboardPage.helpers";
 
 const PERIODS = [
-  { value: "1h", tab: "1 час", caption: "последний час" },
   { value: "24h", tab: "1 день", caption: "последние сутки" },
   { value: "168h", tab: "1 неделя", caption: "последняя неделя" },
   { value: "720h", tab: "1 месяц", caption: "последний месяц" },
 ];
 
 export function DashboardPage() {
-  const [period, setPeriod] = useState(PERIODS[1].value);
+  const [period, setPeriod] = useState(PERIODS[0].value);
   const { data, loading, error, reload } = useDashboardData(period);
 
   const caption =
