@@ -14,6 +14,11 @@ Q_ENRICHED = f"{BASE}/q_enriched"
 DICT_COORDS = f"{BASE}/dict/coords"
 CONSUMER   = f"{BASE}/consumers/c_enrich"
 
+T_HISTORY         = f"{BASE}/history/t_history"
+MARTS_TRENDS      = f"{BASE}/marts/trends"
+MARTS_TOP_ARTICLES = f"{BASE}/marts/top_articles"
+MARTS_TOP_GEO     = f"{BASE}/marts/top_geo"
+
 
 def check_env():
     proxy = os.environ.get("YT_PROXY")
@@ -48,6 +53,37 @@ DICT_COORDS_SCHEMA = [
     {"name": "title", "type": "string", "sort_order": "ascending"},
     {"name": "lat",   "type": "double"},
     {"name": "lon",   "type": "double"},
+]
+
+T_HISTORY_SCHEMA = [
+    {"name": "event_id", "type": "string"},
+    {"name": "title",    "type": "string"},
+    {"name": "url",      "type": "string"},
+    {"name": "h3_r9",    "type": "string"},
+    {"name": "event_ts", "type": "uint64"},
+]
+
+MARTS_TRENDS_SCHEMA = [
+    {"name": "bucket_ts",   "type": "uint64", "sort_order": "ascending"},
+    {"name": "edits_count", "type": "int64"},
+]
+
+MARTS_TOP_ARTICLES_SCHEMA = [
+    {"name": "period",      "type": "string", "sort_order": "ascending"},
+    {"name": "rank",        "type": "int64",  "sort_order": "ascending"},
+    {"name": "title",       "type": "string"},
+    {"name": "url",         "type": "string"},
+    {"name": "edits_count", "type": "int64"},
+]
+
+MARTS_TOP_GEO_SCHEMA = [
+    {"name": "period",        "type": "string", "sort_order": "ascending"},
+    {"name": "rank",          "type": "int64",  "sort_order": "ascending"},
+    {"name": "h3_parent",     "type": "string"},
+    {"name": "top_title",     "type": "string"},
+    {"name": "top_url",       "type": "string"},
+    {"name": "edits_count",   "type": "int64"},
+    {"name": "articles_count", "type": "int64"},
 ]
 
 
@@ -107,6 +143,8 @@ def main():
     create_dir(f"{BASE}/dict")
     create_dir(f"{BASE}/consumers")
     create_dir(f"{BASE}/checkpoints")
+    create_dir(f"{BASE}/history")
+    create_dir(f"{BASE}/marts")
 
     print("\n🔄 Очереди (dynamic tables):")
     create_dynamic_table(Q_RAW,      Q_RAW_SCHEMA,      "сырые события SSE")
@@ -117,6 +155,14 @@ def main():
 
     print("\n📚 Справочник (static table):")
     create_static_table(DICT_COORDS, DICT_COORDS_SCHEMA, "координаты статей")
+
+    print("\n🗄 История (static table):")
+    create_static_table(T_HISTORY, T_HISTORY_SCHEMA, "архив q_enriched, источник витрин")
+
+    print("\n📊 Витрины дашборда (dynamic tables):")
+    create_dynamic_table(MARTS_TRENDS, MARTS_TRENDS_SCHEMA, "правки по часам")
+    create_dynamic_table(MARTS_TOP_ARTICLES, MARTS_TOP_ARTICLES_SCHEMA, "топ правимых статей (снапшот)")
+    create_dynamic_table(MARTS_TOP_GEO, MARTS_TOP_GEO_SCHEMA, "топ гео-мест (снапшот)")
 
     print("\n" + "=" * 60)
     print("✅ Все таблицы готовы.")
