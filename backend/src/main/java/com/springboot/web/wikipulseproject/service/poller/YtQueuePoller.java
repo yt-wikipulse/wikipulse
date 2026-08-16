@@ -19,7 +19,6 @@ public class YtQueuePoller {
     private final RecentEventsCache cache;
     private final int maxPagesPerTick;
 
-    /** Курсор очереди. null — ещё не знаем, где начинать. */
     private Long lastSeenRowIndex = null;
     private int ytFailStreak = 0;
 

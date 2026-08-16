@@ -15,6 +15,7 @@ bigdata/
 ├── jobs/                     ← постоянно/периодически работающие
 │   ├── ingestor.py           ← SSE → Q_RAW (работает на твоём ноуте)
 │   ├── spyt_enrich.py        ← Q_RAW → JOIN → Q_ENRICHED (на кластере)
+│   ├── archiver.py           ← Q_ENRICHED → T_HISTORY, раз в час (на ноуте)
 │   └── spyt_marts.py         ← T_HISTORY → витрины дашборда (на кластере)
 └── README.md                 ← этот файл
 ```
@@ -99,7 +100,7 @@ Spark-джобы запускаются **на кластере** (`--deploy-mod
 
 ```bash
 # Заливаем скрипт как файл
-yt write //home/wikipulse/src --file-from jobs/spyt_enrich.py
+yt write //home/wikipulse/src --file-from src/bigdata/jobs/spyt_enrich.py
 ```
 
 ### 6. Запустить SPYT-enrich (Q_RAW → Q_ENRICHED)
@@ -123,11 +124,33 @@ yt select-rows "* from [//home/wikipulse/q_enriched] \
   where has_geo = true limit 10" --format json
 ```
 
-### 7. Запустить агрегатор витрин (по требованию)
+### 7. Запустить архиватор (Q_ENRICHED → T_HISTORY)
+
+Копирует новые строки очереди в статическую историю — источник витрин.
+Курсор хранится в атрибуте `history/t_history/@archiver_last_row_index`,
+поэтому перезапуск ничего не теряет и не дублирует.
+```bash
+uv run archiver
+```
+
+Обычно запускается по крону раз в час:
+```cron
+0 * * * * cd /path/to/WikiPulse/bigdata && uv run archiver >> /tmp/wikipulse_archiver.log 2>&1
+```
+
+Проверка:
+```bash
+yt select-rows "* from [//home/wikipulse/history/t_history] limit 5" --format json
+```
+
+⚠️ Очередь `q_enriched` живёт ограниченное время: если строки вычищаются
+быстрее, чем раз в час, — запускай архиватор чаще.
+
+### 8. Запустить агрегатор витрин (T_HISTORY → marts/*)
 
 Загрузить скрипт:
 ```bash
-yt write //home/wikipulse/src --file-from jobs/spyt_marts.py
+yt write //home/wikipulse/src --file-from src/bigdata/jobs/spyt_marts.py
 ```
 
 Запустить агрегацию за последние 24 часа:
@@ -135,21 +158,38 @@ yt write //home/wikipulse/src --file-from jobs/spyt_marts.py
 spark-submit \
   --master ytsaurus://https://your-cluster.example.com \
   --deploy-mode cluster \
-  --num-executors 2 \
+  --num-executors 2 --executor-memory 2g --executor-cores 1 \
+  --driver-memory 2g \
+  --conf spark.hadoop.yt.proxy.role=http \
+  --conf spark.yarn.appMasterEnv.YT_TOKEN=$YT_TOKEN \
+  --conf spark.yarn.appMasterEnv.YT_PROXY=your-cluster.example.com \
   --conf spark.pyspark.python=/usr/bin/python3.11 \
+  --conf spark.shuffle.useOldFetchProtocol=true \
   --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
+  --files yt:///home/wikipulse/lib/h3.zip \
   yt:///home/wikipulse/src/spyt_marts.py --hours 24
 ```
 
+⚠️ `spark.shuffle.useOldFetchProtocol=true` — обязательный костыль для кластера:
+sandbox'и executor'ов на одном узле не видят /tmp друг друга, host-local
+чтение шафлов падает с `NoSuchFileException .../blockmgr-*/shuffle_*`.
+Старый протокол фетча отключает host-local чтение полностью.
+Альтернатива: `--num-executors 1` (без соседа на узле механизм не запускается).
+
+Параметры: `--hours` (окно, по умолчанию 24), `--top-n` (размер топов,
+по умолчанию 100), `--h3-res` (резолюция H3 топа мест, по умолчанию 4).
+Запуск идемпотентен: витрины перезаписываются по ключам, повторный запуск
+безопасен.
+
 Проверь витрины:
 ```bash
-# Топ стран
-yt select-rows "* from [//home/wikipulse/marts/top_countries] \
-  order by edits_count desc limit 10" --format json
+# Топ статей
+yt select-rows "* from [//home/wikipulse/marts/top_articles] \
+  where period = \"24h\" order by rank limit 10" --format json
 
-# По языкам
-yt select-rows "* from [//home/wikipulse/marts/by_language] \
-  order by edits_count desc limit 10" --format json
+# Топ гео-мест
+yt select-rows "* from [//home/wikipulse/marts/top_geo] \
+  where period = \"24h\" order by rank limit 10" --format json
 
 # Тренды по часам
 yt select-rows "* from [//home/wikipulse/marts/trends] \

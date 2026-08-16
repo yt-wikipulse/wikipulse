@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""
+source ~/a-summer-school
+uv run archiver
+"""
+import logging
+import os
+import sys
+
+import yt.wrapper as yt
+
+BASE = "//home/wikipulse"
+Q_ENRICHED = f"{BASE}/q_enriched"
+T_HISTORY = f"{BASE}/history/t_history"
+
+CURSOR_ATTR = "archiver_last_row_index"
+PAGE_SIZE = 5000
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+log = logging.getLogger("archiver")
+
+
+def read_cursor() -> int:
+    path = f"{T_HISTORY}/@{CURSOR_ATTR}"
+    if not yt.exists(path):
+        return 0
+    return int(yt.get(path))
+
+
+def write_cursor(value: int):
+    yt.set(f"{T_HISTORY}/@{CURSOR_ATTR}", value)
+
+
+def fetch_page(cursor: int, limit: int) -> list[dict]:
+    query = (
+        f"[$row_index] as row_index, event_id, title, url, h3_r9, event_ts "
+        f"from [{Q_ENRICHED}] where [$row_index] > {cursor} limit {limit}"
+    )
+    return list(yt.select_rows(query))
+
+
+def main():
+    if not os.environ.get("YT_PROXY"):
+        print("ОШИБКА: YT_PROXY не задан.")
+        print("Выполни: source ~/a-summer-school")
+        sys.exit(1)
+
+    cursor = read_cursor()
+    total = 0
+
+    log.info("Архиватор стартовал: %s → %s | курсор %d", Q_ENRICHED, T_HISTORY, cursor)
+    log.info("-" * 60)
+
+    while True:
+        page = fetch_page(cursor, PAGE_SIZE)
+        if not page:
+            break
+
+        rows = [
+            {
+                "event_id": r["event_id"],
+                "title":    r["title"],
+                "url":      r["url"],
+                "h3_r9":    r["h3_r9"],
+                "event_ts": int(r["event_ts"]),
+            }
+            for r in page
+        ]
+        yt.write_table(yt.TablePath(T_HISTORY, append=True), rows)
+
+        cursor = max(int(r["row_index"]) for r in page)
+        write_cursor(cursor)
+        total += len(rows)
+        log.info("заархивировано %d | всего %d | курсор %d", len(rows), total, cursor)
+
+    log.info("=" * 60)
+    log.info("Готово: %d строк, курсор %d", total, cursor)
+
+
+if __name__ == "__main__":
+    main()

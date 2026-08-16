@@ -8,12 +8,19 @@ dependencies = [
     "ytsaurus-client>=0.13.53",
     "ytsaurus-yson>=0.4.10",
     "orjson>=3.10.0",
+    "h3>=4.5.0",
 ]
 
 [project.scripts]
 init-tables           = "bigdata.scripts.init_tables:main"
 load-dict-coords-full = "bigdata.scripts.load_dict_coords_full:main"
 ingestor              = "bigdata.jobs.ingestor:main"
+archiver              = "bigdata.jobs.archiver:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
