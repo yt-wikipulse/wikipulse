@@ -1,15 +1,243 @@
+import { useState } from "react";
+
+import { useDashboardData } from "../features/dashboard/useDashboardData";
 import styles from "./DashboardPage.module.scss";
+import {
+  axisLabelIndexes,
+  formatBucketLabel,
+  formatCount,
+  isDailyChart,
+  pluralizeEdits,
+  sharePercent,
+} from "./DashboardPage.helpers";
+
+const PERIODS = [
+  { value: "24h", tab: "1 день", caption: "последние сутки" },
+  { value: "7d", tab: "1 неделя", caption: "последняя неделя" },
+  { value: "30d", tab: "1 месяц", caption: "последний месяц" },
+];
 
 export function DashboardPage() {
+  const [period, setPeriod] = useState(PERIODS[0].value);
+  const { data, loading, error, reload } = useDashboardData(period);
+
+  const caption =
+    PERIODS.find((item) => item.value === period)?.caption ?? period;
+  const daily = isDailyChart(data?.bucket_seconds ?? 0);
+  const buckets = data?.trends ?? [];
+  const maxEdits = Math.max(...buckets.map((bucket) => bucket.edits_count), 1);
+  const axisLabels = axisLabelIndexes(buckets.length);
+
+  const totalEdits = data?.total_edits ?? 0;
+  const topArticle = data?.top_articles[0];
+  const topPlace = data?.top_geo[0];
+  // Бэкенд добивает пустые часы нулями, поэтому судим по сумме, а не по
+  // длине массива: 24 нулевых столбика — это тоже «данных нет».
+  const isEmpty = Boolean(data) && totalEdits === 0;
+
   return (
-    <main
-      className={styles.dashboardPage}
-      aria-labelledby="dashboard-title"
-    >
-      <h1 id="dashboard-title">Дашборд</h1>
-      <p>
-        Аналитика появится после согласования исторического источника данных.
-      </p>
+    <main className={styles.dashboardPage} aria-labelledby="dashboard-title">
+      <header className={styles.dashboardPage__head}>
+        <div className={styles.dashboardPage__heading}>
+          <h1 id="dashboard-title" className={styles.dashboardPage__title}>
+            Аналитика правок
+          </h1>
+          <p className={styles.dashboardPage__subtitle}>
+            Сводка по потоку правок Википедии · {caption}
+          </p>
+        </div>
+
+        <div className={styles.dashboardPage__periods} role="group" aria-label="Период">
+          {PERIODS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={styles.dashboardPage__period}
+              aria-pressed={item.value === period}
+              onClick={() => setPeriod(item.value)}
+            >
+              {item.tab}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {error ? (
+        <section className={styles.dashboardPage__notice} role="alert">
+          <p>Не удалось загрузить дашборд: {error}</p>
+          <button
+            type="button"
+            className={styles.dashboardPage__retry}
+            onClick={reload}
+          >
+            Повторить
+          </button>
+        </section>
+      ) : null}
+
+      {!error && loading && !data ? (
+        <section className={styles.dashboardPage__notice} aria-live="polite">
+          <p>Загружаем витрины…</p>
+        </section>
+      ) : null}
+
+      {!error && isEmpty ? (
+        <section className={styles.dashboardPage__notice}>
+          <p>
+            За {caption} правок нет. Витрины пересчитываются раз в час — если
+            период только что открылся, данные появятся после ближайшего
+            пересчёта.
+          </p>
+        </section>
+      ) : null}
+
+      {data && !isEmpty ? (
+        <div className={styles.dashboardPage__grid}>
+          <section className={styles.dashboardPage__kpis}>
+            <article className={styles.dashboardPage__kpi}>
+              <h2 className={styles.dashboardPage__label}>Всего правок</h2>
+              <p className={styles.dashboardPage__value}>
+                {formatCount(totalEdits)}
+              </p>
+            </article>
+
+            <article className={styles.dashboardPage__kpi}>
+              <h2 className={styles.dashboardPage__label}>Топ статья</h2>
+              <p className={styles.dashboardPage__value}>
+                {topArticle ? topArticle.title : "—"}
+              </p>
+              {topArticle ? (
+                <p className={styles.dashboardPage__caption}>
+                  <span className={styles.dashboardPage__accent}>
+                    {formatCount(topArticle.edits_count)}
+                  </span>{" "}
+                  {pluralizeEdits(topArticle.edits_count)} ·{" "}
+                  {sharePercent(topArticle.edits_count, totalEdits)} потока
+                </p>
+              ) : null}
+            </article>
+
+            <article className={styles.dashboardPage__kpi}>
+              <h2 className={styles.dashboardPage__label}>Топ место</h2>
+              <p className={styles.dashboardPage__value}>
+                {topPlace ? topPlace.top_title : "—"}
+              </p>
+              {topPlace ? (
+                <p className={styles.dashboardPage__caption}>
+                  <span className={styles.dashboardPage__accent}>
+                    {formatCount(topPlace.edits_count)}
+                  </span>{" "}
+                  {pluralizeEdits(topPlace.edits_count)} ·{" "}
+                  {formatCount(topPlace.articles_count)} статей
+                </p>
+              ) : null}
+            </article>
+          </section>
+
+          <section className={styles.dashboardPage__card}>
+            <h2 className={styles.dashboardPage__label}>Топ статей</h2>
+            <ol className={styles.dashboardPage__list}>
+              {data.top_articles.map((article, index) => (
+                <li key={article.url} className={styles.dashboardPage__row}>
+                  <span className={styles.dashboardPage__rank}>
+                    {index + 1}
+                  </span>
+                  <a
+                    className={styles.dashboardPage__link}
+                    href={article.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {article.title}
+                  </a>
+                  <span className={styles.dashboardPage__rowValue}>
+                    {formatCount(article.edits_count)}
+                  </span>
+                  <span className={styles.dashboardPage__track}>
+                    <span
+                      className={styles.dashboardPage__bar}
+                      style={{
+                        width: `${barWidth(article.edits_count, data.top_articles)}%`,
+                      }}
+                    />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section className={styles.dashboardPage__card}>
+            <h2 className={styles.dashboardPage__label}>
+              {daily ? "Правки по дням" : "Правки по часам"}
+            </h2>
+            <div className={styles.dashboardPage__chart} role="list">
+              {buckets.map((bucket, index) => (
+                <div
+                  key={bucket.bucket_ts}
+                  className={styles.dashboardPage__column}
+                  role="listitem"
+                  aria-label={`${formatBucketLabel(bucket.bucket_ts, daily)} — ${formatCount(bucket.edits_count)} ${pluralizeEdits(bucket.edits_count)}`}
+                >
+                  <span className={styles.dashboardPage__columnTrack}>
+                    <span
+                      className={styles.dashboardPage__columnBar}
+                      style={{
+                        height: `${(bucket.edits_count / maxEdits) * 100}%`,
+                      }}
+                    />
+                  </span>
+                  <span className={styles.dashboardPage__columnLabel}>
+                    {axisLabels.has(index)
+                      ? formatBucketLabel(bucket.bucket_ts, daily)
+                      : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section
+            className={`${styles.dashboardPage__card} ${styles["dashboardPage__card--wide"]}`}
+          >
+            <h2 className={styles.dashboardPage__label}>Топ мест</h2>
+            <ol className={styles.dashboardPage__list}>
+              {data.top_geo.map((place, index) => (
+                <li key={place.h3_parent} className={styles.dashboardPage__row}>
+                  <span className={styles.dashboardPage__rank}>
+                    {index + 1}
+                  </span>
+                  <a
+                    className={styles.dashboardPage__link}
+                    href={place.top_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {place.top_title}
+                  </a>
+                  <span className={styles.dashboardPage__rowValue}>
+                    {formatCount(place.edits_count)}
+                  </span>
+                  <span className={styles.dashboardPage__track}>
+                    <span
+                      className={styles.dashboardPage__bar}
+                      style={{
+                        width: `${barWidth(place.edits_count, data.top_geo)}%`,
+                      }}
+                    />
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
+}
+
+// Столбик строки топа — доля от лидера списка, а не от общего числа правок:
+// иначе у хвоста списка полоска вырождается в точку.
+function barWidth(value: number, rows: { edits_count: number }[]): number {
+  const max = Math.max(...rows.map((row) => row.edits_count), 1);
+  return (value / max) * 100;
 }

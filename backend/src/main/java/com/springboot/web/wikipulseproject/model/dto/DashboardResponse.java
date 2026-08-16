@@ -6,7 +6,7 @@ import com.springboot.web.wikipulseproject.model.TrendPoint;
 
 import java.util.List;
 
-//ответ /api/dashboard
+//ответ /api/v1/dashboard
 public record DashboardResponse(
     String period,
     long generatedAt,

@@ -4,9 +4,18 @@ import styles from "./CellPopover.module.scss";
 
 const TOP_ARTICLES_LIMIT = 3;
 
+export type PopoverPlacement =
+  | "top-center"
+  | "top-left"
+  | "top-right"
+  | "bottom-center"
+  | "bottom-left"
+  | "bottom-right";
+
 type CellPopoverProps = {
   hexagon: ActiveHexagon | null;
   onClose: () => void;
+  placement?: PopoverPlacement;
 };
 
 type ArticleSummary = {
@@ -59,7 +68,11 @@ function summarizeTopArticles(
     .slice(0, limit);
 }
 
-export function CellPopover({ hexagon, onClose }: CellPopoverProps) {
+export function CellPopover({
+  hexagon,
+  onClose,
+  placement = "top-center",
+}: CellPopoverProps) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -86,6 +99,7 @@ export function CellPopover({ hexagon, onClose }: CellPopoverProps) {
   return (
     <div
       className={styles.cellPopover}
+      data-placement={placement}
       role="dialog"
       aria-label="Активность ячейки"
     >

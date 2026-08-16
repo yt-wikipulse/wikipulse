@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { BehaviorType, LngLat } from "@yandex/ymaps3-types";
+import type { BehaviorType, LngLat, LngLatBounds } from "@yandex/ymaps3-types";
 import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
-import { CellPopover } from "../CellPopover/CellPopover";
+import { CellPopover, type PopoverPlacement } from "../CellPopover/CellPopover";
 import {
   getFillColor,
+  getPopoverPlacement,
   h3ToPolygon,
   toViewport,
   type MapViewport,
@@ -28,6 +29,8 @@ const INITIAL_LOCATION = {
   center: [37.6176, 55.7558] as LngLat,
   zoom: 7,
 };
+
+const ZOOM_RANGE = { min: 3, max: 21 };
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -64,8 +67,25 @@ export function LiveMap({
     document.createElement("div"),
   );
 
+  const [popoverPlacement, setPopoverPlacement] =
+    useState<PopoverPlacement>("top-center");
+
   // Слушатель карты создаётся один раз, данные читает через ref.
   const hexagonsRef = useRef(hexagons);
+  const selectedH3Ref = useRef(selectedH3);
+  const boundsRef = useRef<LngLatBounds | null>(null);
+
+  function updatePopoverPlacement(bounds: LngLatBounds) {
+    const currentSelectedH3 = selectedH3Ref.current;
+
+    if (!currentSelectedH3) {
+      return;
+    }
+
+    const [lat, lng] = cellToLatLng(currentSelectedH3);
+
+    setPopoverPlacement(getPopoverPlacement(bounds, lat, lng));
+  }
 
   const maxEvents = hexagons.reduce(
     (max, hexagon) => Math.max(max, hexagon.events_count),
@@ -100,6 +120,7 @@ export function LiveMap({
           {
             location: INITIAL_LOCATION,
             behaviors: MAP_BEHAVIORS,
+            zoomRange: ZOOM_RANGE,
           },
         );
 
@@ -162,6 +183,9 @@ export function LiveMap({
               onViewportChange(
                 toViewport(location.bounds, location.zoom),
               );
+
+              boundsRef.current = location.bounds;
+              updatePopoverPlacement(location.bounds);
             },
           }),
         );
@@ -171,6 +195,8 @@ export function LiveMap({
         onViewportChange(
           toViewport(map.bounds, map.zoom),
         );
+
+        boundsRef.current = map.bounds;
 
         setMapVersion((version) => version + 1);
         setMapLoading(false);
@@ -265,6 +291,14 @@ export function LiveMap({
   ]);
 
   useEffect(() => {
+    selectedH3Ref.current = selectedH3;
+
+    if (selectedH3 && boundsRef.current) {
+      updatePopoverPlacement(boundsRef.current);
+    }
+  }, [selectedH3]);
+
+  useEffect(() => {
     const map = mapRef.current;
 
     if (!map || !selectedH3) {
@@ -317,6 +351,7 @@ export function LiveMap({
           <CellPopover
             hexagon={selectedHexagon}
             onClose={() => onSelectedH3Change(null)}
+            placement={popoverPlacement}
           />,
           popoverElement,
         )}

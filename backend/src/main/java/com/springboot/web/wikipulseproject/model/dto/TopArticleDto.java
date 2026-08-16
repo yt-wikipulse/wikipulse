@@ -4,6 +4,5 @@ package com.springboot.web.wikipulseproject.model.dto;
 public record TopArticleDto(
     String title,
     String url,
-    long eventsCount
+    long editsCount
 ) {}
-
