@@ -7,6 +7,7 @@ import {
   LiveMap,
   type MapViewport,
 } from "../components/LiveMap/LiveMap";
+import { MapStatus } from "../components/MapStatus/MapStatus";
 import { useLiveMapData } from "../features/live-map/useLiveMapData";
 
 import styles from "./LiveMapPage.module.scss";
@@ -35,7 +36,9 @@ export function LiveMapPage() {
   const {
     hexagons,
     loading,
+    isBackgroundRefreshing,
     error,
+    retry,
   } = useLiveMapData(viewport);
 
   const handleViewportChange = useCallback(
@@ -61,32 +64,13 @@ export function LiveMapPage() {
       <section
         className={styles.liveMapPage__map}
       >
-        <div
-          className={styles.liveMapPage__toolbar}
-        >
-          <div>
-            <strong>
-              {loading
-                ? "Загрузка…"
-                : "Backend API"}
-            </strong>
-
-            <span>
-              {hexagons.length} ячеек
-            </span>
-          </div>
-
-          {error && (
-            <p
-              className={
-                styles.liveMapPage__warning
-              }
-              role="alert"
-            >
-              {error}
-            </p>
-          )}
-        </div>
+        <MapStatus
+          loading={loading}
+          isBackgroundRefreshing={isBackgroundRefreshing}
+          error={error}
+          cellCount={hexagons.length}
+          onRetry={retry}
+        />
 
         <LiveMap
           hexagons={hexagons}
