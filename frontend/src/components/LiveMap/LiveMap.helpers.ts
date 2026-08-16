@@ -11,6 +11,9 @@ export type MapViewport = {
   zoom: number;
 };
 
+// ponytail: при переполнении чистим кэш целиком, LRU — если начнёт мазать.
+const BOUNDARY_CACHE_CAP = 20_000;
+
 const boundaryCache = new Map<string, LngLat[]>();
 
 export function h3ToPolygon(h3: string): LngLat[] {
@@ -27,6 +30,10 @@ export function h3ToPolygon(h3: string): LngLat[] {
   const ring = boundary.length > 0
     ? [...boundary, boundary[0]]
     : boundary;
+
+  if (boundaryCache.size >= BOUNDARY_CACHE_CAP) {
+    boundaryCache.clear();
+  }
 
   boundaryCache.set(h3, ring);
 

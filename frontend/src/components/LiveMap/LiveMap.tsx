@@ -67,11 +67,9 @@ export function LiveMap({
   // Слушатель карты создаётся один раз, данные читает через ref.
   const hexagonsRef = useRef(hexagons);
 
-  const maxEvents = Math.max(
+  const maxEvents = hexagons.reduce(
+    (max, hexagon) => Math.max(max, hexagon.events_count),
     1,
-    ...hexagons.map(
-      (hexagon) => hexagon.events_count,
-    ),
   );
 
   const selectedHexagon = selectedH3
