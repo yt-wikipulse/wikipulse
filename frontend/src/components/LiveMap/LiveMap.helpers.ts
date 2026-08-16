@@ -2,6 +2,7 @@ import type { LngLat, LngLatBounds } from "@yandex/ymaps3-types";
 import { cellToBoundary } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
+import type { PopoverPlacement } from "../CellPopover/CellPopover";
 
 export type MapViewport = {
   minLng: number;
@@ -81,13 +82,45 @@ export function toViewport(
 // Ступеней заливки: чем их меньше, тем меньше MultiPolygon-фич на карте.
 const FILL_LEVELS = 8;
 
+export const SELECTED_FILL_COLOR = "#ffd500";
+
+const POPOVER_EDGE_MARGIN = 0.2;
+
+export function getPopoverPlacement(
+  bounds: LngLatBounds,
+  lat: number,
+  lng: number,
+): PopoverPlacement {
+  const [[firstLng, firstLat], [secondLng, secondLat]] = bounds;
+
+  const minLng = Math.min(firstLng, secondLng);
+  const maxLng = Math.max(firstLng, secondLng);
+  const minLat = Math.min(firstLat, secondLat);
+  const maxLat = Math.max(firstLat, secondLat);
+
+  const lngFraction = (lng - minLng) / (maxLng - minLng);
+  const latFraction = (lat - minLat) / (maxLat - minLat);
+
+  const vertical =
+    latFraction > 1 - POPOVER_EDGE_MARGIN ? "bottom" : "top";
+
+  const horizontal =
+    lngFraction > 1 - POPOVER_EDGE_MARGIN
+      ? "left"
+      : lngFraction < POPOVER_EDGE_MARGIN
+        ? "right"
+        : "center";
+
+  return `${vertical}-${horizontal}` as PopoverPlacement;
+}
+
 export function getFillColor(
   hexagon: ActiveHexagon,
   maxEvents: number,
   selectedH3: string | null,
 ) {
   if (hexagon.h3_index === selectedH3) {
-    return "#ff5f1fe6";
+    return SELECTED_FILL_COLOR;
   }
 
   const level = Math.round(
@@ -98,5 +131,5 @@ export function getFillColor(
     .toString(16)
     .padStart(2, "0");
 
-  return `#0075ff${alpha}`;
+  return `#ff7700${alpha}`;
 }
