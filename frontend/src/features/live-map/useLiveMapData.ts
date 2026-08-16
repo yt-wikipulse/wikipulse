@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getActiveHexagons,
@@ -28,6 +28,10 @@ export function useLiveMapData(
   const [state, setState] =
     useState<LiveMapDataState>(INITIAL_STATE);
 
+  const loadHexagonsRef = useRef<() => void>(() => {});
+
+  const hasDataRef = useRef(false);
+
   useEffect(() => {
     if (!viewport) {
       return;
@@ -36,7 +40,6 @@ export function useLiveMapData(
     const requestViewport = viewport;
     let cancelled = false;
     let isFetching = false;
-    let hasData = false;
     let activeController: AbortController | null = null;
 
     async function loadHexagons() {
@@ -50,8 +53,8 @@ export function useLiveMapData(
 
       setState((current) => ({
         ...current,
-        loading: !hasData,
-        isBackgroundRefreshing: hasData,
+        loading: !hasDataRef.current,
+        isBackgroundRefreshing: hasDataRef.current,
       }));
 
       try {
@@ -64,7 +67,7 @@ export function useLiveMapData(
           return;
         }
 
-        hasData = true;
+        hasDataRef.current = true;
 
         setState({
           hexagons: response.hexagons,
@@ -91,6 +94,8 @@ export function useLiveMapData(
       }
     }
 
+    loadHexagonsRef.current = () => void loadHexagons();
+
     void loadHexagons();
 
     const intervalId = window.setInterval(
@@ -105,5 +110,8 @@ export function useLiveMapData(
     };
   }, [viewport]);
 
-  return state;
+  return {
+    ...state,
+    retry: () => loadHexagonsRef.current(),
+  };
 }

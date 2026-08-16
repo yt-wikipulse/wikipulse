@@ -74,9 +74,14 @@ export function CellPopover({ hexagon, onClose }: CellPopoverProps) {
     };
   }, [onClose]);
 
-  const topArticles = hexagon
-    ? summarizeTopArticles(hexagon.events, TOP_ARTICLES_LIMIT)
-    : [];
+  if (!hexagon) {
+    return null;
+  }
+
+  const topArticles = summarizeTopArticles(
+    hexagon.events,
+    TOP_ARTICLES_LIMIT,
+  );
 
   return (
     <div
@@ -93,44 +98,36 @@ export function CellPopover({ hexagon, onClose }: CellPopoverProps) {
         ×
       </button>
 
-      {hexagon ? (
-        <>
-          <div className={styles.cellPopover__stat}>
-            <span className={styles.cellPopover__statLabel}>
-              Правок за 30 минут
-            </span>
-            <span className={styles.cellPopover__statValue}>
-              {hexagon.events_count}
-            </span>
-          </div>
+      <div className={styles.cellPopover__stat}>
+        <span className={styles.cellPopover__statLabel}>
+          Правок за 30 минут
+        </span>
+        <span className={styles.cellPopover__statValue}>
+          {hexagon.events_count}
+        </span>
+      </div>
 
-          <h2 className={styles.cellPopover__sectionTitle}>Топ статей</h2>
+      <h2 className={styles.cellPopover__sectionTitle}>Топ статей</h2>
 
-          <ul className={styles.cellPopover__articles}>
-            {topArticles.map((article) => (
-              <li key={article.title}>
-                <a
-                  className={styles.cellPopover__article}
-                  href={article.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span className={styles.cellPopover__articleTitle}>
-                    {article.title}
-                  </span>
-                  <span className={styles.cellPopover__articleMeta}>
-                    {article.editsCount} {pluralizeEdits(article.editsCount)}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className={styles.cellPopover__empty}>
-          В этой ячейке больше нет активности
-        </p>
-      )}
+      <ul className={styles.cellPopover__articles}>
+        {topArticles.map((article) => (
+          <li key={article.title}>
+            <a
+              className={styles.cellPopover__article}
+              href={article.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className={styles.cellPopover__articleTitle}>
+                {article.title}
+              </span>
+              <span className={styles.cellPopover__articleMeta}>
+                {article.editsCount} {pluralizeEdits(article.editsCount)}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

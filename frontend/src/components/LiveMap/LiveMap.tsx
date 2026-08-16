@@ -1,25 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type {
-  BehaviorType,
-  LngLat,
-  LngLatBounds,
-} from "@yandex/ymaps3-types";
-import { cellToBoundary, cellToLatLng } from "h3-js";
+import type { BehaviorType, LngLat } from "@yandex/ymaps3-types";
+import { cellToLatLng } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "../CellPopover/CellPopover";
+import {
+  getFillColor,
+  h3ToPolygon,
+  toViewport,
+  type MapViewport,
+} from "./LiveMap.helpers";
 import { mapCustomization } from "./mapCustomization";
 
 import styles from "./LiveMap.module.scss";
 
-export type MapViewport = {
-  minLng: number;
-  minLat: number;
-  maxLng: number;
-  maxLat: number;
-  zoom: number;
-};
+export type { MapViewport };
 
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
@@ -46,52 +42,6 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "panTilt",
 ];
 
-function h3ToPolygon(h3: string): LngLat[] {
-  const boundary = cellToBoundary(h3).map(
-    ([latitude, longitude]) =>
-      [longitude, latitude] as LngLat,
-  );
-
-  return boundary.length > 0
-    ? [...boundary, boundary[0]]
-    : boundary;
-}
-
-function toViewport(
-  bounds: LngLatBounds,
-  zoom: number,
-): MapViewport {
-  const [[firstLng, firstLat], [secondLng, secondLat]] =
-    bounds;
-
-  return {
-    minLng: Math.min(firstLng, secondLng),
-    minLat: Math.min(firstLat, secondLat),
-    maxLng: Math.max(firstLng, secondLng),
-    maxLat: Math.max(firstLat, secondLat),
-    zoom: Math.floor(zoom),
-  };
-}
-
-function getFillColor(
-  hexagon: ActiveHexagon,
-  maxEvents: number,
-  selectedH3: string | null,
-) {
-  if (hexagon.h3_index === selectedH3) {
-    return "#ff5f1fe6";
-  }
-
-  const intensity =
-    hexagon.events_count / maxEvents;
-
-  const alpha = Math.round(90 + intensity * 150)
-    .toString(16)
-    .padStart(2, "0");
-
-  return `#0075ff${alpha}`;
-}
-
 export function LiveMap({
   hexagons,
   selectedH3,
@@ -110,6 +60,7 @@ export function LiveMap({
 
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapLoading, setMapLoading] = useState(true);
 
   const [popoverElement] = useState(() =>
     document.createElement("div"),
@@ -129,6 +80,12 @@ export function LiveMap({
       (hexagon) => hexagon.h3_index === selectedH3,
     ) ?? null)
     : null;
+
+  useEffect(() => {
+    if (selectedH3 && !selectedHexagon) {
+      onSelectedH3Change(null);
+    }
+  }, [selectedH3, selectedHexagon, onSelectedH3Change]);
 
   useEffect(() => {
     let disposed = false;
@@ -211,9 +168,11 @@ export function LiveMap({
         );
 
         setMapVersion((version) => version + 1);
+        setMapLoading(false);
       } catch {
         if (!disposed) {
           setMapError("Не удалось загрузить карту");
+          setMapLoading(false);
         }
       }
     }
@@ -332,6 +291,12 @@ export function LiveMap({
             role="alert"
           >
             {mapError}
+          </p>
+        )}
+
+        {mapLoading && !mapError && (
+          <p className={styles.liveMap__loading}>
+            Загрузка…
           </p>
         )}
       </div>
