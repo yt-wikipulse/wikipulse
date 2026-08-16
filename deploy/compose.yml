@@ -1,0 +1,51 @@
+name: wikipulse
+
+x-yt: &yt
+  environment:
+    YT_PROXY: ${YT_PROXY:?}
+    YT_TOKEN: ${YT_TOKEN:?}
+  # кластерный RPC-proxy не резолвится публичным DNS (см. bigdata/README.md)
+  extra_hosts:
+    - "rpc-proxy.example.com:203.0.113.10"
+  restart: unless-stopped
+
+services:
+  backend:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+
+  ingestor:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/bigdata.Dockerfile
+    command: ingestor
+
+  archiver:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/bigdata.Dockerfile
+    # ponytail: sleep-петля вместо cron, хватит для MVP
+    command: sh -c 'while true; do archiver || true; sleep 3600; done'
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy:/data
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  caddy:
