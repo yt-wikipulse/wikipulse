@@ -8,6 +8,10 @@ import {
 
 const POLL_INTERVAL_MS = 2_500;
 
+// Быстрый флик успевает пересечь несколько клеток сетки bbox — ждём,
+// пока карта осядет, и грузим только последнюю.
+const VIEWPORT_SETTLE_MS = 120;
+
 type LiveMapDataState = {
   hexagons: ActiveHexagon[];
   loading: boolean;
@@ -91,7 +95,10 @@ export function useLiveMapData(
       }
     }
 
-    void loadHexagons();
+    const settleId = window.setTimeout(
+      () => void loadHexagons(),
+      VIEWPORT_SETTLE_MS,
+    );
 
     const intervalId = window.setInterval(
       () => void loadHexagons(),
@@ -100,6 +107,7 @@ export function useLiveMapData(
 
     return () => {
       cancelled = true;
+      window.clearTimeout(settleId);
       window.clearInterval(intervalId);
       activeController?.abort();
     };

@@ -3,23 +3,22 @@ import { createPortal } from "react-dom";
 import type {
   BehaviorType,
   LngLat,
-  LngLatBounds,
 } from "@yandex/ymaps3-types";
-import { cellToBoundary, cellToLatLng } from "h3-js";
+import {
+  cellToBoundary,
+  cellToLatLng,
+  getResolution,
+  latLngToCell,
+} from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "../CellPopover/CellPopover";
 import { mapCustomization } from "./mapCustomization";
+import { toViewport, type MapViewport } from "./viewport";
 
 import styles from "./LiveMap.module.scss";
 
-export type MapViewport = {
-  minLng: number;
-  minLat: number;
-  maxLng: number;
-  maxLat: number;
-  zoom: number;
-};
+export type { MapViewport };
 
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
@@ -33,8 +32,6 @@ const INITIAL_LOCATION = {
   zoom: 7,
 };
 
-const VIEWPORT_DEBOUNCE_MS = 400;
-
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
   "pinchZoom",
@@ -46,31 +43,31 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "panTilt",
 ];
 
+const FILL_LEVELS = 8;
+const SELECTED_FILL = "#ff5f1fe6";
+
+const boundaryCache = new Map<string, LngLat[]>();
+
 function h3ToPolygon(h3: string): LngLat[] {
+  const cached = boundaryCache.get(h3);
+
+  if (cached) {
+    return cached;
+  }
+
   const boundary = cellToBoundary(h3).map(
     ([latitude, longitude]) =>
       [longitude, latitude] as LngLat,
   );
 
-  return boundary.length > 0
-    ? [...boundary, boundary[0]]
-    : boundary;
-}
+  const ring =
+    boundary.length > 0
+      ? [...boundary, boundary[0]]
+      : boundary;
 
-function toViewport(
-  bounds: LngLatBounds,
-  zoom: number,
-): MapViewport {
-  const [[firstLng, firstLat], [secondLng, secondLat]] =
-    bounds;
+  boundaryCache.set(h3, ring);
 
-  return {
-    minLng: Math.min(firstLng, secondLng),
-    minLat: Math.min(firstLat, secondLat),
-    maxLng: Math.max(firstLng, secondLng),
-    maxLat: Math.max(firstLat, secondLat),
-    zoom: Math.floor(zoom),
-  };
+  return ring;
 }
 
 function getFillColor(
@@ -79,13 +76,17 @@ function getFillColor(
   selectedH3: string | null,
 ) {
   if (hexagon.h3_index === selectedH3) {
-    return "#ff5f1fe6";
+    return SELECTED_FILL;
   }
 
-  const intensity =
-    hexagon.events_count / maxEvents;
+  const level = Math.round(
+    (hexagon.events_count / maxEvents) *
+      (FILL_LEVELS - 1),
+  );
 
-  const alpha = Math.round(90 + intensity * 150)
+  const alpha = Math.round(
+    90 + (level / (FILL_LEVELS - 1)) * 150,
+  )
     .toString(16)
     .padStart(2, "0");
 
@@ -115,7 +116,8 @@ export function LiveMap({
     document.createElement("div"),
   );
 
-  const viewportDebounceRef = useRef<number | null>(null);
+  // Слушатель карты создаётся один раз, данные читает через ref.
+  const hexagonsRef = useRef(hexagons);
 
   const maxEvents = Math.max(
     1,
@@ -176,30 +178,38 @@ export function LiveMap({
 
         map.addChild(
           new ymaps3.YMapListener({
-            onClick: (object) => {
-              if (!object) {
-                onSelectedH3Change(null);
-              }
-            },
+            onClick: (_object, event) => {
+              const active = hexagonsRef.current;
+              const coordinates = event?.coordinates;
 
-            onUpdate: ({ location, mapInAction }) => {
-              if (mapInAction) {
+              if (!coordinates || active.length === 0) {
+                onSelectedH3Change(null);
                 return;
               }
 
-              const nextViewport = toViewport(
-                location.bounds,
-                location.zoom,
+              const [lng, lat] = coordinates;
+
+              const cell = latLngToCell(
+                lat,
+                lng,
+                getResolution(active[0].h3_index),
               );
 
-              if (viewportDebounceRef.current !== null) {
-                window.clearTimeout(viewportDebounceRef.current);
-              }
+              onSelectedH3Change(
+                active.some(
+                  (hexagon) => hexagon.h3_index === cell,
+                )
+                  ? cell
+                  : null,
+              );
+            },
 
-              viewportDebounceRef.current = window.setTimeout(() => {
-                viewportDebounceRef.current = null;
-                onViewportChange(nextViewport);
-              }, VIEWPORT_DEBOUNCE_MS);
+            // Грузим и во время движения: округлённый bbox меняется
+            // раз в четверть экрана, лишних запросов не будет.
+            onUpdate: ({ location }) => {
+              onViewportChange(
+                toViewport(location.bounds, location.zoom),
+              );
             },
           }),
         );
@@ -223,11 +233,6 @@ export function LiveMap({
     return () => {
       disposed = true;
 
-      if (viewportDebounceRef.current !== null) {
-        window.clearTimeout(viewportDebounceRef.current);
-        viewportDebounceRef.current = null;
-      }
-
       featuresRef.current = [];
       mapRef.current?.destroy();
       mapRef.current = null;
@@ -235,55 +240,67 @@ export function LiveMap({
   }, [onViewportChange, onSelectedH3Change]);
 
   useEffect(() => {
+    hexagonsRef.current = hexagons;
+
     const map = mapRef.current;
 
     if (!map) {
       return;
     }
 
+    // Одна фича на цвет, а не на ячейку: тысячи YMapFeature карта не тянет.
+    const groups = new Map<string, LngLat[][][]>();
+
+    for (const hexagon of hexagons) {
+      const fill = getFillColor(
+        hexagon,
+        maxEvents,
+        selectedH3,
+      );
+
+      const polygon = [
+        h3ToPolygon(hexagon.h3_index),
+      ];
+
+      const group = groups.get(fill);
+
+      if (group) {
+        group.push(polygon);
+      } else {
+        groups.set(fill, [polygon]);
+      }
+    }
+
+    const features = [...groups].map(
+      ([fill, coordinates]) => {
+        const feature = new ymaps3.YMapFeature({
+          geometry: {
+            type: "MultiPolygon",
+            coordinates,
+          },
+
+          style: {
+            cursor: "pointer",
+            fill,
+
+            stroke: [
+              {
+                color: "#ffffffd2",
+                width: 1,
+              },
+            ],
+          },
+        });
+
+        map.addChild(feature);
+
+        return feature;
+      },
+    );
+
     for (const feature of featuresRef.current) {
       map.removeChild(feature);
     }
-
-    const features = hexagons.map((hexagon) => {
-      const feature = new ymaps3.YMapFeature({
-        id: hexagon.h3_index,
-
-        geometry: {
-          type: "Polygon",
-          coordinates: [
-            h3ToPolygon(hexagon.h3_index),
-          ],
-        },
-
-        style: {
-          cursor: "pointer",
-
-          fill: getFillColor(
-            hexagon,
-            maxEvents,
-            selectedH3,
-          ),
-
-          stroke: [
-            {
-              color: "#ffffffd2",
-              width: 1,
-            },
-          ],
-        },
-
-        onClick: () => {
-          onSelectedH3Change(
-            hexagon.h3_index,
-          );
-        },
-      });
-
-      map.addChild(feature);
-
-      return feature;
-    });
 
     featuresRef.current = features;
   }, [
@@ -291,7 +308,6 @@ export function LiveMap({
     selectedH3,
     maxEvents,
     mapVersion,
-    onSelectedH3Change,
   ]);
 
   useEffect(() => {
