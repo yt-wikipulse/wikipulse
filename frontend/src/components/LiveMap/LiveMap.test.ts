@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { cellToBoundary, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
-import { getFillColor, h3ToPolygon, toViewport } from "./LiveMap.helpers";
+import {
+  getFillColor,
+  getPopoverPlacement,
+  h3ToPolygon,
+  SELECTED_FILL_COLOR,
+  toViewport,
+} from "./LiveMap.helpers";
 
 describe("toViewport", () => {
   it("нормализует bbox независимо от порядка углов и floor'ит zoom", () => {
@@ -59,16 +65,58 @@ describe("getFillColor", () => {
   };
 
   it("красит выбранную ячейку в акцентный цвет независимо от интенсивности", () => {
-    expect(getFillColor(hexagon, 5, hexagon.h3_index)).toBe("#ff5f1fe6");
+    expect(getFillColor(hexagon, 5, hexagon.h3_index)).toBe(
+      SELECTED_FILL_COLOR,
+    );
   });
 
   it("максимальная интенсивность (events_count === maxEvents) даёт максимальную alpha", () => {
-    expect(getFillColor(hexagon, 5, null)).toBe("#0075fff0");
+    expect(getFillColor(hexagon, 5, null)).toBe("#ff7700f0");
   });
 
   it("нулевая интенсивность даёт минимальную alpha", () => {
     expect(
       getFillColor({ ...hexagon, events_count: 0 }, 5, null),
-    ).toBe("#0075ff5a");
+    ).toBe("#ff77005a");
+  });
+});
+
+describe("getPopoverPlacement", () => {
+  const bounds: [[number, number], [number, number]] = [
+    [37, 55],
+    [39, 57],
+  ];
+
+  it("по умолчанию — сверху по центру, точка далеко от краёв", () => {
+    expect(getPopoverPlacement(bounds, 56, 38)).toBe("top-center");
+  });
+
+  it("прыгает влево, когда точка у правого края viewport", () => {
+    expect(getPopoverPlacement(bounds, 56, 38.99)).toBe("top-left");
+  });
+
+  it("прыгает вправо, когда точка у левого края viewport", () => {
+    expect(getPopoverPlacement(bounds, 56, 37.01)).toBe("top-right");
+  });
+
+  it("прыгает вниз, когда точка у верхнего края viewport", () => {
+    expect(getPopoverPlacement(bounds, 56.99, 38)).toBe("bottom-center");
+  });
+
+  it("комбинирует обе оси одновременно", () => {
+    expect(getPopoverPlacement(bounds, 56.99, 38.99)).toBe(
+      "bottom-left",
+    );
+  });
+
+  it("не зависит от порядка углов bounds", () => {
+    const reversedBounds: [[number, number], [number, number]] = [
+      [39, 57],
+      [37, 55],
+    ];
+
+    expect(getPopoverPlacement(bounds, 56, 38)).toBe(
+      getPopoverPlacement(reversedBounds, 56, 38),
+    );
   });
 });
