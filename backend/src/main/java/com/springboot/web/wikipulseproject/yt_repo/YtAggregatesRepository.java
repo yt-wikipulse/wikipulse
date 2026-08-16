@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 public class YtAggregatesRepository {
 
     private static final int ABSOLUTE_MAX_LIMIT = 1000;
+    private static final int DEFAULT_LIMIT = 1000;
     private static final Pattern PERIOD_PATTERN = Pattern.compile("^\\d+h$");
 
     private final YTsaurusClient client;
@@ -51,8 +52,13 @@ public class YtAggregatesRepository {
     }
 
     public List<TrendPoint> fetchTrends(long fromBucketTs) {
+        return fetchTrends(fromBucketTs, DEFAULT_LIMIT);
+    }
+
+    public List<TrendPoint> fetchTrends(long fromBucketTs, int limit) {
         String query = "bucket_ts, edits_count FROM [" + trendsTable
-                + "] WHERE bucket_ts >= " + fromBucketTs + " ORDER BY bucket_ts";
+                + "] WHERE bucket_ts >= " + fromBucketTs
+                + " ORDER BY bucket_ts LIMIT " + clampLimit(limit);
         return select(query, "marts/trends", r -> new TrendPoint(
                 r.get("bucket_ts").map(YTreeNode::longValue).orElse(0L),
                 r.get("edits_count").map(YTreeNode::longValue).orElse(0L)));
