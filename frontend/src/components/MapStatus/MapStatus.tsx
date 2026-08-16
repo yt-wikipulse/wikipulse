@@ -71,12 +71,11 @@ export function MapStatus({
       <div className={styles.mapStatus__row}>
         <strong>Живая карта</strong>
 
-        {isBackgroundRefreshing && (
-          <span
-            className={styles.mapStatus__refreshing}
-            aria-hidden="true"
-          />
-        )}
+        <span
+          className={styles.mapStatus__refreshing}
+          data-visible={isBackgroundRefreshing}
+          aria-hidden="true"
+        />
       </div>
 
       <span className={styles.mapStatus__count}>
