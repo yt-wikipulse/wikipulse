@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type {
-  BehaviorType,
-  LngLat,
-} from "@yandex/ymaps3-types";
-import {
-  cellToBoundary,
-  cellToLatLng,
-  getResolution,
-  latLngToCell,
-} from "h3-js";
+import type { BehaviorType, LngLat } from "@yandex/ymaps3-types";
+import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "../CellPopover/CellPopover";
+import {
+  getFillColor,
+  h3ToPolygon,
+  toViewport,
+  type MapViewport,
+} from "./LiveMap.helpers";
 import { mapCustomization } from "./mapCustomization";
-import { toViewport, type MapViewport } from "./viewport";
 
 import styles from "./LiveMap.module.scss";
 
@@ -43,56 +40,6 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "panTilt",
 ];
 
-const FILL_LEVELS = 8;
-const SELECTED_FILL = "#ff5f1fe6";
-
-const boundaryCache = new Map<string, LngLat[]>();
-
-function h3ToPolygon(h3: string): LngLat[] {
-  const cached = boundaryCache.get(h3);
-
-  if (cached) {
-    return cached;
-  }
-
-  const boundary = cellToBoundary(h3).map(
-    ([latitude, longitude]) =>
-      [longitude, latitude] as LngLat,
-  );
-
-  const ring =
-    boundary.length > 0
-      ? [...boundary, boundary[0]]
-      : boundary;
-
-  boundaryCache.set(h3, ring);
-
-  return ring;
-}
-
-function getFillColor(
-  hexagon: ActiveHexagon,
-  maxEvents: number,
-  selectedH3: string | null,
-) {
-  if (hexagon.h3_index === selectedH3) {
-    return SELECTED_FILL;
-  }
-
-  const level = Math.round(
-    (hexagon.events_count / maxEvents) *
-      (FILL_LEVELS - 1),
-  );
-
-  const alpha = Math.round(
-    90 + (level / (FILL_LEVELS - 1)) * 150,
-  )
-    .toString(16)
-    .padStart(2, "0");
-
-  return `#0075ff${alpha}`;
-}
-
 export function LiveMap({
   hexagons,
   selectedH3,
@@ -111,6 +58,7 @@ export function LiveMap({
 
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapLoading, setMapLoading] = useState(true);
 
   const [popoverElement] = useState(() =>
     document.createElement("div"),
@@ -131,6 +79,12 @@ export function LiveMap({
       (hexagon) => hexagon.h3_index === selectedH3,
     ) ?? null)
     : null;
+
+  useEffect(() => {
+    if (selectedH3 && !selectedHexagon) {
+      onSelectedH3Change(null);
+    }
+  }, [selectedH3, selectedHexagon, onSelectedH3Change]);
 
   useEffect(() => {
     let disposed = false;
@@ -221,9 +175,11 @@ export function LiveMap({
         );
 
         setMapVersion((version) => version + 1);
+        setMapLoading(false);
       } catch {
         if (!disposed) {
           setMapError("Не удалось загрузить карту");
+          setMapLoading(false);
         }
       }
     }
@@ -348,6 +304,12 @@ export function LiveMap({
             role="alert"
           >
             {mapError}
+          </p>
+        )}
+
+        {mapLoading && !mapError && (
+          <p className={styles.liveMap__loading}>
+            Загрузка…
           </p>
         )}
       </div>
