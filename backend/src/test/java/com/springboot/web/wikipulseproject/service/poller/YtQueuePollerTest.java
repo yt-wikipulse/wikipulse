@@ -1,5 +1,6 @@
 package com.springboot.web.wikipulseproject.service.poller;
 
+import com.springboot.web.wikipulseproject.error.YtReadException;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import com.springboot.web.wikipulseproject.yt_repo.QEnrichedRepository;
 import com.springboot.web.wikipulseproject.yt_repo.RecentEventsCache;
@@ -12,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -39,25 +39,26 @@ class YtQueuePollerTest {
     }
 
     @Test
-    void firstReadStartsFromQueueTail() {
+    void firstTickOnlyLearnsQueueTail() {
         when(repository.skipToLatest()).thenReturn(100L);
-        when(repository.fetchAfter(100L)).thenReturn(page(List.of(), 100L, false));
 
-        poller.poll();
+        poller.writeCache();
 
         verify(repository).skipToLatest();
-        verify(repository).fetchAfter(100L);
+        verify(repository, never()).fetchAfter(anyLong());
+        verify(cache, never()).put(any());
     }
 
     @Test
-    void queueTailIsRequestedOnlyOnce() {
+    void secondTickReadsFromLearnedTail() {
         when(repository.skipToLatest()).thenReturn(100L);
-        when(repository.fetchAfter(anyLong())).thenReturn(page(List.of(), 100L, false));
+        when(repository.fetchAfter(100L)).thenReturn(page(List.of(), 100L, false));
 
-        poller.poll();
-        poller.poll();
+        poller.writeCache();
+        poller.writeCache();
 
         verify(repository, times(1)).skipToLatest();
+        verify(repository).fetchAfter(100L);
     }
 
     @Test
@@ -67,8 +68,9 @@ class YtQueuePollerTest {
                 .thenReturn(page(List.of(event(1), event(2)), 57L, false));
         when(repository.fetchAfter(57L)).thenReturn(page(List.of(), 57L, false));
 
-        poller.poll();
-        poller.poll();
+        poller.writeCache();
+        poller.writeCache();
+        poller.writeCache();
 
         verify(repository).fetchAfter(57L);
         verify(repository, never()).fetchAfter(2L);
@@ -80,10 +82,11 @@ class YtQueuePollerTest {
         when(repository.fetchAfter(0L)).thenReturn(page(List.of(event(1)), 10L, true));
         when(repository.fetchAfter(10L)).thenReturn(page(List.of(event(2)), 20L, false));
 
-        List<EnrichedEvent> polled = poller.poll();
+        poller.writeCache();
+        poller.writeCache();
 
-        assertEquals(2, polled.size());
         verify(repository, times(2)).fetchAfter(anyLong());
+        verify(cache, times(2)).put(any(EnrichedEvent.class));
     }
 
     @Test
@@ -94,7 +97,8 @@ class YtQueuePollerTest {
             return page(List.of(event(1)), from + 10, true);
         });
 
-        poller.poll();
+        poller.writeCache();
+        poller.writeCache();
 
         verify(repository, times(MAX_PAGES)).fetchAfter(anyLong());
     }
@@ -106,16 +110,42 @@ class YtQueuePollerTest {
                 .thenReturn(page(List.of(event(1), event(2)), 5L, false));
 
         poller.writeCache();
+        poller.writeCache();
 
         verify(cache, times(2)).put(any(EnrichedEvent.class));
     }
 
     @Test
-    void repositoryFailureDoesNotBreakTick() {
-        when(repository.skipToLatest()).thenThrow(new IllegalStateException("YT недоступен"));
+    void ytFailureDoesNotBreakTick() {
+        when(repository.skipToLatest())
+                .thenThrow(new YtReadException("YT недоступен", new RuntimeException()));
 
         assertDoesNotThrow(() -> poller.writeCache());
         verify(cache, never()).put(any());
+    }
+
+    @Test
+    void unexpectedFailureDoesNotBreakTick() {
+        when(repository.skipToLatest()).thenThrow(new IllegalStateException("баг"));
+
+        assertDoesNotThrow(() -> poller.writeCache());
+        verify(cache, never()).put(any());
+    }
+
+    @Test
+    void cursorSurvivesFailedTick() {
+        when(repository.skipToLatest()).thenReturn(100L);
+        when(repository.fetchAfter(100L))
+                .thenThrow(new YtReadException("сеть моргнула", new RuntimeException()))
+                .thenReturn(page(List.of(event(1)), 110L, false));
+
+        poller.writeCache();
+        poller.writeCache();
+        poller.writeCache();
+
+        verify(repository, times(1)).skipToLatest();
+        verify(repository, times(2)).fetchAfter(100L);
+        verify(cache, times(1)).put(any(EnrichedEvent.class));
     }
 
     private QEnrichedRepository.EventsPage page(List<EnrichedEvent> events,

@@ -3,6 +3,7 @@ package com.springboot.web.wikipulseproject.service.poller;
 import com.springboot.web.wikipulseproject.model.EnrichedEvent;
 import com.springboot.web.wikipulseproject.yt_repo.RecentEventsCache;
 import com.uber.h3core.H3Core;
+import java.time.Clock;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -31,12 +32,14 @@ public class MockPoller {
     );
 
     private final RecentEventsCache cache;
+    private final Clock clock;
     /** «Готовые» h3_r9 по одному на место — как если бы их прислала очередь. */
     private final List<String> cellKeys;
     private final AtomicLong counter = new AtomicLong();
 
-    public MockPoller(RecentEventsCache cache, H3Core h3) {
+    public MockPoller(RecentEventsCache cache, H3Core h3, Clock clock) {
         this.cache = cache;
+        this.clock = clock;
         this.cellKeys = PLACES.stream()
             .map(p -> h3.latLngToCellAddress(p.lat(), p.lon(), 9))
             .toList();
@@ -53,7 +56,7 @@ public class MockPoller {
             place.title(),
             place.url(),
             cellKeys.get(i),
-            System.currentTimeMillis()
+            clock.instant().getEpochSecond()
         ));
     }
 }
