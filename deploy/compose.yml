@@ -35,6 +35,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_YMAPS_API_KEY: ${VITE_YMAPS_API_KEY:?}
     environment:
       DOMAIN: ${DOMAIN:?}
       ACME_EMAIL: ${ACME_EMAIL:?}
