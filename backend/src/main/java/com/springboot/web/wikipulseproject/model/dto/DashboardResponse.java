@@ -1,14 +1,18 @@
 package com.springboot.web.wikipulseproject.model.dto;
 
+import com.springboot.web.wikipulseproject.model.TopArticle;
+import com.springboot.web.wikipulseproject.model.TopGeoPlace;
+import com.springboot.web.wikipulseproject.model.TrendPoint;
+
 import java.util.List;
 
 //ответ /api/v1/dashboard
 public record DashboardResponse(
     String period,
     long generatedAt,
-    long bucketSeconds,
+    int bucketSeconds,
     long totalEdits,
-    List<TrendPointDto> trends,
-    List<TopArticleDto> topArticles,
-    List<TopGeoDto> topGeo
+    List<TrendPoint> trends,
+    List<TopArticle> topArticles,
+    List<TopGeoPlace> topGeo
 ) {}
