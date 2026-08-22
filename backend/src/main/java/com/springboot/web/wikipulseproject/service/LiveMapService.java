@@ -95,6 +95,6 @@ public class LiveMapService {
 
     //внутреннее событие парсим во внешний контракт: id/title/url
     private HexagonEventDto toEventDto(EnrichedEvent e) {
-        return new HexagonEventDto(e.eventId(), e.title(), e.url());
+        return new HexagonEventDto(e.eventId(), e.title(), e.url(), e.lengthUpdate(), e.diffUrl());
     }
 }
