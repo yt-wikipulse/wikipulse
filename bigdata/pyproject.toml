@@ -16,6 +16,7 @@ init-tables           = "bigdata.scripts.init_tables:main"
 load-dict-coords-full = "bigdata.scripts.load_dict_coords_full:main"
 ingestor              = "bigdata.jobs.ingestor:main"
 archiver              = "bigdata.jobs.archiver:main"
+scheduler             = "bigdata.jobs.scheduler:main"
 
 [dependency-groups]
 dev = [

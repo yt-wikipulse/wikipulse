@@ -155,8 +155,8 @@ def parse_args():
                         help="окно агрегации, часов (по умолчанию 24)")
     parser.add_argument("--top-n", type=int, default=100,
                         help="размер топов (по умолчанию 100)")
-    parser.add_argument("--h3-res", type=int, default=4,
-                        help="резолюция H3 для топа гео-мест (по умолчанию 4)")
+    parser.add_argument("--h3-res", type=int, default=6,
+                        help="резолюция H3 для топа гео-мест (по умолчанию 6)")
     return parser.parse_args()
 
 
