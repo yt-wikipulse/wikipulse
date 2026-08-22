@@ -4,5 +4,7 @@ package com.springboot.web.wikipulseproject.model.dto;
 public record HexagonEventDto(
     String id,
     String title,
-    String url
+    String url,
+    long lengthUpdate,
+    String diffUrl
 ) {}

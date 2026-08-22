@@ -85,7 +85,9 @@ public class QEnrichedRepository {
                         r.getStringO("title").orElse(null),
                         r.getStringO("url").orElse(null),
                         r.getStringO("h3_r9").orElse(null),
-                        r.get("event_ts").map(YTreeNode::longValue).orElse(0L)));
+                        r.get("event_ts").map(YTreeNode::longValue).orElse(0L),
+                        r.get("length_update").map(YTreeNode::longValue).orElse(0L),
+                        r.getStringO("diff_url").orElse(null)));
             }
 
             return new EventsPage(Collections.unmodifiableList(events), maxIdx, hasMore);

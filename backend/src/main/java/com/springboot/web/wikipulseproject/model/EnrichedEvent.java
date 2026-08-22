@@ -6,4 +6,6 @@ public record EnrichedEvent(
     String title,
     String url,
     String h3R9,
-    long eventTs) {}
+    long eventTs,
+    long lengthUpdate,
+    String diffUrl) {}
