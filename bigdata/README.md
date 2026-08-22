@@ -15,8 +15,9 @@ bigdata/
 ├── jobs/                     ← постоянно/периодически работающие
 │   ├── ingestor.py           ← SSE → Q_RAW (работает на твоём ноуте)
 │   ├── spyt_enrich.py        ← Q_RAW → JOIN → Q_ENRICHED (на кластере)
-│   ├── archiver.py           ← Q_ENRICHED → T_HISTORY, раз в час (на ноуте)
-│   └── spyt_marts.py         ← T_HISTORY → витрины дашборда (на кластере)
+│   ├── archiver.py           ← Q_ENRICHED → T_HISTORY (на ноуте)
+│   ├── spyt_marts.py         ← T_HISTORY → витрины дашборда (на кластере)
+│   └── scheduler.py          ← гоняет archiver + spyt_marts по расписанию
 └── README.md                 ← этот файл
 ```
 
@@ -133,9 +134,10 @@ yt select-rows "* from [//home/wikipulse/q_enriched] \
 uv run archiver
 ```
 
-Обычно запускается по крону раз в час:
-```cron
-0 * * * * cd /path/to/WikiPulse/bigdata && uv run archiver >> /tmp/wikipulse_archiver.log 2>&1
+Обычно запускается шедулером каждые 5 минут — см. раздел 9.
+Разово, руками:
+```bash
+uv run archiver
 ```
 
 Проверка:
@@ -195,6 +197,31 @@ yt select-rows "* from [//home/wikipulse/marts/top_geo] \
 yt select-rows "* from [//home/wikipulse/marts/trends] \
   order by bucket_ts desc limit 24" --format json
 ```
+
+### 9. Шедулер витрин (archiver + marts по расписанию)
+
+Один процесс вместо крона. Каждый цикл (5 минут): заливает актуальный
+`spyt_marts.py` в Cypress, запускает `archiver` и пересчитывает витрину
+за 24 часа. Раз в час дополнительно — витрины за неделю (168h) и месяц (720h).
+
+```bash
+uv run scheduler            # демон
+uv run scheduler --once     # один цикл для проверки
+```
+
+Параметры: `--interval` (сек, по умолчанию 300), `--slow-interval`
+(сек, 3600), `--top-n` и `--h3-res` (передаются в spyt_marts).
+Запускается на машине с настроенным `spark-submit`
+(`source ~/a-summer-school`). Шедулер сам подставляет окружение
+spark-submit (его bin первым в PATH), поэтому работает под `uv run`
+даже при активированном `spyt-summer-school`.
+
+Шедулер идемпотентен: падение любого шага не роняет цикл, наложения
+циклов нет (однопоточный; если цикл длился дольше интервала — следующий
+стартует сразу). Витрины получают ключи period `24h` / `168h` / `720h`.
+
+⚠️ Не запускай одновременно archiver из `deploy/compose.yml` — два
+архиватора гоняются за курсором и плодят дубли в `t_history`.
 
 ## Частые проблемы
 
