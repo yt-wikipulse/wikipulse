@@ -59,4 +59,41 @@
       }
     }
   }
+
+  &__nearestEdit {
+    margin-left: auto;
+    padding: 7px 13px;
+
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 13px;
+
+    background: transparent;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-small);
+    cursor: pointer;
+
+    &[aria-pressed="true"] {
+      color: var(--color-text-accent);
+      background: var(--color-background-accent-soft);
+      border-color: transparent;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        color: var(--color-text-primary);
+        background: var(--color-background-interactive-hover);
+      }
+
+      &[aria-pressed="true"]:hover {
+        color: var(--color-text-accent);
+        background: var(--color-background-accent-soft);
+      }
+    }
+  }
 }

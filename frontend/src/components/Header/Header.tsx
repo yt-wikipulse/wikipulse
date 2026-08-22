@@ -7,7 +7,17 @@ const TABS = [
   { to: "/dashboard", label: "Дашборд" },
 ];
 
-export function Header() {
+type HeaderProps = {
+  showNearestEdit?: boolean;
+  isNearestEditOpen?: boolean;
+  onNearestEditClick?: () => void;
+};
+
+export function Header({
+  showNearestEdit = false,
+  isNearestEditOpen = false,
+  onNearestEditClick,
+}: HeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.header__brand}>
@@ -21,6 +31,16 @@ export function Header() {
           </NavLink>
         ))}
       </nav>
+      {showNearestEdit && (
+        <button
+          className={styles.header__nearestEdit}
+          type="button"
+          aria-pressed={isNearestEditOpen}
+          onClick={onNearestEditClick}
+        >
+          Ближайшая правка
+        </button>
+      )}
     </header>
   );
 }

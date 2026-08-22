@@ -18,10 +18,16 @@ import styles from "./LiveMap.module.scss";
 
 export type { MapViewport };
 
+export type MapFocus = {
+  h3Index: string;
+  token: number;
+};
+
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
   focusH3: string | null;
   selectedH3: string | null;
+  focus?: MapFocus | null;
   onSelectedH3Change: (h3: string | null) => void;
   onViewportChange: (viewport: MapViewport) => void;
 };
@@ -35,7 +41,12 @@ const ZOOM_RANGE = { min: 3, max: 21 };
 
 // Ячейка витрины — res 4, карта отдаёт res 3/6/9. Точного совпадения не
 // будет, поэтому летим в центр ячейки и выделяем то, что под ним.
-const FOCUS_ZOOM = 8;
+const DASHBOARD_FOCUS_ZOOM = 8;
+
+// Ближайшая правка приходит ячейкой res 9 — можно встать вплотную.
+const NEAREST_FOCUS_ZOOM = 15;
+
+const FOCUS_DURATION_MS = 500;
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -52,6 +63,7 @@ export function LiveMap({
   hexagons,
   focusH3,
   selectedH3,
+  focus = null,
   onSelectedH3Change,
   onViewportChange,
 }: LiveMapProps) {
@@ -313,7 +325,7 @@ export function LiveMap({
 
     map.setLocation({
       center: [lng, lat] as LngLat,
-      zoom: FOCUS_ZOOM,
+      zoom: DASHBOARD_FOCUS_ZOOM,
       duration: 400,
     });
   }, [focusH3, mapVersion]);
@@ -338,6 +350,22 @@ export function LiveMap({
       onSelectedH3Change(cell);
     }
   }, [hexagons, onSelectedH3Change]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !focus) {
+      return;
+    }
+
+    const [lat, lng] = cellToLatLng(focus.h3Index);
+
+    map.setLocation({
+      center: [lng, lat] as LngLat,
+      zoom: NEAREST_FOCUS_ZOOM,
+      duration: FOCUS_DURATION_MS,
+    });
+  }, [focus, mapVersion]);
 
   useEffect(() => {
     selectedH3Ref.current = selectedH3;
