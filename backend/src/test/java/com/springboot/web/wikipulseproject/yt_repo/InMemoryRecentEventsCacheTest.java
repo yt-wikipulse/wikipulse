@@ -155,22 +155,26 @@ class InMemoryRecentEventsCacheTest {
 
     private EnrichedEvent event(String id, String cell) {
         return new EnrichedEvent(
-                rowIndex.incrementAndGet(),
-                id,
-                "Заголовок " + id,
-                "https://example.org/" + id,
-                cell,
-                clock.instant().getEpochSecond());
+            rowIndex.incrementAndGet(),
+            id,
+            "Заголовок " + id,
+            "https://example.org/" + id,
+            cell,
+            clock.instant().getEpochSecond(),
+            500L,                                         // НОВОЕ
+            "https://example.org/diff/" + id);            // НОВОЕ
     }
 
     private EnrichedEvent eventAt(String id, String cell, long eventTs) {
         return new EnrichedEvent(
-                rowIndex.incrementAndGet(),
-                id,
-                "Заголовок " + id,
-                "https://example.org/" + id,
-                cell,
-                eventTs);
+            rowIndex.incrementAndGet(),
+            id,
+            "Заголовок " + id,
+            "https://example.org/" + id,
+            cell,
+            eventTs,
+            500L,                                         // НОВОЕ
+            "https://example.org/diff/" + id);            // НОВОЕ
     }
 
     /** Часы, которые можно двигать руками — иначе окно не проверить без sleep. */

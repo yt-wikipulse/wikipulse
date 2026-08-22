@@ -156,11 +156,13 @@ class YtQueuePollerTest {
 
     private EnrichedEvent event(long rowIndex) {
         return new EnrichedEvent(
-                rowIndex,
-                "e" + rowIndex,
-                "Заголовок " + rowIndex,
-                "https://example.org/" + rowIndex,
-                "8928308280fffff",
-                1_760_000_000L);
+            rowIndex,
+            "e" + rowIndex,
+            "Заголовок " + rowIndex,
+            "https://example.org/" + rowIndex,
+            "8928308280fffff",
+            1_760_000_000L,
+            100L + rowIndex,                              // НОВОЕ: lengthUpdate
+            "https://example.org/diff/" + rowIndex);      // НОВОЕ: diffUrl
     }
 }
