@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useDashboardData } from "../features/dashboard/useDashboardData";
 import styles from "./DashboardPage.module.scss";
@@ -206,14 +207,12 @@ export function DashboardPage() {
                   <span className={styles.dashboardPage__rank}>
                     {index + 1}
                   </span>
-                  <a
+                  <Link
                     className={styles.dashboardPage__link}
-                    href={place.top_url}
-                    target="_blank"
-                    rel="noreferrer"
+                    to={`/map?h3=${place.h3_parent}`}
                   >
                     {place.top_title}
-                  </a>
+                  </Link>
                   <span className={styles.dashboardPage__rowValue}>
                     {formatCount(place.edits_count)}
                   </span>

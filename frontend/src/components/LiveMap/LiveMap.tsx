@@ -20,6 +20,7 @@ export type { MapViewport };
 
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
+  focusH3: string | null;
   selectedH3: string | null;
   onSelectedH3Change: (h3: string | null) => void;
   onViewportChange: (viewport: MapViewport) => void;
@@ -31,6 +32,10 @@ const INITIAL_LOCATION = {
 };
 
 const ZOOM_RANGE = { min: 3, max: 21 };
+
+// Ячейка витрины — res 4, карта отдаёт res 3/6/9. Точного совпадения не
+// будет, поэтому летим в центр ячейки и выделяем то, что под ним.
+const FOCUS_ZOOM = 8;
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -45,6 +50,7 @@ const MAP_BEHAVIORS: BehaviorType[] = [
 
 export function LiveMap({
   hexagons,
+  focusH3,
   selectedH3,
   onSelectedH3Change,
   onViewportChange,
@@ -289,6 +295,49 @@ export function LiveMap({
     maxEvents,
     mapVersion,
   ]);
+
+  // Ждём, пока под центром появятся данные: до первого попадания — только
+  // перелёт, после — выделение, и больше не мешаем пользователю.
+  const pendingFocusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !focusH3) {
+      return;
+    }
+
+    pendingFocusRef.current = focusH3;
+
+    const [lat, lng] = cellToLatLng(focusH3);
+
+    map.setLocation({
+      center: [lng, lat] as LngLat,
+      zoom: FOCUS_ZOOM,
+      duration: 400,
+    });
+  }, [focusH3, mapVersion]);
+
+  useEffect(() => {
+    const pending = pendingFocusRef.current;
+
+    if (!pending || hexagons.length === 0) {
+      return;
+    }
+
+    const [lat, lng] = cellToLatLng(pending);
+
+    const cell = latLngToCell(
+      lat,
+      lng,
+      getResolution(hexagons[0].h3_index),
+    );
+
+    if (hexagons.some((hexagon) => hexagon.h3_index === cell)) {
+      pendingFocusRef.current = null;
+      onSelectedH3Change(cell);
+    }
+  }, [hexagons, onSelectedH3Change]);
 
   useEffect(() => {
     selectedH3Ref.current = selectedH3;

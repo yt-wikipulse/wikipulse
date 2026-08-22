@@ -2,6 +2,7 @@ import {
   useCallback,
   useState,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   LiveMap,
@@ -32,6 +33,10 @@ export function LiveMapPage() {
 
   const [selectedH3, setSelectedH3] =
     useState<string | null>(null);
+
+  // Переход из «Топ мест» дашборда: /map?h3=<ячейка витрины>.
+  const [searchParams] = useSearchParams();
+  const focusH3 = searchParams.get("h3");
 
   const {
     hexagons,
@@ -74,6 +79,7 @@ export function LiveMapPage() {
 
         <LiveMap
           hexagons={hexagons}
+          focusH3={focusH3}
           selectedH3={selectedH3}
           onSelectedH3Change={setSelectedH3}
           onViewportChange={handleViewportChange}
