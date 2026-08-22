@@ -1,5 +1,6 @@
 package com.springboot.web.wikipulseproject.controller;
 
+/**
 import com.springboot.web.wikipulseproject.error.BadRequestException;
 import com.springboot.web.wikipulseproject.model.dto.DashboardResponse;
 import com.springboot.web.wikipulseproject.model.dto.TopArticleDto;
@@ -16,13 +17,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
+
  * ВРЕМЕННЫЙ МОК дашборда по контракту docs/03-contracts/rest-api.md.
  * Форма ответа настоящая, цифры выдуманные — чтобы фронт верстал, пока
  * пишется DashboardService и пока не прогнали джобу витрин.
  * Когда сервис появится: выкинуть фикстуры, оставить контроллер тонким,
  * как LiveMapController.
- 
+
 @RestController
 @RequestMapping("/api/v1/dashboard")
 public class DashboardController {
@@ -163,6 +164,8 @@ public class DashboardController {
             "https://es.wikipedia.org/wiki/Teotihuac%C3%A1n", 4980, 121),
         new TopGeoDto("842f5a3ffffffff", "東京タワー",
             "https://ja.wikipedia.org/wiki/東京タワー", 3760, 96));
+*/
+
 import com.springboot.web.wikipulseproject.model.dto.DashboardResponse;
 import com.springboot.web.wikipulseproject.service.DashboardService;
 import org.springframework.http.ResponseEntity;
@@ -170,7 +173,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-*/
 
 @RestController
 @RequestMapping("/api/v1")
