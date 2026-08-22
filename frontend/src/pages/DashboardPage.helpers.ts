@@ -20,9 +20,13 @@ export function isDailyChart(bucketSeconds: number): boolean {
 }
 
 // Подписи под каждым столбиком не помещаются — оставляем примерно шесть штук
-// с равным шагом, последний столбик подписан всегда.
-export function axisLabelIndexes(count: number): Set<number> {
-  const step = Math.max(1, Math.ceil(count / AXIS_LABELS));
+// с равным шагом, последний столбик подписан всегда. На узком графике шесть
+// подписей сталкиваются, поэтому вызывающий может попросить меньше.
+export function axisLabelIndexes(
+  count: number,
+  maxLabels: number = AXIS_LABELS,
+): Set<number> {
+  const step = Math.max(1, Math.ceil(count / maxLabels));
   const indexes = new Set<number>();
 
   for (let index = 0; index < count; index += step) {

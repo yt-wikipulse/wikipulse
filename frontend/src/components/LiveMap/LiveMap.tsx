@@ -14,6 +14,7 @@ import {
 } from "./LiveMap.helpers";
 import { mapCustomization } from "./mapCustomization";
 
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import styles from "./LiveMap.module.scss";
 
 export type { MapViewport };
@@ -48,6 +49,8 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "panTilt",
 ];
 
+const COMPACT_POPOVER = "(max-width: 767px)";
+
 export function LiveMap({
   hexagons,
   focusH3,
@@ -72,6 +75,10 @@ export function LiveMap({
   const [popoverElement] = useState(() =>
     document.createElement("div"),
   );
+
+  // Ниже 768px попап шире карты: привязка к ячейке всегда уводила бы его за
+  // край, поэтому там он живёт в контейнере карты, а не в маркере.
+  const isCompact = useMediaQuery(COMPACT_POPOVER);
 
   const [popoverPlacement, setPopoverPlacement] =
     useState<PopoverPlacement>("top-center");
@@ -393,9 +400,18 @@ export function LiveMap({
             Загрузка…
           </p>
         )}
+
+        {isCompact && selectedH3 && (
+          <CellPopover
+            hexagon={selectedHexagon}
+            onClose={() => onSelectedH3Change(null)}
+            placement="sheet"
+          />
+        )}
       </div>
 
-      {selectedH3 &&
+      {!isCompact &&
+        selectedH3 &&
         createPortal(
           <CellPopover
             hexagon={selectedHexagon}

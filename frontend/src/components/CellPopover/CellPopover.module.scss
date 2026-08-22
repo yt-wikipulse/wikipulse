@@ -40,6 +40,18 @@
     translate: 0 14px;
   }
 
+  &[data-placement="sheet"] {
+    position: absolute;
+    z-index: 20;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    left: var(--space-4);
+
+    width: auto;
+
+    translate: none;
+  }
+
   &__close {
     position: absolute;
     top: 8px;

@@ -10,7 +10,10 @@ export type PopoverPlacement =
   | "top-right"
   | "bottom-center"
   | "bottom-left"
-  | "bottom-right";
+  | "bottom-right"
+  // На узком экране попап шире карты, поэтому вместо привязки к ячейке он
+  // прижимается к нижнему краю: любая привязка увела бы его за край.
+  | "sheet";
 
 type CellPopoverProps = {
   hexagon: ActiveHexagon | null;
