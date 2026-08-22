@@ -89,6 +89,8 @@ def enrich_batch(batch_df, batch_id):
                 "url": r["url"],
                 "h3_r9": h3_index,
                 "event_ts": r["event_ts"],
+                "length_update": r["length_update"],
+                "diff_url": r["diff_url"],
             })
 
     if enriched:
@@ -122,7 +124,9 @@ def main():
         F.col("event_ts").cast(T.LongType()).alias("event_ts"),
         F.col("wiki").cast(T.StringType()).alias("wiki"),
         F.col("title").cast(T.StringType()).alias("title"),
-        F.col("url").cast(T.StringType()).alias("url")
+        F.col("url").cast(T.StringType()).alias("url"),
+        F.col("length_update").cast(T.LongType()).alias("length_update"),
+        F.col("diff_url").cast(T.StringType()).alias("diff_url")
     )
 
     query = (

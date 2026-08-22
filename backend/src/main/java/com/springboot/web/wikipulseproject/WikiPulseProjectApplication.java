@@ -16,12 +16,6 @@ import java.util.List;
 public class WikiPulseProjectApplication {
 
     public static void main(String[] args) {
-        ApplicationContext context = SpringApplication.run(WikiPulseProjectApplication.class, args);
-        YtAggregatesRepository repository = context.getBean(YtAggregatesRepository.class);
-
-        List<TopArticle> articles = repository.fetchTopArticles("100h", 100);
-        List<TopGeoPlace> places = repository.fetchTopGeo("100h", 100);
-        List<TrendPoint> points = repository.fetchTrends(1786644000);
-        String s = "3";
+        SpringApplication.run(WikiPulseProjectApplication.class, args);
     }
 }

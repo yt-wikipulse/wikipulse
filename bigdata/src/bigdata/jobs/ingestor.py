@@ -49,12 +49,16 @@ def event_to_row(evt: dict) -> dict | None:
     if rev_new is None:
         return None
 
+    length = evt.get("length", {})
+
     return {
         "event_id": f"{wiki}|{rev_new}",
         "wiki":     wiki,
         "title":    normalize_title(evt.get("title", "")),
         "url":      evt.get("title_url", ""),
         "event_ts": int(evt.get("timestamp", 0)),
+        "length_update": length.get("new", 0) - length.get("old", 0),
+        "diff_url": evt.get("notify_url", ""),
     }
 
 

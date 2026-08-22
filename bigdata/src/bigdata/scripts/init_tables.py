@@ -38,6 +38,8 @@ Q_RAW_SCHEMA = [
     {"name": "title",      "type": "string"},
     {"name": "url",        "type": "string"},
     {"name": "event_ts",   "type": "uint64"},
+    {"name": "length_update", "type": "int64"},
+    {"name": "diff_url", "type": "string"},
 ]
 
 Q_ENRICHED_SCHEMA = [
@@ -46,6 +48,8 @@ Q_ENRICHED_SCHEMA = [
     {"name": "url",      "type": "string"},
     {"name": "h3_r9",    "type": "string"},
     {"name": "event_ts", "type": "uint64"},
+    {"name": "length_update", "type": "int64"},
+    {"name": "diff_url", "type": "string"},
 ]
 
 DICT_COORDS_SCHEMA = [
@@ -61,6 +65,8 @@ T_HISTORY_SCHEMA = [
     {"name": "url",      "type": "string"},
     {"name": "h3_r9",    "type": "string"},
     {"name": "event_ts", "type": "uint64"},
+    {"name": "length_update", "type": "int64"},
+    {"name": "diff_url", "type": "string"},
 ]
 
 MARTS_TRENDS_SCHEMA = [

@@ -37,7 +37,8 @@ def write_cursor(value: int):
 
 def fetch_page(cursor: int, limit: int) -> list[dict]:
     query = (
-        f"[$row_index] as row_index, event_id, title, url, h3_r9, event_ts "
+        f"[$row_index] as row_index, event_id, title, url, h3_r9, event_ts, "
+        f"length_update, diff_url "
         f"from [{Q_ENRICHED}] where [$row_index] > {cursor} limit {limit}"
     )
     return list(yt.select_rows(query))
@@ -67,6 +68,8 @@ def main():
                 "url":      r["url"],
                 "h3_r9":    r["h3_r9"],
                 "event_ts": int(r["event_ts"]),
+                "length_update": int(r["length_update"]),
+                "diff_url":      r["diff_url"],
             }
             for r in page
         ]
