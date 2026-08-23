@@ -57,3 +57,6 @@ venv/
 context.md
 tmp/
 .tmp/
+
+# локальные переменные деплоя
+deploy/.env
