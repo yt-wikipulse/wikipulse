@@ -20,6 +20,13 @@
   --color-text-accent: #a8450a;
   --color-text-warning: #b54708;
 
+  /* diff правки */
+  --color-diff-added-bg: #e8f3ea;
+  --color-diff-added-accent: #1f7a45;
+  --color-diff-removed-bg: #fbe9e7;
+  --color-diff-removed-accent: #b3261e;
+  --color-background-skeleton: #efece7;
+
   /* lines and accent */
   --color-border-default: #e7e4de;
   --color-accent: #e8620c;

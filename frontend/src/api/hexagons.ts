@@ -2,6 +2,9 @@ export type HexagonEvent = {
   id: string;
   title: string;
   url: string;
+  length_update: number;
+  diff_url: string;
+  event_ts: number;
 };
 
 export type ActiveHexagon = {
