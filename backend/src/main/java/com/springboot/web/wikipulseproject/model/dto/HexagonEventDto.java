@@ -6,5 +6,6 @@ public record HexagonEventDto(
     String title,
     String url,
     long lengthUpdate,
-    String diffUrl
+    String diffUrl,
+    long eventTs
 ) {}

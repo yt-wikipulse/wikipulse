@@ -11,20 +11,32 @@ public class H3GeoService {
 
     private final H3Core h3;
     private final int zoomR3Max;
+    private final int zoomR4Max;
+    private final int zoomR5Max;
     private final int zoomR6Max;
+    private final int zoomR8Max;
 
     public H3GeoService(H3Core h3,
-                        @Value("${app.live.zoom-r3-max:5}") int zoomR3Max,
-                        @Value("${app.live.zoom-r6-max:11}") int zoomR6Max) {
+                        @Value("${app.live.zoom-r3-max:6}") int zoomR3Max,
+                        @Value("${app.live.zoom-r4-max:7}") int zoomR4Max,
+                        @Value("${app.live.zoom-r5-max:9}") int zoomR5Max,
+                        @Value("${app.live.zoom-r6-max:11}") int zoomR6Max,
+                        @Value("${app.live.zoom-r8-max:13}") int zoomR8Max) {
         this.h3 = h3;
         this.zoomR3Max = zoomR3Max;
+        this.zoomR4Max = zoomR4Max;
+        this.zoomR5Max = zoomR5Max;
         this.zoomR6Max = zoomR6Max;
+        this.zoomR8Max = zoomR8Max;
     }
 
     //зум нашей карты - чем сильне мы приблизили тем меньше шестиугольник видим
     public int resolutionZoom(int zoom) {
         if (zoom <= zoomR3Max) return 3;
+        if (zoom <= zoomR4Max) return 4;
+        if (zoom <= zoomR5Max) return 5;
         if (zoom <= zoomR6Max) return 6;
+        if (zoom <= zoomR8Max) return 8;
         return 9;
     }
 

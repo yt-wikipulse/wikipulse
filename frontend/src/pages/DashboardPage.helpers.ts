@@ -1,3 +1,6 @@
+import type { TrendPoint } from "../api/dashboard";
+
+const HOUR_SECONDS = 3600;
 const DAY_SECONDS = 86400;
 
 const AXIS_LABELS = 6;
@@ -13,15 +16,41 @@ const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   month: "2-digit",
 });
 
-// Шаг графика задаёт бэкенд полем bucket_seconds — фронт только решает,
-// подписывать точку часом или датой.
-export function isDailyChart(bucketSeconds: number): boolean {
-  return bucketSeconds >= DAY_SECONDS;
+export function chartStepSeconds(period: string): number {
+  return period === "24h" ? HOUR_SECONDS : DAY_SECONDS;
 }
 
-// Подписи под каждым столбиком не помещаются — оставляем примерно шесть штук
-// с равным шагом, последний столбик подписан всегда. На узком графике шесть
-// подписей сталкиваются, поэтому вызывающий может попросить меньше.
+export function isDailyChart(period: string): boolean {
+  return chartStepSeconds(period) >= DAY_SECONDS;
+}
+
+function toDailyBuckets(points: TrendPoint[]): TrendPoint[] {
+  const byDay = new Map<number, number>();
+
+  for (const point of points) {
+    const dayStart =
+      Math.floor(point.bucket_ts / DAY_SECONDS) * DAY_SECONDS;
+
+    byDay.set(dayStart, (byDay.get(dayStart) ?? 0) + point.edits_count);
+  }
+
+  return [...byDay.entries()]
+    .map(([bucket_ts, edits_count]) => ({ bucket_ts, edits_count }))
+    .sort((a, b) => a.bucket_ts - b.bucket_ts);
+}
+
+export function prepareBuckets(
+  points: TrendPoint[],
+  bucketSeconds: number,
+  period: string,
+): TrendPoint[] {
+  if (points.length === 0 || bucketSeconds >= chartStepSeconds(period)) {
+    return points;
+  }
+
+  return toDailyBuckets(points);
+}
+
 export function axisLabelIndexes(
   count: number,
   maxLabels: number = AXIS_LABELS,
@@ -58,12 +87,4 @@ export function pluralizeEdits(value: number): string {
     default:
       return "правок";
   }
-}
-
-export function sharePercent(value: number, total: number): string {
-  if (total <= 0) {
-    return "0%";
-  }
-
-  return `${((value / total) * 100).toFixed(1).replace(".", ",")}%`;
 }

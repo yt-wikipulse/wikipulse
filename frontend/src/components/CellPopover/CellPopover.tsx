@@ -1,8 +1,17 @@
-import { useEffect } from "react";
+import {
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
+import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
 
 const TOP_ARTICLES_LIMIT = 3;
+
+const DIFF_HOVER_DELAY_MS = 300;
 
 export type PopoverPlacement =
   | "top-center"
@@ -11,8 +20,6 @@ export type PopoverPlacement =
   | "bottom-center"
   | "bottom-left"
   | "bottom-right"
-  // На узком экране попап шире карты, поэтому вместо привязки к ячейке он
-  // прижимается к нижнему краю: любая привязка увела бы его за край.
   | "sheet";
 
 type CellPopoverProps = {
@@ -25,6 +32,7 @@ type ArticleSummary = {
   title: string;
   url: string;
   editsCount: number;
+  latest: HexagonEvent;
 };
 
 function pluralizeEdits(count: number): string {
@@ -57,11 +65,16 @@ function summarizeTopArticles(
 
     if (existing) {
       existing.editsCount += 1;
+
+      if (event.event_ts > existing.latest.event_ts) {
+        existing.latest = event;
+      }
     } else {
       byTitle.set(event.title, {
         title: event.title,
         url: event.url,
         editsCount: 1,
+        latest: event,
       });
     }
   }
@@ -76,6 +89,12 @@ export function CellPopover({
   onClose,
   placement = "top-center",
 }: CellPopoverProps) {
+  const [diff, setDiff] = useState<{
+    title: string;
+    openedAt: number;
+  } | null>(null);
+  const hoverTimerRef = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -90,8 +109,48 @@ export function CellPopover({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
   if (!hexagon) {
     return null;
+  }
+
+  function openDiff(title: string, delayMs: number) {
+    window.clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = window.setTimeout(
+      () => setDiff({ title, openedAt: Math.floor(Date.now() / 1000) }),
+      delayMs,
+    );
+  }
+
+  function handleArticleClick(
+    articleEvent: MouseEvent<HTMLAnchorElement>,
+    title: string,
+  ) {
+    if (diff?.title === title) {
+      return;
+    }
+
+    articleEvent.preventDefault();
+    openDiff(title, 0);
+  }
+
+  function handlePointer(
+    pointerEvent: PointerEvent<HTMLElement>,
+    action: () => void,
+  ) {
+    if (pointerEvent.pointerType === "mouse") {
+      action();
+    }
+  }
+
+  function closeDiff() {
+    window.clearTimeout(hoverTimerRef.current);
+    setDiff(null);
   }
 
   const topArticles = summarizeTopArticles(
@@ -103,6 +162,7 @@ export function CellPopover({
     <div
       className={styles.cellPopover}
       data-placement={placement}
+      data-diff-open={diff !== null}
       role="dialog"
       aria-label="Активность ячейки"
     >
@@ -128,12 +188,34 @@ export function CellPopover({
 
       <ul className={styles.cellPopover__articles}>
         {topArticles.map((article) => (
-          <li key={article.title}>
+          <li
+            className={styles.cellPopover__articleItem}
+            data-diff={diff?.title === article.title}
+            key={article.title}
+            onPointerEnter={(pointerEvent) =>
+              handlePointer(pointerEvent, () =>
+                openDiff(article.title, DIFF_HOVER_DELAY_MS),
+              )
+            }
+            onPointerLeave={(pointerEvent) =>
+              handlePointer(pointerEvent, closeDiff)
+            }
+          >
             <a
               className={styles.cellPopover__article}
               href={article.url}
               target="_blank"
               rel="noreferrer"
+              data-active={diff?.title === article.title}
+              onFocus={() => openDiff(article.title, 0)}
+              onBlur={(blurEvent) => {
+                if (blurEvent.relatedTarget) {
+                  closeDiff();
+                }
+              }}
+              onClick={(clickEvent) =>
+                handleArticleClick(clickEvent, article.title)
+              }
             >
               <span className={styles.cellPopover__articleTitle}>
                 {article.title}
@@ -142,6 +224,17 @@ export function CellPopover({
                 {article.editsCount} {pluralizeEdits(article.editsCount)}
               </span>
             </a>
+
+            {diff?.title === article.title && (
+              <div className={styles.cellPopover__diff}>
+                <DiffPopover
+                  event={article.latest}
+                  openedAt={diff.openedAt}
+                  onClose={closeDiff}
+                  key={article.latest.id}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>

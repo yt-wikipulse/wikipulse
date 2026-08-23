@@ -1,0 +1,35 @@
+# Автовыкладка при пуше в main: исходники едут на сервер, там пересобираются
+# образы и поднимаются контейнеры.
+#
+# Секрет в Repository settings -> Secrets:
+#   DEPLOY_SSH_KEY — приватный ключ без passphrase, публичная часть лежит
+#                    в /home/ubuntu/.ssh/authorized_keys на сервере
+#
+# Значения YT_TOKEN и ключа Яндекс Карт живут в /opt/wikipulse/src/deploy/.env
+# на самом сервере и через CI не проходят.
+
+"on":
+  push:
+    - workflows: [deploy]
+      filter:
+        branches: [main]
+
+workflows:
+  deploy:
+    tasks:
+      - deploy
+
+tasks:
+  - name: deploy
+    cubes:
+      - name: upload-and-restart
+        image: alpine:3.20
+        script:
+          - apk add --no-cache openssh-client rsync
+          - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          - echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          - chmod 600 ~/.ssh/id_ed25519
+          - ssh-keyscan -H 203.0.113.12 >> ~/.ssh/known_hosts
+          # deploy/.env исключён: он создаётся на сервере один раз и хранит секреты
+          - rsync -az --delete --exclude '.git' --exclude 'node_modules' --exclude 'target' --exclude 'deploy/.env' ./ ubuntu@203.0.113.12:/opt/wikipulse/src/
+          - ssh ubuntu@203.0.113.12 'cd /opt/wikipulse/src/deploy && docker compose up -d --build --remove-orphans'

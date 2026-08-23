@@ -23,12 +23,15 @@ app:
     # В main должно быть true.
     window-enabled: false
     #zoom <= zoom-r3-max  -> r3
-    #zoom-r3-max < zoom <= zoom-r6-max -> r6
-    #zoom > zoom-r6-max   -> r9
+    #zoom-r3-max < zoom <= zoom-r4-max -> r4, и так далее по ступеням
+    #zoom > zoom-r8-max   -> r9
     zoom-min: 0          #карты начинаются с 0 весь мир
     zoom-max: 30         #потолок
-    zoom-r3-max: 5       #маппинг zoom -> resolution
+    zoom-r3-max: 6       #маппинг zoom -> resolution
+    zoom-r4-max: 7
+    zoom-r5-max: 9
     zoom-r6-max: 11
+    zoom-r8-max: 13
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
   poller:
     interval-ms: 500

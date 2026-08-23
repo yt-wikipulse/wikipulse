@@ -1,15 +1,20 @@
 import {
   useCallback,
+  useRef,
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { useAppShellContext } from "../app/appShellContext";
 import {
   LiveMap,
+  type MapFocus,
   type MapViewport,
 } from "../components/LiveMap/LiveMap";
 import { MapStatus } from "../components/MapStatus/MapStatus";
+import { NearestEditPanel } from "../components/NearestEditPanel/NearestEditPanel";
 import { useLiveMapData } from "../features/live-map/useLiveMapData";
+import { useNearestEdit } from "../features/nearest-edit/useNearestEdit";
 
 import styles from "./LiveMapPage.module.scss";
 
@@ -34,7 +39,6 @@ export function LiveMapPage() {
   const [selectedH3, setSelectedH3] =
     useState<string | null>(null);
 
-  // Переход из «Топ мест» дашборда: /map?h3=<ячейка витрины>.
   const [searchParams] = useSearchParams();
   const focusH3 = searchParams.get("h3");
 
@@ -45,6 +49,31 @@ export function LiveMapPage() {
     error,
     retry,
   } = useLiveMapData(viewport);
+
+  const { isNearestEditOpen, closeNearestEdit } =
+    useAppShellContext();
+
+  const {
+    state: nearestEditState,
+    retry: retryNearestEdit,
+  } = useNearestEdit(isNearestEditOpen);
+
+  const [mapFocus, setMapFocus] =
+    useState<MapFocus | null>(null);
+
+  const focusTokenRef = useRef(0);
+
+  const handleShowOnMap = useCallback(
+    (h3Index: string) => {
+      focusTokenRef.current += 1;
+
+      setMapFocus({
+        h3Index,
+        token: focusTokenRef.current,
+      });
+    },
+    [],
+  );
 
   const handleViewportChange = useCallback(
     (nextViewport: MapViewport) => {
@@ -81,8 +110,16 @@ export function LiveMapPage() {
           hexagons={hexagons}
           focusH3={focusH3}
           selectedH3={selectedH3}
+          focus={mapFocus}
           onSelectedH3Change={setSelectedH3}
           onViewportChange={handleViewportChange}
+        />
+
+        <NearestEditPanel
+          state={nearestEditState}
+          onRetry={retryNearestEdit}
+          onShowOnMap={handleShowOnMap}
+          onClose={closeNearestEdit}
         />
       </section>
     </main>

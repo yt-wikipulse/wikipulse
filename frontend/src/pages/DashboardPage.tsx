@@ -10,11 +10,9 @@ import {
   formatCount,
   isDailyChart,
   pluralizeEdits,
-  sharePercent,
+  prepareBuckets,
 } from "./DashboardPage.helpers";
 
-// Ниже 1280px карточка графика становится настолько узкой, что шесть подписей
-// оси налезают друг на друга — оставляем четыре.
 const COMPACT_AXIS = "(max-width: 1279px)";
 const COMPACT_AXIS_LABELS = 4;
 
@@ -31,8 +29,12 @@ export function DashboardPage() {
 
   const caption =
     PERIODS.find((item) => item.value === period)?.caption ?? period;
-  const daily = isDailyChart(data?.bucket_seconds ?? 0);
-  const buckets = data?.trends ?? [];
+  const daily = isDailyChart(period);
+  const buckets = prepareBuckets(
+    data?.trends ?? [],
+    data?.bucket_seconds ?? 0,
+    period,
+  );
   const maxEdits = Math.max(...buckets.map((bucket) => bucket.edits_count), 1);
   const axisLabels = axisLabelIndexes(
     buckets.length,
@@ -42,8 +44,6 @@ export function DashboardPage() {
   const totalEdits = data?.total_edits ?? 0;
   const topArticle = data?.top_articles[0];
   const topPlace = data?.top_geo[0];
-  // Бэкенд добивает пустые часы нулями, поэтому судим по сумме, а не по
-  // длине массива: 24 нулевых столбика — это тоже «данных нет».
   const isEmpty = Boolean(data) && totalEdits === 0;
 
   return (
@@ -122,8 +122,7 @@ export function DashboardPage() {
                   <span className={styles.dashboardPage__accent}>
                     {formatCount(topArticle.edits_count)}
                   </span>{" "}
-                  {pluralizeEdits(topArticle.edits_count)} ·{" "}
-                  {sharePercent(topArticle.edits_count, totalEdits)} потока
+                  {pluralizeEdits(topArticle.edits_count)}
                 </p>
               ) : null}
             </article>
@@ -244,8 +243,6 @@ export function DashboardPage() {
   );
 }
 
-// Столбик строки топа — доля от лидера списка, а не от общего числа правок:
-// иначе у хвоста списка полоска вырождается в точку.
 function barWidth(value: number, rows: { edits_count: number }[]): number {
   const max = Math.max(...rows.map((row) => row.edits_count), 1);
   return (value / max) * 100;

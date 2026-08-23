@@ -19,10 +19,16 @@ import styles from "./LiveMap.module.scss";
 
 export type { MapViewport };
 
+export type MapFocus = {
+  h3Index: string;
+  token: number;
+};
+
 type LiveMapProps = {
   hexagons: ActiveHexagon[];
   focusH3: string | null;
   selectedH3: string | null;
+  focus?: MapFocus | null;
   onSelectedH3Change: (h3: string | null) => void;
   onViewportChange: (viewport: MapViewport) => void;
 };
@@ -34,9 +40,11 @@ const INITIAL_LOCATION = {
 
 const ZOOM_RANGE = { min: 3, max: 21 };
 
-// Ячейка витрины — res 4, карта отдаёт res 3/6/9. Точного совпадения не
-// будет, поэтому летим в центр ячейки и выделяем то, что под ним.
-const FOCUS_ZOOM = 8;
+const DASHBOARD_FOCUS_ZOOM = 8;
+
+const NEAREST_FOCUS_ZOOM = 15;
+
+const FOCUS_DURATION_MS = 500;
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -55,6 +63,7 @@ export function LiveMap({
   hexagons,
   focusH3,
   selectedH3,
+  focus = null,
   onSelectedH3Change,
   onViewportChange,
 }: LiveMapProps) {
@@ -76,14 +85,11 @@ export function LiveMap({
     document.createElement("div"),
   );
 
-  // Ниже 768px попап шире карты: привязка к ячейке всегда уводила бы его за
-  // край, поэтому там он живёт в контейнере карты, а не в маркере.
   const isCompact = useMediaQuery(COMPACT_POPOVER);
 
   const [popoverPlacement, setPopoverPlacement] =
     useState<PopoverPlacement>("top-center");
 
-  // Слушатель карты создаётся один раз, данные читает через ref.
   const hexagonsRef = useRef(hexagons);
   const selectedH3Ref = useRef(selectedH3);
   const boundsRef = useRef<LngLatBounds | null>(null);
@@ -190,8 +196,6 @@ export function LiveMap({
               );
             },
 
-            // Грузим и во время движения: округлённый bbox меняется
-            // раз в четверть экрана, лишних запросов не будет.
             onUpdate: ({ location }) => {
               onViewportChange(
                 toViewport(location.bounds, location.zoom),
@@ -241,7 +245,6 @@ export function LiveMap({
       return;
     }
 
-    // Одна фича на цвет, а не на ячейку: тысячи YMapFeature карта не тянет.
     const groups = new Map<string, LngLat[][][]>();
 
     for (const hexagon of hexagons) {
@@ -303,8 +306,6 @@ export function LiveMap({
     mapVersion,
   ]);
 
-  // Ждём, пока под центром появятся данные: до первого попадания — только
-  // перелёт, после — выделение, и больше не мешаем пользователю.
   const pendingFocusRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -320,7 +321,7 @@ export function LiveMap({
 
     map.setLocation({
       center: [lng, lat] as LngLat,
-      zoom: FOCUS_ZOOM,
+      zoom: DASHBOARD_FOCUS_ZOOM,
       duration: 400,
     });
   }, [focusH3, mapVersion]);
@@ -345,6 +346,22 @@ export function LiveMap({
       onSelectedH3Change(cell);
     }
   }, [hexagons, onSelectedH3Change]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !focus) {
+      return;
+    }
+
+    const [lat, lng] = cellToLatLng(focus.h3Index);
+
+    map.setLocation({
+      center: [lng, lat] as LngLat,
+      zoom: NEAREST_FOCUS_ZOOM,
+      duration: FOCUS_DURATION_MS,
+    });
+  }, [focus, mapVersion]);
 
   useEffect(() => {
     selectedH3Ref.current = selectedH3;

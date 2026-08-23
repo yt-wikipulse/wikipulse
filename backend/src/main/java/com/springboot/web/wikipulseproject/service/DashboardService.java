@@ -8,11 +8,13 @@ import com.springboot.web.wikipulseproject.model.dto.DashboardResponse;
 import com.springboot.web.wikipulseproject.yt_repo.YtAggregatesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
 
+@Profile("yt")
 @Service
 @Slf4j
 public class DashboardService {
@@ -43,8 +45,8 @@ public class DashboardService {
         int bucketSeconds = calculateBucketSeconds(period);
         long fromBucketTs = Instant.now().getEpochSecond() - periodToSeconds(period);
 
-        //три чтения из витрин параллельно
-        List<TrendPoint> trends = repository.fetchTrends(fromBucketTs, limit);
+        //три чтения из витрин последовательно
+        List<TrendPoint> trends = repository.fetchTrends(fromBucketTs);
         List<TopArticle> topArticles = repository.fetchTopArticles(periodInHours, limit);
         List<TopGeoPlace> topGeoPlaces = repository.fetchTopGeo(periodInHours, limit);
 
