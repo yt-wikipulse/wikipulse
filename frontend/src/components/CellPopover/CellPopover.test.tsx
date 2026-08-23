@@ -160,7 +160,10 @@ describe("CellPopover", () => {
 
     expect(screen.queryByText("новый текст статьи")).toBeNull();
 
-    fireEvent.mouseEnter(screen.getByRole("link", { name: /Москва/ }).parentElement!);
+    fireEvent.pointerEnter(
+      screen.getByRole("link", { name: /Москва/ }).parentElement!,
+      { pointerType: "mouse" },
+    );
 
     await act(async () => {
       vi.advanceTimersByTime(300);
@@ -188,11 +191,11 @@ describe("CellPopover", () => {
 
     const row = screen.getByRole("link", { name: /Москва/ }).parentElement!;
 
-    fireEvent.mouseEnter(row);
+    fireEvent.pointerEnter(row, { pointerType: "mouse" });
     await act(async () => {
       vi.advanceTimersByTime(150);
     });
-    fireEvent.mouseLeave(row);
+    fireEvent.pointerLeave(row, { pointerType: "mouse" });
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
@@ -230,5 +233,39 @@ describe("CellPopover", () => {
     });
 
     expect(fireEvent.click(row)).toBe(true);
+  });
+  it("не закрывает diff, когда тап просто снимает фокус со строки", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ });
+
+    fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    // После тапа браузер снимает фокус со ссылки, relatedTarget при этом пуст.
+    fireEvent.blur(row, { relatedTarget: null });
+
+    expect(screen.getByText("новый текст статьи")).toBeTruthy();
   });
 });

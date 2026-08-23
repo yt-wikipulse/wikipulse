@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useDashboardData } from "../features/dashboard/useDashboardData";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import styles from "./DashboardPage.module.scss";
 import {
   axisLabelIndexes,
@@ -12,6 +13,9 @@ import {
   prepareBuckets,
 } from "./DashboardPage.helpers";
 
+const COMPACT_AXIS = "(max-width: 1279px)";
+const COMPACT_AXIS_LABELS = 4;
+
 const PERIODS = [
   { value: "24h", tab: "1 день", caption: "последние сутки" },
   { value: "7d", tab: "1 неделя", caption: "последняя неделя" },
@@ -21,6 +25,7 @@ const PERIODS = [
 export function DashboardPage() {
   const [period, setPeriod] = useState(PERIODS[0].value);
   const { data, loading, error, reload } = useDashboardData(period);
+  const compactAxis = useMediaQuery(COMPACT_AXIS);
 
   const caption =
     PERIODS.find((item) => item.value === period)?.caption ?? period;
@@ -31,7 +36,10 @@ export function DashboardPage() {
     period,
   );
   const maxEdits = Math.max(...buckets.map((bucket) => bucket.edits_count), 1);
-  const axisLabels = axisLabelIndexes(buckets.length);
+  const axisLabels = axisLabelIndexes(
+    buckets.length,
+    compactAxis ? COMPACT_AXIS_LABELS : undefined,
+  );
 
   const totalEdits = data?.total_edits ?? 0;
   const topArticle = data?.top_articles[0];

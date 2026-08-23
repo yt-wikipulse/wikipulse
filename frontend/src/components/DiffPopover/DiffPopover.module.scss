@@ -64,6 +64,34 @@
     }
   }
 
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    line-height: 1;
+    background: transparent;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        color: var(--color-text-primary);
+        background: var(--color-background-interactive-hover);
+      }
+    }
+  }
+
   &__lines {
     display: flex;
     flex-direction: column;
@@ -210,4 +238,9 @@
   .diffPopover {
     width: auto;
   }
+}
+
+[data-placement="sheet"] .diffPopover {
+  border: 0;
+  box-shadow: none;
 }

@@ -51,8 +51,11 @@ export function prepareBuckets(
   return toDailyBuckets(points);
 }
 
-export function axisLabelIndexes(count: number): Set<number> {
-  const step = Math.max(1, Math.ceil(count / AXIS_LABELS));
+export function axisLabelIndexes(
+  count: number,
+  maxLabels: number = AXIS_LABELS,
+): Set<number> {
+  const step = Math.max(1, Math.ceil(count / maxLabels));
   const indexes = new Set<number>();
 
   for (let index = 0; index < count; index += step) {

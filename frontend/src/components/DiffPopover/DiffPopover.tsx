@@ -12,9 +12,14 @@ import styles from "./DiffPopover.module.scss";
 type DiffPopoverProps = {
   event: HexagonEvent;
   openedAt: number;
+  onClose?: () => void;
 };
 
-export function DiffPopover({ event, openedAt }: DiffPopoverProps) {
+export function DiffPopover({
+  event,
+  openedAt,
+  onClose,
+}: DiffPopoverProps) {
   const { diff, loading, error, retry } = useWikiDiff(event);
 
   const hiddenLines = diff ? diff.totalLines - diff.lines.length : 0;
@@ -45,6 +50,17 @@ export function DiffPopover({ event, openedAt }: DiffPopoverProps) {
         >
           {formatSizeDelta(event.length_update)}
         </span>
+
+        {onClose ? (
+          <button
+            className={styles.diffPopover__close}
+            type="button"
+            aria-label="Закрыть diff"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        ) : null}
       </header>
 
       {loading && (

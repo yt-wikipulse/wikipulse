@@ -1,4 +1,10 @@
-import { type MouseEvent, useEffect, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
 import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
@@ -13,7 +19,8 @@ export type PopoverPlacement =
   | "top-right"
   | "bottom-center"
   | "bottom-left"
-  | "bottom-right";
+  | "bottom-right"
+  | "sheet";
 
 type CellPopoverProps = {
   hexagon: ActiveHexagon | null;
@@ -132,6 +139,15 @@ export function CellPopover({
     openDiff(title, 0);
   }
 
+  function handlePointer(
+    pointerEvent: PointerEvent<HTMLElement>,
+    action: () => void,
+  ) {
+    if (pointerEvent.pointerType === "mouse") {
+      action();
+    }
+  }
+
   function closeDiff() {
     window.clearTimeout(hoverTimerRef.current);
     setDiff(null);
@@ -146,6 +162,7 @@ export function CellPopover({
     <div
       className={styles.cellPopover}
       data-placement={placement}
+      data-diff-open={diff !== null}
       role="dialog"
       aria-label="Активность ячейки"
     >
@@ -173,11 +190,16 @@ export function CellPopover({
         {topArticles.map((article) => (
           <li
             className={styles.cellPopover__articleItem}
+            data-diff={diff?.title === article.title}
             key={article.title}
-            onMouseEnter={() =>
-              openDiff(article.title, DIFF_HOVER_DELAY_MS)
+            onPointerEnter={(pointerEvent) =>
+              handlePointer(pointerEvent, () =>
+                openDiff(article.title, DIFF_HOVER_DELAY_MS),
+              )
             }
-            onMouseLeave={closeDiff}
+            onPointerLeave={(pointerEvent) =>
+              handlePointer(pointerEvent, closeDiff)
+            }
           >
             <a
               className={styles.cellPopover__article}
@@ -186,7 +208,11 @@ export function CellPopover({
               rel="noreferrer"
               data-active={diff?.title === article.title}
               onFocus={() => openDiff(article.title, 0)}
-              onBlur={closeDiff}
+              onBlur={(blurEvent) => {
+                if (blurEvent.relatedTarget) {
+                  closeDiff();
+                }
+              }}
               onClick={(clickEvent) =>
                 handleArticleClick(clickEvent, article.title)
               }
@@ -204,6 +230,7 @@ export function CellPopover({
                 <DiffPopover
                   event={article.latest}
                   openedAt={diff.openedAt}
+                  onClose={closeDiff}
                   key={article.latest.id}
                 />
               </div>
