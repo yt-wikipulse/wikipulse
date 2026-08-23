@@ -19,6 +19,7 @@ v1 ограничен живой картой; маршрут дашборда �
 | Какие данные отдаёт backend | [REST-контракт](../03-contracts/rest-api.md) |
 | Как устроен frontend | Этот документ |
 | Как писать стили | [Frontend styles](frontend-styles.md) |
+| Почему код написан именно так | [Решения в коде фронтенда](frontend-implementation-notes.md) |
 | Кто владеет стыком и как менять контракт | [Роли](../../process/roles.md) |
 | Как вести ветки, review и документацию | [Process](../../process/README.md) |
 

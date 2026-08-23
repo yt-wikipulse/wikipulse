@@ -8,11 +8,13 @@ import com.springboot.web.wikipulseproject.model.dto.DashboardResponse;
 import com.springboot.web.wikipulseproject.yt_repo.YtAggregatesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
 
+@Profile("yt")
 @Service
 @Slf4j
 public class DashboardService {
