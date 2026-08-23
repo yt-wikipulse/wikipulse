@@ -16,6 +16,15 @@ const BOUNDARY_CACHE_CAP = 20_000;
 
 const boundaryCache = new Map<string, LngLat[]>();
 
+function unwrapRing(ring: LngLat[]): LngLat[] {
+  const [referenceLng] = ring[0];
+
+  return ring.map(([lng, lat]) => [
+    lng - 360 * Math.round((lng - referenceLng) / 360),
+    lat,
+  ] as LngLat);
+}
+
 export function h3ToPolygon(h3: string): LngLat[] {
   const cached = boundaryCache.get(h3);
 
@@ -28,7 +37,7 @@ export function h3ToPolygon(h3: string): LngLat[] {
   );
 
   const ring = boundary.length > 0
-    ? [...boundary, boundary[0]]
+    ? unwrapRing([...boundary, boundary[0]])
     : boundary;
 
   if (boundaryCache.size >= BOUNDARY_CACHE_CAP) {
