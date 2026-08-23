@@ -43,8 +43,8 @@ public class DashboardService {
         int bucketSeconds = calculateBucketSeconds(period);
         long fromBucketTs = Instant.now().getEpochSecond() - periodToSeconds(period);
 
-        //три чтения из витрин параллельно
-        List<TrendPoint> trends = repository.fetchTrends(fromBucketTs, limit);
+        //три чтения из витрин последовательно
+        List<TrendPoint> trends = repository.fetchTrends(fromBucketTs);
         List<TopArticle> topArticles = repository.fetchTopArticles(periodInHours, limit);
         List<TopGeoPlace> topGeoPlaces = repository.fetchTopGeo(periodInHours, limit);
 
