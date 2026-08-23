@@ -8,7 +8,7 @@ import styles from "./NearestEditPanel.module.scss";
 type NearestEditPanelProps = {
   state: NearestEditState;
   onRetry: () => void;
-  onShowOnMap: (h3Index: string) => void;
+  onShowOnMap: (h3Index: string, zoom: number) => void;
   onClose: () => void;
 };
 
@@ -21,7 +21,7 @@ function PanelBody({
 }: {
   state: NearestEditState;
   onRetry: () => void;
-  onShowOnMap: (h3Index: string) => void;
+  onShowOnMap: (h3Index: string, zoom: number) => void;
 }) {
   switch (state.status) {
     case "idle":
@@ -113,7 +113,9 @@ function PanelBody({
           <button
             className={styles.nearestEditPanel__showOnMap}
             type="button"
-            onClick={() => onShowOnMap(state.edit.h3Index)}
+            onClick={() =>
+              onShowOnMap(state.edit.h3Index, state.zoom)
+            }
           >
             Показать на карте
           </button>

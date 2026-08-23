@@ -110,6 +110,38 @@ export function getPopoverPlacement(
   return `${vertical}-${horizontal}` as PopoverPlacement;
 }
 
+const STROKE_COLOR = "#ffffffd2";
+
+function withAlpha(color: string, opacity: number) {
+  if (opacity >= 1) {
+    return color;
+  }
+
+  const alpha =
+    color.length === 9 ? parseInt(color.slice(7, 9), 16) : 255;
+
+  return (
+    color.slice(0, 7) +
+    Math.round(alpha * opacity)
+      .toString(16)
+      .padStart(2, "0")
+  );
+}
+
+export function getFeatureStyle(fill: string, opacity: number) {
+  return {
+    cursor: "pointer",
+    fill: withAlpha(fill, opacity),
+
+    stroke: [
+      {
+        color: withAlpha(STROKE_COLOR, opacity),
+        width: 1,
+      },
+    ],
+  };
+}
+
 export function getFillColor(
   hexagon: ActiveHexagon,
   maxEvents: number,
