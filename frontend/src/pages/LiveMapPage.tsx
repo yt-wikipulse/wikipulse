@@ -64,11 +64,12 @@ export function LiveMapPage() {
   const focusTokenRef = useRef(0);
 
   const handleShowOnMap = useCallback(
-    (h3Index: string) => {
+    (h3Index: string, zoom: number) => {
       focusTokenRef.current += 1;
 
       setMapFocus({
         h3Index,
+        zoom,
         token: focusTokenRef.current,
       });
     },

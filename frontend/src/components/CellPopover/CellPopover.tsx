@@ -6,12 +6,15 @@ import {
   useState,
 } from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
+import { useKeepInViewport } from "../../hooks/useKeepInViewport";
 import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
 
 const TOP_ARTICLES_LIMIT = 3;
 
 const DIFF_HOVER_DELAY_MS = 300;
+
+const DIFF_CLOSE_DELAY_MS = 160;
 
 export type PopoverPlacement =
   | "top-center"
@@ -92,8 +95,13 @@ export function CellPopover({
   const [diff, setDiff] = useState<{
     title: string;
     openedAt: number;
+    pinned: boolean;
   } | null>(null);
   const hoverTimerRef = useRef<number | undefined>(undefined);
+  const closeTimerRef = useRef<number | undefined>(undefined);
+  const diffRef = useKeepInViewport<HTMLDivElement>(
+    diff !== null && placement !== "sheet",
+  );
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -112,6 +120,7 @@ export function CellPopover({
   useEffect(() => {
     return () => {
       window.clearTimeout(hoverTimerRef.current);
+      window.clearTimeout(closeTimerRef.current);
     };
   }, []);
 
@@ -119,10 +128,11 @@ export function CellPopover({
     return null;
   }
 
-  function openDiff(title: string, delayMs: number) {
+  function openDiff(title: string, delayMs: number, pinned = false) {
     window.clearTimeout(hoverTimerRef.current);
     hoverTimerRef.current = window.setTimeout(
-      () => setDiff({ title, openedAt: Math.floor(Date.now() / 1000) }),
+      () =>
+        setDiff({ title, openedAt: Math.floor(Date.now() / 1000), pinned }),
       delayMs,
     );
   }
@@ -136,7 +146,7 @@ export function CellPopover({
     }
 
     articleEvent.preventDefault();
-    openDiff(title, 0);
+    openDiff(title, 0, true);
   }
 
   function handlePointer(
@@ -150,7 +160,22 @@ export function CellPopover({
 
   function closeDiff() {
     window.clearTimeout(hoverTimerRef.current);
+    window.clearTimeout(closeTimerRef.current);
     setDiff(null);
+  }
+
+  function cancelScheduledClose() {
+    window.clearTimeout(closeTimerRef.current);
+  }
+
+  function scheduleCloseUnpinned() {
+    window.clearTimeout(hoverTimerRef.current);
+    window.clearTimeout(closeTimerRef.current);
+
+    closeTimerRef.current = window.setTimeout(
+      () => setDiff((current) => (current?.pinned ? current : null)),
+      DIFF_CLOSE_DELAY_MS,
+    );
   }
 
   const topArticles = summarizeTopArticles(
@@ -161,6 +186,7 @@ export function CellPopover({
   return (
     <div
       className={styles.cellPopover}
+      data-map-popover="true"
       data-placement={placement}
       data-diff-open={diff !== null}
       role="dialog"
@@ -193,12 +219,13 @@ export function CellPopover({
             data-diff={diff?.title === article.title}
             key={article.title}
             onPointerEnter={(pointerEvent) =>
-              handlePointer(pointerEvent, () =>
-                openDiff(article.title, DIFF_HOVER_DELAY_MS),
-              )
+              handlePointer(pointerEvent, () => {
+                cancelScheduledClose();
+                openDiff(article.title, DIFF_HOVER_DELAY_MS);
+              })
             }
             onPointerLeave={(pointerEvent) =>
-              handlePointer(pointerEvent, closeDiff)
+              handlePointer(pointerEvent, scheduleCloseUnpinned)
             }
           >
             <a
@@ -210,7 +237,7 @@ export function CellPopover({
               onFocus={() => openDiff(article.title, 0)}
               onBlur={(blurEvent) => {
                 if (blurEvent.relatedTarget) {
-                  closeDiff();
+                  scheduleCloseUnpinned();
                 }
               }}
               onClick={(clickEvent) =>
@@ -226,7 +253,14 @@ export function CellPopover({
             </a>
 
             {diff?.title === article.title && (
-              <div className={styles.cellPopover__diff}>
+              <div
+                className={styles.cellPopover__diff}
+                ref={diffRef}
+                onPointerEnter={cancelScheduledClose}
+                onPointerLeave={(pointerEvent) =>
+                  handlePointer(pointerEvent, scheduleCloseUnpinned)
+                }
+              >
                 <DiffPopover
                   event={article.latest}
                   openedAt={diff.openedAt}
