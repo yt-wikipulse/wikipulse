@@ -45,7 +45,6 @@ export function LiveMapPage() {
   const {
     hexagons,
     loading,
-    isBackgroundRefreshing,
     error,
     retry,
   } = useLiveMapData(viewport);
@@ -101,7 +100,6 @@ export function LiveMapPage() {
       >
         <MapStatus
           loading={loading}
-          isBackgroundRefreshing={isBackgroundRefreshing}
           error={error}
           cellCount={hexagons.length}
           onRetry={retry}
