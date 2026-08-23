@@ -268,4 +268,133 @@ describe("CellPopover", () => {
 
     expect(screen.getByText("новый текст статьи")).toBeTruthy();
   });
+  it("оставляет diff открытым, когда его открыли кликом и увели курсор", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ });
+
+    fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    fireEvent.pointerLeave(row.parentElement!, { pointerType: "mouse" });
+
+    expect(screen.getByText("новый текст статьи")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть diff" }));
+
+    expect(screen.queryByText("новый текст статьи")).toBeNull();
+  });
+
+  it("закрывает diff, открытый наведением, когда курсор ушёл", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ }).parentElement!;
+
+    fireEvent.pointerEnter(row, { pointerType: "mouse" });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    fireEvent.pointerLeave(row, { pointerType: "mouse" });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(screen.queryByText("новый текст статьи")).toBeNull();
+  });
+
+  it("не закрывает diff, пока курсор переходит на саму карточку", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ }).parentElement!;
+
+    fireEvent.pointerEnter(row, { pointerType: "mouse" });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    const card = screen
+      .getByText("новый текст статьи")
+      .closest('[class*="cellPopover__diff"]')!;
+
+    // Курсор уходит со строки и тут же попадает на карточку.
+    fireEvent.pointerLeave(row, { pointerType: "mouse" });
+    fireEvent.pointerEnter(card, { pointerType: "mouse" });
+
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(screen.getByText("новый текст статьи")).toBeTruthy();
+  });
 });
