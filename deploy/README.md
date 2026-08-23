@@ -25,7 +25,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 | Переменная | Смысл |
 |---|---|
 | `YT_PROXY`, `YT_TOKEN` | доступ к кластеру |
-| `VITE_YMAPS_API_KEY` | ключ JavaScript API Яндекс Карт |
+| `VITE_YMAPS_API_KEY` | ключи JavaScript API Яндекс Карт через запятую |
 | `DOMAIN` | адрес сайта для Caddy |
 | `ACME_EMAIL` | почта для Let's Encrypt |
 
