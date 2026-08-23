@@ -10,10 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -76,6 +73,7 @@ public class LiveMapService {
                             parent,
                             events.size(),
                             events.stream()
+                                .sorted(Comparator.comparingLong(EnrichedEvent::eventTs).reversed())
                                 .limit(eventsCap)
                                 .map(this::toEventDto)
                                 .toList()));
@@ -95,6 +93,6 @@ public class LiveMapService {
 
     //внутреннее событие парсим во внешний контракт: id/title/url
     private HexagonEventDto toEventDto(EnrichedEvent e) {
-        return new HexagonEventDto(e.eventId(), e.title(), e.url(), e.lengthUpdate(), e.diffUrl());
+        return new HexagonEventDto(e.eventId(), e.title(), e.url(), e.lengthUpdate(), e.diffUrl(), e.eventTs());
     }
 }
