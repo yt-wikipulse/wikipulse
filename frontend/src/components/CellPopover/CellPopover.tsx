@@ -1,8 +1,13 @@
-import { useEffect } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
+import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
 
 const TOP_ARTICLES_LIMIT = 3;
+
+// Курсор проезжает по списку насквозь — без задержки это очередь запросов
+// в MediaWiki на каждую строку под указателем.
+const DIFF_HOVER_DELAY_MS = 300;
 
 export type PopoverPlacement =
   | "top-center"
@@ -22,6 +27,7 @@ type ArticleSummary = {
   title: string;
   url: string;
   editsCount: number;
+  latest: HexagonEvent;
 };
 
 function pluralizeEdits(count: number): string {
@@ -54,11 +60,18 @@ function summarizeTopArticles(
 
     if (existing) {
       existing.editsCount += 1;
+
+      // Diff показываем по самой свежей правке статьи, порядок событий
+      // в ячейке не гарантирован.
+      if (event.event_ts > existing.latest.event_ts) {
+        existing.latest = event;
+      }
     } else {
       byTitle.set(event.title, {
         title: event.title,
         url: event.url,
         editsCount: 1,
+        latest: event,
       });
     }
   }
@@ -73,6 +86,12 @@ export function CellPopover({
   onClose,
   placement = "top-center",
 }: CellPopoverProps) {
+  const [diff, setDiff] = useState<{
+    title: string;
+    openedAt: number;
+  } | null>(null);
+  const hoverTimerRef = useRef<number | undefined>(undefined);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -87,8 +106,41 @@ export function CellPopover({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
   if (!hexagon) {
     return null;
+  }
+
+  function openDiff(title: string, delayMs: number) {
+    window.clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = window.setTimeout(
+      () => setDiff({ title, openedAt: Math.floor(Date.now() / 1000) }),
+      delayMs,
+    );
+  }
+
+  // На тач-устройствах наведения нет: первый тап открывает diff, ссылка на
+  // статью живёт внутри карточки.
+  function handleArticleClick(
+    articleEvent: MouseEvent<HTMLAnchorElement>,
+    title: string,
+  ) {
+    if (diff?.title === title) {
+      return;
+    }
+
+    articleEvent.preventDefault();
+    openDiff(title, 0);
+  }
+
+  function closeDiff() {
+    window.clearTimeout(hoverTimerRef.current);
+    setDiff(null);
   }
 
   const topArticles = summarizeTopArticles(
@@ -125,12 +177,25 @@ export function CellPopover({
 
       <ul className={styles.cellPopover__articles}>
         {topArticles.map((article) => (
-          <li key={article.title}>
+          <li
+            className={styles.cellPopover__articleItem}
+            key={article.title}
+            onMouseEnter={() =>
+              openDiff(article.title, DIFF_HOVER_DELAY_MS)
+            }
+            onMouseLeave={closeDiff}
+          >
             <a
               className={styles.cellPopover__article}
               href={article.url}
               target="_blank"
               rel="noreferrer"
+              data-active={diff?.title === article.title}
+              onFocus={() => openDiff(article.title, 0)}
+              onBlur={closeDiff}
+              onClick={(clickEvent) =>
+                handleArticleClick(clickEvent, article.title)
+              }
             >
               <span className={styles.cellPopover__articleTitle}>
                 {article.title}
@@ -139,6 +204,16 @@ export function CellPopover({
                 {article.editsCount} {pluralizeEdits(article.editsCount)}
               </span>
             </a>
+
+            {diff?.title === article.title && (
+              <div className={styles.cellPopover__diff}>
+                <DiffPopover
+                  event={article.latest}
+                  openedAt={diff.openedAt}
+                  key={article.latest.id}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>

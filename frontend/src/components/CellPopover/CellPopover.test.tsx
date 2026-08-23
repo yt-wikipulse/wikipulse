@@ -1,11 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover } from "./CellPopover";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function hexagonWithTitles(titles: string[]): ActiveHexagon {
@@ -16,6 +25,9 @@ function hexagonWithTitles(titles: string[]): ActiveHexagon {
       id: `event-${index}`,
       title,
       url: `https://ru.wikipedia.org/wiki/${title}`,
+      length_update: 100 + index,
+      diff_url: `https://ru.wikipedia.org/w/index.php?diff=${index + 2}&oldid=${index + 1}`,
+      event_ts: 1_700_000_000 + index,
     })),
   };
 }
@@ -119,5 +131,107 @@ describe("CellPopover", () => {
     fireEvent.keyDown(window, { key: "Escape" });
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+  it("по наведению на статью показывает diff её последней правки", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const calls: string[] = [];
+
+    vi.stubGlobal("fetch", (input: string) => {
+      calls.push(input);
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+    });
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва", "Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText("новый текст статьи")).toBeNull();
+
+    fireEvent.mouseEnter(screen.getByRole("link", { name: /Москва/ }).parentElement!);
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    // Diff берём по самой свежей правке статьи (event_ts у второй больше).
+    expect(new URL(calls[0]).searchParams.get("torev")).toBe("3");
+  });
+
+  it("не дёргает MediaWiki, если курсор просто проехал по строке", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ }).parentElement!;
+
+    fireEvent.mouseEnter(row);
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+    });
+    fireEvent.mouseLeave(row);
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("по тапу открывает diff вместо перехода на статью", async () => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            compare: {
+              body: `<tr><td class="diff-addedline"><div>новый текст статьи</div></td></tr>`,
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    render(
+      <CellPopover
+        hexagon={hexagonWithTitles(["Москва"])}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = screen.getByRole("link", { name: /Москва/ });
+    const firstTap = fireEvent.click(row);
+
+    // fireEvent возвращает false, если обработчик вызвал preventDefault.
+    expect(firstTap).toBe(false);
+
+    await waitFor(() => {
+      expect(screen.getByText("новый текст статьи")).toBeTruthy();
+    });
+
+    // Diff уже открыт — повторный тап уводит на статью как обычная ссылка.
+    expect(fireEvent.click(row)).toBe(true);
   });
 });
