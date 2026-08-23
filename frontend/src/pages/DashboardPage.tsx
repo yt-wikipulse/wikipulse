@@ -9,7 +9,7 @@ import {
   formatCount,
   isDailyChart,
   pluralizeEdits,
-  sharePercent,
+  prepareBuckets,
 } from "./DashboardPage.helpers";
 
 const PERIODS = [
@@ -24,8 +24,12 @@ export function DashboardPage() {
 
   const caption =
     PERIODS.find((item) => item.value === period)?.caption ?? period;
-  const daily = isDailyChart(data?.bucket_seconds ?? 0);
-  const buckets = data?.trends ?? [];
+  const daily = isDailyChart(period);
+  const buckets = prepareBuckets(
+    data?.trends ?? [],
+    data?.bucket_seconds ?? 0,
+    period,
+  );
   const maxEdits = Math.max(...buckets.map((bucket) => bucket.edits_count), 1);
   const axisLabels = axisLabelIndexes(buckets.length);
 
@@ -112,8 +116,7 @@ export function DashboardPage() {
                   <span className={styles.dashboardPage__accent}>
                     {formatCount(topArticle.edits_count)}
                   </span>{" "}
-                  {pluralizeEdits(topArticle.edits_count)} ·{" "}
-                  {sharePercent(topArticle.edits_count, totalEdits)} потока
+                  {pluralizeEdits(topArticle.edits_count)}
                 </p>
               ) : null}
             </article>

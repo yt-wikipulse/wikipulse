@@ -1,3 +1,6 @@
+import type { TrendPoint } from "../api/dashboard";
+
+const HOUR_SECONDS = 3600;
 const DAY_SECONDS = 86400;
 
 const AXIS_LABELS = 6;
@@ -13,10 +16,48 @@ const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   month: "2-digit",
 });
 
-// Шаг графика задаёт бэкенд полем bucket_seconds — фронт только решает,
-// подписывать точку часом или датой.
-export function isDailyChart(bucketSeconds: number): boolean {
-  return bucketSeconds >= DAY_SECONDS;
+// Шаг графика диктует выбранный период, а не бэкенд: сутки смотрим по часам,
+// неделю и месяц — по дням.
+export function chartStepSeconds(period: string): number {
+  return period === "24h" ? HOUR_SECONDS : DAY_SECONDS;
+}
+
+export function isDailyChart(period: string): boolean {
+  return chartStepSeconds(period) >= DAY_SECONDS;
+}
+
+// ponytail: сутки режем по UTC — так же, как бэкенд сворачивает 30d.
+// Восточнее Гринвича подпись совпадает, западнее дата уедет на день назад.
+function toDailyBuckets(points: TrendPoint[]): TrendPoint[] {
+  const byDay = new Map<number, number>();
+
+  for (const point of points) {
+    const dayStart =
+      Math.floor(point.bucket_ts / DAY_SECONDS) * DAY_SECONDS;
+
+    byDay.set(dayStart, (byDay.get(dayStart) ?? 0) + point.edits_count);
+  }
+
+  return [...byDay.entries()]
+    .map(([bucket_ts, edits_count]) => ({ bucket_ts, edits_count }))
+    .sort((a, b) => a.bucket_ts - b.bucket_ts);
+}
+
+/**
+ * Бэкенд отдаёт часовые точки для 24h и 7d и суточные для 30d. Если шаг
+ * мельче, чем нужно периоду, складываем сами — иначе за неделю получаем
+ * 168 столбиков вместо семи.
+ */
+export function prepareBuckets(
+  points: TrendPoint[],
+  bucketSeconds: number,
+  period: string,
+): TrendPoint[] {
+  if (points.length === 0 || bucketSeconds >= chartStepSeconds(period)) {
+    return points;
+  }
+
+  return toDailyBuckets(points);
 }
 
 // Подписи под каждым столбиком не помещаются — оставляем примерно шесть штук
@@ -54,12 +95,4 @@ export function pluralizeEdits(value: number): string {
     default:
       return "правок";
   }
-}
-
-export function sharePercent(value: number, total: number): string {
-  if (total <= 0) {
-    return "0%";
-  }
-
-  return `${((value / total) * 100).toFixed(1).replace(".", ",")}%`;
 }
