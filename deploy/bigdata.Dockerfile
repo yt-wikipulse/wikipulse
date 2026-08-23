@@ -5,7 +5,11 @@ FROM python:3.12-slim-bookworm
 # Планировщик считает витрины через spark-submit, а тому нужна Java 17 —
 # версия зафиксирована гайдом кластера (setup/spyt-env.md). Без неё scheduler
 # падает с FileNotFoundError и уходит в цикл перезапусков.
-RUN apt-get update \
+# deb.debian.org из ru-central1 недоступен — apt уходит в таймаут. Ходим
+# через зеркало Яндекса, на которое настроен и сам сервер.
+RUN sed -i 's|http://deb.debian.org|http://mirror.yandex.ru|g' \
+        /etc/apt/sources.list.d/debian.sources \
+ && apt-get update \
  && apt-get install -y --no-install-recommends openjdk-17-jre-headless \
  && rm -rf /var/lib/apt/lists/*
 
