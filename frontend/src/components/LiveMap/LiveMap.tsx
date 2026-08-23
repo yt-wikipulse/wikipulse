@@ -91,6 +91,7 @@ export function LiveMap({
     useState<PopoverPlacement>("top-center");
 
   const hexagonsRef = useRef(hexagons);
+  const pointerTargetRef = useRef<EventTarget | null>(null);
   const selectedH3Ref = useRef(selectedH3);
   const boundsRef = useRef<LngLatBounds | null>(null);
 
@@ -122,6 +123,18 @@ export function LiveMap({
       onSelectedH3Change(null);
     }
   }, [selectedH3, selectedHexagon, onSelectedH3Change]);
+
+  useEffect(() => {
+    function rememberTarget(domEvent: PointerEvent) {
+      pointerTargetRef.current = domEvent.target;
+    }
+
+    window.addEventListener("pointerdown", rememberTarget, true);
+
+    return () => {
+      window.removeEventListener("pointerdown", rememberTarget, true);
+    };
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -171,6 +184,15 @@ export function LiveMap({
         map.addChild(
           new ymaps3.YMapListener({
             onClick: (_object, event) => {
+              const target = pointerTargetRef.current;
+
+              if (
+                target instanceof Element &&
+                target.closest('[data-map-popover="true"]')
+              ) {
+                return;
+              }
+
               const active = hexagonsRef.current;
               const coordinates = event?.coordinates;
 

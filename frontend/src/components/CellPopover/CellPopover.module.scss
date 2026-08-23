@@ -128,13 +128,15 @@
   &__diff {
     position: absolute;
     top: -8px;
-    left: calc(100% + 12px);
+    left: 100%;
     z-index: 1;
+    padding-left: 12px;
   }
 
   &[data-placement="sheet"] {
     .cellPopover__diff {
       position: static;
+      padding-left: 0;
     }
 
     &[data-diff-open="true"] {
