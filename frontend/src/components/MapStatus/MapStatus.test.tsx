@@ -9,7 +9,6 @@ afterEach(() => {
 
 const BASE_PROPS = {
   loading: false,
-  isBackgroundRefreshing: false,
   error: null,
   cellCount: 3,
   onRetry: () => {},
@@ -61,26 +60,6 @@ describe("MapStatus", () => {
       screen.getByText("Не удалось загрузить данные карты"),
     ).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("показывает индикатор фонового обновления, не мешая счётчику", () => {
-    const { container } = render(
-      <MapStatus {...BASE_PROPS} isBackgroundRefreshing />,
-    );
-
-    expect(screen.getByText(/Ячеек:\s*3/)).toBeTruthy();
-    expect(
-      container.querySelector('[data-visible="true"]'),
-    ).not.toBeNull();
-  });
-
-  it("не меняет layout, когда фоновое обновление выключено — индикатор в DOM, но скрыт", () => {
-    const { container } = render(<MapStatus {...BASE_PROPS} />);
-
-    const indicator = container.querySelector('[aria-hidden="true"]');
-
-    expect(indicator).not.toBeNull();
-    expect(indicator?.getAttribute("data-visible")).toBe("false");
   });
 
   it("не роняет фокус в body, когда Retry исчезает из-за фонового поллинга", () => {
