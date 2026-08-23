@@ -8,8 +8,6 @@ import {
 
 const POLL_INTERVAL_MS = 2_500;
 
-// Быстрый флик успевает пересечь несколько клеток сетки bbox — ждём,
-// пока карта осядет, и грузим только последнюю.
 const VIEWPORT_SETTLE_MS = 120;
 
 type LiveMapDataState = {
@@ -98,10 +96,8 @@ export function useLiveMapData(
       }
     }
 
-    // Повтор по кнопке — сразу, ждать пользователя незачем.
     loadHexagonsRef.current = () => void loadHexagons();
 
-    // Первый экран грузим немедленно, дальше ждём, пока карта осядет.
     let settleId: number | undefined;
 
     if (hasDataRef.current) {

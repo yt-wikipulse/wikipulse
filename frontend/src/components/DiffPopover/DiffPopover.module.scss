@@ -100,11 +100,8 @@
 
   &__text {
     min-width: 0;
-    // Викитекст — сплошная строка без пробелов, иначе рвёт карточку.
     overflow-wrap: anywhere;
 
-    // Строка статьи бывает на пол-экрана шаблонов и файлов: без обрезки
-    // одно изменение занимает всю карточку и остальных не видно.
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
@@ -209,7 +206,6 @@
   }
 }
 
-// На узком экране наведения нет: карточка приезжает снизу как bottom sheet.
 @media (max-width: 767px) {
   .diffPopover {
     width: auto;

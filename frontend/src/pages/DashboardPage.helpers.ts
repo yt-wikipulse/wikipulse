@@ -16,8 +16,6 @@ const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   month: "2-digit",
 });
 
-// Шаг графика диктует выбранный период, а не бэкенд: сутки смотрим по часам,
-// неделю и месяц — по дням.
 export function chartStepSeconds(period: string): number {
   return period === "24h" ? HOUR_SECONDS : DAY_SECONDS;
 }
@@ -26,8 +24,6 @@ export function isDailyChart(period: string): boolean {
   return chartStepSeconds(period) >= DAY_SECONDS;
 }
 
-// ponytail: сутки режем по UTC — так же, как бэкенд сворачивает 30d.
-// Восточнее Гринвича подпись совпадает, западнее дата уедет на день назад.
 function toDailyBuckets(points: TrendPoint[]): TrendPoint[] {
   const byDay = new Map<number, number>();
 
@@ -43,11 +39,6 @@ function toDailyBuckets(points: TrendPoint[]): TrendPoint[] {
     .sort((a, b) => a.bucket_ts - b.bucket_ts);
 }
 
-/**
- * Бэкенд отдаёт часовые точки для 24h и 7d и суточные для 30d. Если шаг
- * мельче, чем нужно периоду, складываем сами — иначе за неделю получаем
- * 168 столбиков вместо семи.
- */
 export function prepareBuckets(
   points: TrendPoint[],
   bucketSeconds: number,
@@ -60,8 +51,6 @@ export function prepareBuckets(
   return toDailyBuckets(points);
 }
 
-// Подписи под каждым столбиком не помещаются — оставляем примерно шесть штук
-// с равным шагом, последний столбик подписан всегда.
 export function axisLabelIndexes(count: number): Set<number> {
   const step = Math.max(1, Math.ceil(count / AXIS_LABELS));
   const indexes = new Set<number>();

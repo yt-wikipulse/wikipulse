@@ -36,8 +36,6 @@ export function DashboardPage() {
   const totalEdits = data?.total_edits ?? 0;
   const topArticle = data?.top_articles[0];
   const topPlace = data?.top_geo[0];
-  // Бэкенд добивает пустые часы нулями, поэтому судим по сумме, а не по
-  // длине массива: 24 нулевых столбика — это тоже «данных нет».
   const isEmpty = Boolean(data) && totalEdits === 0;
 
   return (
@@ -237,8 +235,6 @@ export function DashboardPage() {
   );
 }
 
-// Столбик строки топа — доля от лидера списка, а не от общего числа правок:
-// иначе у хвоста списка полоска вырождается в точку.
 function barWidth(value: number, rows: { edits_count: number }[]): number {
   const max = Math.max(...rows.map((row) => row.edits_count), 1);
   return (value / max) * 100;

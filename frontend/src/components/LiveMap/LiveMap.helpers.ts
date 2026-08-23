@@ -12,7 +12,6 @@ export type MapViewport = {
   zoom: number;
 };
 
-// ponytail: при переполнении чистим кэш целиком, LRU — если начнёт мазать.
 const BOUNDARY_CACHE_CAP = 20_000;
 
 const boundaryCache = new Map<string, LngLat[]>();
@@ -41,8 +40,6 @@ export function h3ToPolygon(h3: string): LngLat[] {
   return ring;
 }
 
-// Доля экрана, которую догружаем за краем. Она же — шаг сетки округления
-// bbox: пока карта не переехала на соседнюю клетку, запрос не меняется.
 const VIEWPORT_PAD = 0.25;
 
 function padAxis(
@@ -79,7 +76,6 @@ export function toViewport(
   };
 }
 
-// Ступеней заливки: чем их меньше, тем меньше MultiPolygon-фич на карте.
 const FILL_LEVELS = 8;
 
 export const SELECTED_FILL_COLOR = "#ffd500";

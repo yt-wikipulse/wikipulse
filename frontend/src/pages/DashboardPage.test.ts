@@ -19,7 +19,6 @@ describe("prepareBuckets", () => {
   const DAY = 86400;
   const HOUR = 3600;
 
-  // Двое суток по три часовых точки в каждых.
   const hourly = [
     { bucket_ts: 0, edits_count: 1 },
     { bucket_ts: HOUR, edits_count: 2 },
