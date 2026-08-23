@@ -2,13 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getDashboard, type DashboardResponse } from "../../api/dashboard";
 
-// Витрины пересчитываются раз в час, поллинг дашборду не нужен:
-// данные обновляются при смене периода и по кнопке повтора.
 const TOP_LIMIT = 5;
 
 type DashboardResult = {
-  // Ключ запроса, ответ которого лежит в state. Пока он не совпадает
-  // с текущим, показываем загрузку — отдельный флаг для этого не нужен.
   key: string;
   data: DashboardResponse | null;
   error: string | null;
@@ -45,7 +41,6 @@ export function useDashboardData(period: string) {
 
         setResult({
           key,
-          // Прошлый период на экране не оставляем: подписи говорили бы неправду.
           data: null,
           error:
             error instanceof Error

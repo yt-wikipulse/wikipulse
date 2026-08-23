@@ -11,7 +11,6 @@ import styles from "./DiffPopover.module.scss";
 
 type DiffPopoverProps = {
   event: HexagonEvent;
-  /** Момент открытия карточки: «сколько назад» считаем от него, а не в рендере. */
   openedAt: number;
 };
 

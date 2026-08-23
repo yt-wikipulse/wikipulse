@@ -1,9 +1,3 @@
-/*
- * Diff правки берём у самой Википедии: action=compare отдаёт уже посчитанный
- * diff, свой считать не нужно. HTML из ответа НЕ вставляем в DOM — разбираем
- * DOMParser'ом и рендерим текстом, иначе это дыра на любой правке статьи.
- */
-
 export type DiffSegment = {
   text: string;
   changed: boolean;
@@ -19,7 +13,6 @@ export type WikiDiff = {
   totalLines: number;
 };
 
-// Больше строк в поповер не влезает, остальное — по ссылке в Википедию.
 export const DIFF_LINES_LIMIT = 8;
 
 type Revisions = {
@@ -27,10 +20,6 @@ type Revisions = {
   toRev: number;
 };
 
-/**
- * notify_url из потока правок выглядит как
- * https://ru.wikipedia.org/w/index.php?diff=154475554&oldid=154475304
- */
 export function parseRevisions(diffUrl: string): Revisions | null {
   let params: URLSearchParams;
 
@@ -58,7 +47,6 @@ function apiUrl(articleUrl: string, params: Record<string, string>): string {
   const query = new URLSearchParams({
     format: "json",
     formatversion: "2",
-    // Анонимный CORS: без origin=* Википедия не отдаст ответ в браузер.
     origin: "*",
     ...params,
   });
@@ -76,7 +64,6 @@ async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
   return response.json();
 }
 
-/** Запасной путь для правок без разбираемого diff_url: последняя правка статьи. */
 async function fetchLatestRevisions(
   articleUrl: string,
   title: string,
@@ -132,10 +119,6 @@ function readSegments(cell: Element): DiffSegment[] {
   return segments;
 }
 
-/**
- * Ответ compare — набор <tr> без обёртки: маркер, удалённая строка, добавленная.
- * Двухколоночную таблицу разворачиваем в один поток: сначала «−», потом «+».
- */
 export function parseCompareBody(body: string): DiffLine[] {
   const document = new DOMParser().parseFromString(
     `<table><tbody>${body}</tbody></table>`,

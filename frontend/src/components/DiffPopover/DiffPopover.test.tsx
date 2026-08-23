@@ -19,7 +19,6 @@ const EVENT: HexagonEvent = {
   event_ts: 1_787_000_000,
 };
 
-// Форма ответа — как у настоящего action=compare.
 const COMPARE_BODY = `
   <tr><td colspan="2" class="diff-lineno">Строка 42:</td></tr>
   <tr>
@@ -58,11 +57,9 @@ describe("DiffPopover", () => {
     expect(url.searchParams.get("action")).toBe("compare");
     expect(url.searchParams.get("fromrev")).toBe("154475304");
     expect(url.searchParams.get("torev")).toBe("154475554");
-    // Без origin=* Википедия не отдаст ответ в браузер.
     expect(url.searchParams.get("origin")).toBe("*");
 
     expect(screen.getByText(/1887/).tagName).toBe("MARK");
-    // Заголовок карточки ведёт на саму статью.
     expect(
       screen
         .getByRole("link", { name: "Эйфелева башня" })

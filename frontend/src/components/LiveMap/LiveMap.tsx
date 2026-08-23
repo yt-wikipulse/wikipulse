@@ -39,11 +39,8 @@ const INITIAL_LOCATION = {
 
 const ZOOM_RANGE = { min: 3, max: 21 };
 
-// Ячейка витрины — res 4, карта отдаёт res 3/6/9. Точного совпадения не
-// будет, поэтому летим в центр ячейки и выделяем то, что под ним.
 const DASHBOARD_FOCUS_ZOOM = 8;
 
-// Ближайшая правка приходит ячейкой res 9 — можно встать вплотную.
 const NEAREST_FOCUS_ZOOM = 15;
 
 const FOCUS_DURATION_MS = 500;
@@ -88,7 +85,6 @@ export function LiveMap({
   const [popoverPlacement, setPopoverPlacement] =
     useState<PopoverPlacement>("top-center");
 
-  // Слушатель карты создаётся один раз, данные читает через ref.
   const hexagonsRef = useRef(hexagons);
   const selectedH3Ref = useRef(selectedH3);
   const boundsRef = useRef<LngLatBounds | null>(null);
@@ -195,8 +191,6 @@ export function LiveMap({
               );
             },
 
-            // Грузим и во время движения: округлённый bbox меняется
-            // раз в четверть экрана, лишних запросов не будет.
             onUpdate: ({ location }) => {
               onViewportChange(
                 toViewport(location.bounds, location.zoom),
@@ -246,7 +240,6 @@ export function LiveMap({
       return;
     }
 
-    // Одна фича на цвет, а не на ячейку: тысячи YMapFeature карта не тянет.
     const groups = new Map<string, LngLat[][][]>();
 
     for (const hexagon of hexagons) {
@@ -308,8 +301,6 @@ export function LiveMap({
     mapVersion,
   ]);
 
-  // Ждём, пока под центром появятся данные: до первого попадания — только
-  // перелёт, после — выделение, и больше не мешаем пользователю.
   const pendingFocusRef = useRef<string | null>(null);
 
   useEffect(() => {

@@ -54,4 +54,5 @@ Production hosting для `BrowserRouter` должен возвращать `ind
 - [Дорожная карта frontend MVP](../docs/01-product/roadmap.md)
 - [REST-контракт](../docs/03-contracts/rest-api.md)
 - [Правила написания стилей](../docs/02-architecture/frontend-styles.md)
+- [Решения в коде фронтенда](../docs/02-architecture/frontend-implementation-notes.md)
 - [Общий локальный запуск](../docs/05-runbooks/local-setup.md)

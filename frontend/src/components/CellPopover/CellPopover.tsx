@@ -5,8 +5,6 @@ import styles from "./CellPopover.module.scss";
 
 const TOP_ARTICLES_LIMIT = 3;
 
-// Курсор проезжает по списку насквозь — без задержки это очередь запросов
-// в MediaWiki на каждую строку под указателем.
 const DIFF_HOVER_DELAY_MS = 300;
 
 export type PopoverPlacement =
@@ -61,8 +59,6 @@ function summarizeTopArticles(
     if (existing) {
       existing.editsCount += 1;
 
-      // Diff показываем по самой свежей правке статьи, порядок событий
-      // в ячейке не гарантирован.
       if (event.event_ts > existing.latest.event_ts) {
         existing.latest = event;
       }
@@ -124,8 +120,6 @@ export function CellPopover({
     );
   }
 
-  // На тач-устройствах наведения нет: первый тап открывает diff, ссылка на
-  // статью живёт внутри карточки.
   function handleArticleClick(
     articleEvent: MouseEvent<HTMLAnchorElement>,
     title: string,

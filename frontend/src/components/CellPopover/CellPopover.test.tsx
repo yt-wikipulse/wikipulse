@@ -170,7 +170,6 @@ describe("CellPopover", () => {
       expect(screen.getByText("новый текст статьи")).toBeTruthy();
     });
 
-    // Diff берём по самой свежей правке статьи (event_ts у второй больше).
     expect(new URL(calls[0]).searchParams.get("torev")).toBe("3");
   });
 
@@ -224,14 +223,12 @@ describe("CellPopover", () => {
     const row = screen.getByRole("link", { name: /Москва/ });
     const firstTap = fireEvent.click(row);
 
-    // fireEvent возвращает false, если обработчик вызвал preventDefault.
     expect(firstTap).toBe(false);
 
     await waitFor(() => {
       expect(screen.getByText("новый текст статьи")).toBeTruthy();
     });
 
-    // Diff уже открыт — повторный тап уводит на статью как обычная ссылка.
     expect(fireEvent.click(row)).toBe(true);
   });
 });

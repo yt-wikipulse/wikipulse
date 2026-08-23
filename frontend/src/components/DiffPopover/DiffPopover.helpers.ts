@@ -47,8 +47,6 @@ export function pluralizeLines(count: number): string {
   return "строк";
 }
 
-// Сколько символов исходной строки оставляем вокруг правки. Слева меньше:
-// сама правка важнее того, что было до неё, и должна попасть в видимые строки.
 const CONTEXT_BEFORE = 40;
 const CONTEXT_AFTER = 80;
 
@@ -70,11 +68,6 @@ function cut(text: string, keep: number, side: "start" | "end"): DiffSegment[] {
   ];
 }
 
-/**
- * Строка статьи бывает на пол-экрана шаблонов и файлов, а изменено в ней
- * одно слово — и оно вполне может оказаться в самом конце. Показываем окно
- * вокруг правки, а не начало строки.
- */
 export function focusOnChange(
   segments: DiffSegment[],
   contextBefore = CONTEXT_BEFORE,
@@ -83,7 +76,6 @@ export function focusOnChange(
   const first = segments.findIndex((segment) => segment.changed);
 
   if (first === -1) {
-    // Строка изменилась целиком — подсвечивать нечего, режем по длине.
     const text = segments.map((segment) => segment.text).join("");
     return cut(text, contextBefore + contextAfter, "end");
   }
