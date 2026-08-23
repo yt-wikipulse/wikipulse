@@ -6,6 +6,7 @@ import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover, type PopoverPlacement } from "../CellPopover/CellPopover";
 import {
+  getFeatureStyle,
   getFillColor,
   getPopoverPlacement,
   h3ToPolygon,
@@ -21,6 +22,9 @@ export type { MapViewport };
 
 export type MapFocus = {
   h3Index: string;
+  // Зум, на котором эта ячейка была найдена: на нём бэкенд отдаёт ту же
+  // резолюцию, поэтому центр камеры совпадает с центром нарисованного гексагона.
+  zoom: number;
   token: number;
 };
 
@@ -42,9 +46,25 @@ const ZOOM_RANGE = { min: 3, max: 21 };
 
 const DASHBOARD_FOCUS_ZOOM = 8;
 
-const NEAREST_FOCUS_ZOOM = 15;
-
 const FOCUS_DURATION_MS = 500;
+
+const FADE_DURATION_MS = 220;
+
+type LayerFeature = {
+  feature: InstanceType<typeof ymaps3.YMapFeature>;
+  fill: string;
+};
+
+function setLayerOpacity(
+  layer: LayerFeature[],
+  opacity: number,
+) {
+  for (const { feature, fill } of layer) {
+    feature.update({
+      style: getFeatureStyle(fill, opacity),
+    });
+  }
+}
 
 const MAP_BEHAVIORS: BehaviorType[] = [
   "drag",
@@ -73,9 +93,11 @@ export function LiveMap({
     InstanceType<typeof ymaps3.YMap> | null
   >(null);
 
-  const featuresRef = useRef<
-    InstanceType<typeof ymaps3.YMapFeature>[]
-  >([]);
+  const featuresRef = useRef<LayerFeature[]>([]);
+
+  const layerResolutionRef = useRef<number | null>(null);
+
+  const fadeRef = useRef<(() => void) | null>(null);
 
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -253,6 +275,8 @@ export function LiveMap({
       disposed = true;
 
       featuresRef.current = [];
+      layerResolutionRef.current = null;
+      fadeRef.current = null;
       mapRef.current?.destroy();
       mapRef.current = null;
     };
@@ -266,6 +290,8 @@ export function LiveMap({
     if (!map) {
       return;
     }
+
+    fadeRef.current?.();
 
     const groups = new Map<string, LngLat[][][]>();
 
@@ -289,38 +315,85 @@ export function LiveMap({
       }
     }
 
-    const features = [...groups].map(
-      ([fill, coordinates]) => {
+    const previousLayer = featuresRef.current;
+    const previousResolution = layerResolutionRef.current;
+
+    const resolution =
+      hexagons.length > 0
+        ? getResolution(hexagons[0].h3_index)
+        : null;
+
+    const crossfade =
+      previousLayer.length > 0 &&
+      resolution !== null &&
+      previousResolution !== null &&
+      resolution !== previousResolution;
+
+    const layer = [...groups].map(
+      ([fill, coordinates]): LayerFeature => {
         const feature = new ymaps3.YMapFeature({
           geometry: {
             type: "MultiPolygon",
             coordinates,
           },
 
-          style: {
-            cursor: "pointer",
-            fill,
-
-            stroke: [
-              {
-                color: "#ffffffd2",
-                width: 1,
-              },
-            ],
-          },
+          style: getFeatureStyle(fill, crossfade ? 0 : 1),
         });
 
         map.addChild(feature);
 
-        return feature;
+        return { feature, fill };
       },
     );
 
-    for (const feature of featuresRef.current) {
-      map.removeChild(feature);
+    featuresRef.current = layer;
+    layerResolutionRef.current = resolution;
+
+    const removePreviousLayer = () => {
+      for (const { feature } of previousLayer) {
+        map.removeChild(feature);
+      }
+    };
+
+    if (!crossfade) {
+      removePreviousLayer();
+      return;
     }
 
-    featuresRef.current = features;
+    const startedAt = performance.now();
+    let frameId = 0;
+
+    const finishFade = () => {
+      cancelAnimationFrame(frameId);
+      fadeRef.current = null;
+
+      removePreviousLayer();
+      setLayerOpacity(layer, 1);
+    };
+
+    const step = (now: number) => {
+      const progress = Math.min(
+        (now - startedAt) / FADE_DURATION_MS,
+        1,
+      );
+
+      if (progress === 1) {
+        finishFade();
+        return;
+      }
+
+      setLayerOpacity(previousLayer, 1 - progress);
+      setLayerOpacity(layer, progress);
+
+      frameId = requestAnimationFrame(step);
+    };
+
+    frameId = requestAnimationFrame(step);
+    fadeRef.current = finishFade;
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, [
     hexagons,
     selectedH3,
@@ -380,7 +453,7 @@ export function LiveMap({
 
     map.setLocation({
       center: [lng, lat] as LngLat,
-      zoom: NEAREST_FOCUS_ZOOM,
+      zoom: focus.zoom,
       duration: FOCUS_DURATION_MS,
     });
   }, [focus, mapVersion]);

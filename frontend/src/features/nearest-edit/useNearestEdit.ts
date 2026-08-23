@@ -17,7 +17,7 @@ export type NearestEditState =
   | { status: "geo-denied" }
   | { status: "geo-unavailable"; reason: GeoUnavailableReason }
   | { status: "searching"; step: number; radiusKm: number }
-  | { status: "found"; edit: NearestEdit }
+  | { status: "found"; edit: NearestEdit; zoom: number }
   | { status: "empty" }
   | { status: "request-failed"; message: string };
 
@@ -26,10 +26,12 @@ type SearchStep = {
   zoom: number;
 };
 
+const SEARCH_ZOOM = 15;
+
 const SEARCH_STEPS: SearchStep[] = [
-  { radiusKm: 55, zoom: 12 },
-  { radiusKm: 220, zoom: 12 },
-  { radiusKm: 880, zoom: 12 },
+  { radiusKm: 55, zoom: SEARCH_ZOOM },
+  { radiusKm: 220, zoom: SEARCH_ZOOM },
+  { radiusKm: 880, zoom: SEARCH_ZOOM },
 ];
 
 const IDLE_STATE: NearestEditState = { status: "idle" };
@@ -82,7 +84,11 @@ export function useNearestEdit(isOpen: boolean) {
           const nearest = pickNearest(response.hexagons, geo.point);
 
           if (nearest) {
-            setState({ status: "found", edit: nearest });
+            setState({
+              status: "found",
+              edit: nearest,
+              zoom: step.zoom,
+            });
 
             return;
           }
