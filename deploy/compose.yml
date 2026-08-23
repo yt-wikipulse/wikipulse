@@ -1,0 +1,63 @@
+name: wikipulse
+
+x-yt: &yt
+  environment:
+    YT_PROXY: ${YT_PROXY:?}
+    YT_TOKEN: ${YT_TOKEN:?}
+  # кластерный RPC-proxy не резолвится публичным DNS (см. bigdata/README.md);
+  # узел Wikimedia, который отдаёт DNS по умолчанию (esams), из ru-central1
+  # недоступен, поэтому поток читаем через eqiad
+  extra_hosts:
+    - "rpc-proxy.example.com:203.0.113.10"
+    - "stream.wikimedia.org:208.80.154.224"
+  restart: unless-stopped
+
+services:
+  backend:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    # В application.yaml лежат временные значения для разработки: окно
+    # выключено, очередь читается с начала. На проде это съедает память.
+    command:
+      - "--app.live.window-enabled=true"
+      - "--app.poller.start-from-beginning=false"
+
+  ingestor:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/bigdata.Dockerfile
+    command: ingestor
+
+  scheduler:
+    <<: *yt
+    build:
+      context: ..
+      dockerfile: deploy/bigdata.Dockerfile
+    # Гоняет archiver и spyt_marts по расписанию — заменил sleep-петлю.
+    # spark-submit в этом образе отсутствует, поэтому шаги витрин пишут
+    # предупреждение и пропускаются; переливка истории работает.
+    command: scheduler
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_YMAPS_API_KEY: ${VITE_YMAPS_API_KEY:?}
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy:/data
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  caddy:
