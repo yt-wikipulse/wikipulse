@@ -1,3 +1,5 @@
+import type { DiffSegment } from "../../api/wikiDiff";
+
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 60 * MINUTE_SECONDS;
 
@@ -43,4 +45,69 @@ export function pluralizeLines(count: number): string {
   }
 
   return "строк";
+}
+
+// Сколько символов исходной строки оставляем вокруг правки. Слева меньше:
+// сама правка важнее того, что было до неё, и должна попасть в видимые строки.
+const CONTEXT_BEFORE = 40;
+const CONTEXT_AFTER = 80;
+
+const ELLIPSIS = "…";
+
+function cut(text: string, keep: number, side: "start" | "end"): DiffSegment[] {
+  if (text.length <= keep) {
+    return text ? [{ text, changed: false }] : [];
+  }
+
+  return [
+    {
+      text:
+        side === "start"
+          ? ELLIPSIS + text.slice(-keep)
+          : text.slice(0, keep) + ELLIPSIS,
+      changed: false,
+    },
+  ];
+}
+
+/**
+ * Строка статьи бывает на пол-экрана шаблонов и файлов, а изменено в ней
+ * одно слово — и оно вполне может оказаться в самом конце. Показываем окно
+ * вокруг правки, а не начало строки.
+ */
+export function focusOnChange(
+  segments: DiffSegment[],
+  contextBefore = CONTEXT_BEFORE,
+  contextAfter = CONTEXT_AFTER,
+): DiffSegment[] {
+  const first = segments.findIndex((segment) => segment.changed);
+
+  if (first === -1) {
+    // Строка изменилась целиком — подсвечивать нечего, режем по длине.
+    const text = segments.map((segment) => segment.text).join("");
+    return cut(text, contextBefore + contextAfter, "end");
+  }
+
+  let last = first;
+  for (let i = segments.length - 1; i > first; i -= 1) {
+    if (segments[i].changed) {
+      last = i;
+      break;
+    }
+  }
+
+  const before = segments
+    .slice(0, first)
+    .map((segment) => segment.text)
+    .join("");
+  const after = segments
+    .slice(last + 1)
+    .map((segment) => segment.text)
+    .join("");
+
+  return [
+    ...cut(before, contextBefore, "start"),
+    ...segments.slice(first, last + 1),
+    ...cut(after, contextAfter, "end"),
+  ];
 }

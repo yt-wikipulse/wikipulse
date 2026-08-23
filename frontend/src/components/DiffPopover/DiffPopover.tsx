@@ -1,6 +1,7 @@
 import type { HexagonEvent } from "../../api/hexagons";
 import { useWikiDiff } from "../../features/wiki-diff/useWikiDiff";
 import {
+  focusOnChange,
   formatEditAge,
   formatSizeDelta,
   pluralizeLines,
@@ -81,7 +82,7 @@ export function DiffPopover({ event, openedAt }: DiffPopoverProps) {
                 {line.kind === "removed" ? "−" : "+"}
               </span>
               <span className={styles.diffPopover__text}>
-                {line.segments.map((segment, segmentIndex) =>
+                {focusOnChange(line.segments).map((segment, segmentIndex) =>
                   segment.changed ? (
                     <mark key={segmentIndex}>{segment.text}</mark>
                   ) : (
