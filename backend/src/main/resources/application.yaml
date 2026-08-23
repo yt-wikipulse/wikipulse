@@ -19,9 +19,7 @@ spring:
 app:
   live:
     window-minutes: 30
-    # ВРЕМЕННО: старые события не протухают и не вытесняются.
-    # В main должно быть true.
-    window-enabled: false
+    window-enabled: true
     #zoom <= zoom-r3-max  -> r3
     #zoom-r3-max < zoom <= zoom-r4-max -> r4, и так далее по ступеням
     #zoom > zoom-r8-max   -> r9
@@ -35,9 +33,7 @@ app:
     hexagon-events-cap: 50        #максимум событий в массиве events в одном гексагоне(больше хранить очень тяжело да и не нужно - правок может быть тысячи)
   poller:
     interval-ms: 500
-    # ВРЕМЕННО для проверки старых данных: читаем очередь с первой строки.
-    # В main должно быть false, иначе бэкенд при старте вычитывает всю очередь.
-    start-from-beginning: true
+    start-from-beginning: false
     max-pages-per-tick: 10
 
 yt:
