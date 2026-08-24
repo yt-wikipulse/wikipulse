@@ -29,6 +29,11 @@ def normalize_title(title: str) -> str:
 def event_to_row(evt: dict) -> dict | None:
     wiki = evt.get("wiki", "")
 
+    bot = evt.get("bot", False)
+
+    if bot:
+        return None
+
     if not wiki.endswith("wiki"):
         return None
     if wiki in ("wikidatawiki", "commonswiki", "metawiki", "abstractwiki"):
