@@ -1,12 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+
+export type ViewportSide = "right" | "left";
 
 export function useKeepInViewport<T extends HTMLElement>(
   enabled: boolean,
   margin = 16,
 ) {
   const ref = useRef<T>(null);
+  const [side, setSide] = useState<ViewportSide>("right");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current;
 
     if (!element) {
@@ -21,6 +24,20 @@ export function useKeepInViewport<T extends HTMLElement>(
     function fit() {
       if (!element) {
         return;
+      }
+
+      const anchor = element.offsetParent;
+
+      if (anchor) {
+        const anchorRect = anchor.getBoundingClientRect();
+        const width = element.offsetWidth;
+
+        const fitsRight =
+          anchorRect.right + width <= window.innerWidth - margin;
+
+        const fitsLeft = anchorRect.left - width >= margin;
+
+        setSide(fitsRight || !fitsLeft ? "right" : "left");
       }
 
       element.style.transform = "";
@@ -52,5 +69,5 @@ export function useKeepInViewport<T extends HTMLElement>(
     };
   }, [enabled, margin]);
 
-  return ref;
+  return { ref, side };
 }

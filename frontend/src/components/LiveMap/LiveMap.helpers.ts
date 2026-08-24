@@ -49,6 +49,13 @@ export function h3ToPolygon(h3: string): LngLat[] {
   return ring;
 }
 
+export function toMultiPolygon(cells: string[]) {
+  return {
+    type: "MultiPolygon" as const,
+    coordinates: cells.map((cell) => [h3ToPolygon(cell)]),
+  };
+}
+
 const VIEWPORT_PAD = 0.25;
 
 function padAxis(
@@ -154,12 +161,7 @@ export function getFeatureStyle(fill: string, opacity: number) {
 export function getFillColor(
   hexagon: ActiveHexagon,
   maxEvents: number,
-  selectedH3: string | null,
 ) {
-  if (hexagon.h3_index === selectedH3) {
-    return SELECTED_FILL_COLOR;
-  }
-
   const level = Math.round(
     (hexagon.events_count / maxEvents) * (FILL_LEVELS - 1),
   );
