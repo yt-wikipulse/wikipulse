@@ -2,9 +2,32 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" />
+    <script>
+      (function () {
+        var darkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+        function applyFavicon() {
+          var link = document.createElement("link");
+          link.rel = "icon";
+          link.type = "image/svg+xml";
+          link.href = darkScheme.matches
+            ? "/favicon-dark.svg"
+            : "/favicon-light.svg";
+
+          var current = document.querySelector('link[rel="icon"]');
+          if (current) {
+            current.remove();
+          }
+          document.head.appendChild(link);
+        }
+
+        applyFavicon();
+        darkScheme.addEventListener("change", applyFavicon);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WikiPulse</title>
+    <title>WikiPulse — живая карта правок Википедии</title>
   </head>
   <body>
     <div id="root"></div>
