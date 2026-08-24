@@ -3,6 +3,8 @@
 }
 
 {$DOMAIN} {
+	tls /etc/caddy/certs/chain.pem /etc/caddy/certs/key.pem
+
 	handle /api/* {
 		reverse_proxy backend:8080
 	}
