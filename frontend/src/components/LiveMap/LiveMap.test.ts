@@ -7,6 +7,7 @@ import {
   getPopoverPlacement,
   h3ToPolygon,
   SELECTED_FILL_COLOR,
+  toMultiPolygon,
   toViewport,
 } from "./LiveMap.helpers";
 
@@ -72,6 +73,25 @@ describe("h3ToPolygon", () => {
   });
 });
 
+describe("toMultiPolygon", () => {
+  const first = latLngToCell(55.7558, 37.6176, 9);
+  const second = latLngToCell(59.9386, 30.3141, 9);
+
+  it("оборачивает каждую ячейку в отдельное кольцо MultiPolygon", () => {
+    const geometry = toMultiPolygon([first, second]);
+
+    expect(geometry.type).toBe("MultiPolygon");
+    expect(geometry.coordinates).toEqual([
+      [h3ToPolygon(first)],
+      [h3ToPolygon(second)],
+    ]);
+  });
+
+  it("пустой список даёт пустую геометрию — так из слоя вырезается выбранная ячейка", () => {
+    expect(toMultiPolygon([]).coordinates).toEqual([]);
+  });
+});
+
 describe("getFillColor", () => {
   const hexagon: ActiveHexagon = {
     h3_index: "891f1d48947ffff",
@@ -79,20 +99,18 @@ describe("getFillColor", () => {
     events: [],
   };
 
-  it("красит выбранную ячейку в акцентный цвет независимо от интенсивности", () => {
-    expect(getFillColor(hexagon, 5, hexagon.h3_index)).toBe(
-      SELECTED_FILL_COLOR,
-    );
-  });
-
   it("максимальная интенсивность (events_count === maxEvents) даёт максимальную alpha", () => {
-    expect(getFillColor(hexagon, 5, null)).toBe("#ff7700f0");
+    expect(getFillColor(hexagon, 5)).toBe("#ff7700f0");
   });
 
   it("нулевая интенсивность даёт минимальную alpha", () => {
     expect(
-      getFillColor({ ...hexagon, events_count: 0 }, 5, null),
+      getFillColor({ ...hexagon, events_count: 0 }, 5),
     ).toBe("#ff77005a");
+  });
+
+  it("не красит выбранную ячейку — подсветка рисуется отдельной фичей", () => {
+    expect(getFillColor(hexagon, 5)).not.toBe(SELECTED_FILL_COLOR);
   });
 });
 

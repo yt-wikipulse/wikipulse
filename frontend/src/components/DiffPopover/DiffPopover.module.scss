@@ -28,6 +28,8 @@
   }
 
   &__title {
+    align-self: flex-start;
+    max-width: 100%;
     color: inherit;
     font-size: 14px;
     font-weight: 600;

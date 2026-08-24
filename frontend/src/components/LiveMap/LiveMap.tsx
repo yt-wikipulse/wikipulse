@@ -10,6 +10,8 @@ import {
   getFillColor,
   getPopoverPlacement,
   h3ToPolygon,
+  SELECTED_FILL_COLOR,
+  toMultiPolygon,
   toViewport,
   type MapViewport,
 } from "./LiveMap.helpers";
@@ -54,7 +56,15 @@ const FADE_DURATION_MS = 220;
 type LayerFeature = {
   feature: InstanceType<typeof ymaps3.YMapFeature>;
   fill: string;
+  cells: string[];
 };
+
+function sameCells(current: string[], next: string[]) {
+  return (
+    current.length === next.length &&
+    current.every((cell, index) => cell === next[index])
+  );
+}
 
 function setLayerOpacity(
   layer: LayerFeature[],
@@ -80,6 +90,8 @@ const MAP_BEHAVIORS: BehaviorType[] = [
 
 const COMPACT_POPOVER = "(max-width: 767px)";
 
+const HIGHLIGHT_Z_INDEX = 10;
+
 export function LiveMap({
   hexagons,
   focusH3,
@@ -104,9 +116,13 @@ export function LiveMap({
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapLoading, setMapLoading] = useState(true);
 
-  const [popoverElement] = useState(() =>
-    document.createElement("div"),
-  );
+  const [popoverElement] = useState(() => {
+    const element = document.createElement("div");
+
+    element.className = styles.popoverAnchor;
+
+    return element;
+  });
 
   const isCompact = useMediaQuery(COMPACT_POPOVER);
 
@@ -206,7 +222,7 @@ export function LiveMap({
 
         map.addChild(
           new ymaps3.YMapListener({
-            onClick: (_object, event) => {
+            onFastClick: (_object, event) => {
               const target = pointerTargetRef.current;
 
               if (
@@ -294,25 +310,17 @@ export function LiveMap({
 
     fadeRef.current?.();
 
-    const groups = new Map<string, LngLat[][][]>();
+    const groups = new Map<string, string[]>();
 
     for (const hexagon of hexagons) {
-      const fill = getFillColor(
-        hexagon,
-        maxEvents,
-        selectedH3,
-      );
-
-      const polygon = [
-        h3ToPolygon(hexagon.h3_index),
-      ];
+      const fill = getFillColor(hexagon, maxEvents);
 
       const group = groups.get(fill);
 
       if (group) {
-        group.push(polygon);
+        group.push(hexagon.h3_index);
       } else {
-        groups.set(fill, [polygon]);
+        groups.set(fill, [hexagon.h3_index]);
       }
     }
 
@@ -330,20 +338,38 @@ export function LiveMap({
       previousResolution !== null &&
       resolution !== previousResolution;
 
-    const layer = [...groups].map(
-      ([fill, coordinates]): LayerFeature => {
-        const feature = new ymaps3.YMapFeature({
-          geometry: {
-            type: "MultiPolygon",
-            coordinates,
-          },
+    const reusable = new Map<string, LayerFeature>();
 
+    if (!crossfade) {
+      for (const entry of previousLayer) {
+        reusable.set(entry.fill, entry);
+      }
+    }
+
+    const layer = [...groups].map(
+      ([fill, cells]): LayerFeature => {
+        const reused = reusable.get(fill);
+
+        if (reused) {
+          reusable.delete(fill);
+
+          if (!sameCells(reused.cells, cells)) {
+            reused.feature.update({
+              geometry: toMultiPolygon(cells),
+            });
+          }
+
+          return { feature: reused.feature, fill, cells };
+        }
+
+        const feature = new ymaps3.YMapFeature({
+          geometry: toMultiPolygon(cells),
           style: getFeatureStyle(fill, crossfade ? 0 : 1),
         });
 
         map.addChild(feature);
 
-        return { feature, fill };
+        return { feature, fill, cells };
       },
     );
 
@@ -351,7 +377,11 @@ export function LiveMap({
     layerResolutionRef.current = resolution;
 
     const removePreviousLayer = () => {
-      for (const { feature } of previousLayer) {
+      const stale = crossfade
+        ? previousLayer
+        : [...reusable.values()];
+
+      for (const { feature } of stale) {
         map.removeChild(feature);
       }
     };
@@ -397,10 +427,65 @@ export function LiveMap({
     };
   }, [
     hexagons,
-    selectedH3,
     maxEvents,
     mapVersion,
   ]);
+
+  useEffect(() => {
+    if (!selectedH3) {
+      return;
+    }
+
+    const group = featuresRef.current.find(
+      ({ cells }) => cells.includes(selectedH3),
+    );
+
+    if (!group) {
+      return;
+    }
+
+    group.feature.update({
+      geometry: toMultiPolygon(
+        group.cells.filter((cell) => cell !== selectedH3),
+      ),
+    });
+
+    return () => {
+      if (featuresRef.current.includes(group)) {
+        group.feature.update({
+          geometry: toMultiPolygon(group.cells),
+        });
+      }
+    };
+  }, [selectedH3, hexagons, mapVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || !selectedH3) {
+      return;
+    }
+
+    const highlight = new ymaps3.YMapFeature({
+      geometry: {
+        type: "Polygon",
+        coordinates: [h3ToPolygon(selectedH3)],
+      },
+
+      style: {
+        ...getFeatureStyle(SELECTED_FILL_COLOR, 1),
+        zIndex: HIGHLIGHT_Z_INDEX,
+      },
+    });
+
+    map.addChild(highlight);
+
+    return () => {
+      if (mapRef.current === map) {
+        map.removeChild(highlight);
+      }
+    };
+  }, [selectedH3, mapVersion]);
 
   const pendingFocusRef = useRef<string | null>(null);
 
@@ -480,6 +565,8 @@ export function LiveMap({
       {
         coordinates: [lng, lat] as LngLat,
         zIndex: 1000,
+        blockBehaviors: true,
+        blockEvents: true,
       },
       popoverElement,
     );
@@ -498,6 +585,7 @@ export function LiveMap({
       <div
         ref={containerRef}
         className={styles.liveMap}
+        data-map-area="true"
       >
         {mapError && (
           <p
@@ -513,15 +601,15 @@ export function LiveMap({
             Загрузка…
           </p>
         )}
-
-        {isCompact && selectedH3 && (
-          <CellPopover
-            hexagon={selectedHexagon}
-            onClose={() => onSelectedH3Change(null)}
-            placement="sheet"
-          />
-        )}
       </div>
+
+      {isCompact && selectedH3 && (
+        <CellPopover
+          hexagon={selectedHexagon}
+          onClose={() => onSelectedH3Change(null)}
+          placement="sheet"
+        />
+      )}
 
       {!isCompact &&
         selectedH3 &&

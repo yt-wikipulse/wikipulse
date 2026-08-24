@@ -9,11 +9,19 @@
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 12px 32px rgba(16, 24, 40, 0.16);
-  scale: 1;
+
+  &[data-ready="false"] {
+    visibility: hidden;
+  }
 
   @media (prefers-reduced-motion: no-preference) {
-    transition: translate 180ms ease;
-    animation: cellPopoverEnter 160ms ease-out;
+    &[data-ready="true"] {
+      animation: cellPopoverEnter 160ms ease-out;
+    }
+
+    &[data-settled="true"] {
+      transition: translate 180ms ease;
+    }
   }
 
   &[data-placement="top-center"] {
@@ -131,6 +139,13 @@
     left: 100%;
     z-index: 1;
     padding-left: 12px;
+
+    &[data-side="left"] {
+      right: 100%;
+      left: auto;
+      padding-right: 12px;
+      padding-left: 0;
+    }
   }
 
   &[data-placement="sheet"] {
@@ -190,12 +205,10 @@
 
 @keyframes cellPopoverEnter {
   from {
-    scale: 0.92;
     opacity: 0;
   }
 
   to {
-    scale: 1;
     opacity: 1;
   }
 }

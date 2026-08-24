@@ -2,6 +2,7 @@ import {
   type MouseEvent,
   type PointerEvent,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -15,6 +16,12 @@ const TOP_ARTICLES_LIMIT = 3;
 const DIFF_HOVER_DELAY_MS = 300;
 
 const DIFF_CLOSE_DELAY_MS = 160;
+
+const POPOVER_GAP = 14;
+
+const POPOVER_MARGIN = 16;
+
+const POPOVER_SETTLE_MS = 200;
 
 export type PopoverPlacement =
   | "top-center"
@@ -99,9 +106,107 @@ export function CellPopover({
   } | null>(null);
   const hoverTimerRef = useRef<number | undefined>(undefined);
   const closeTimerRef = useRef<number | undefined>(undefined);
-  const diffRef = useKeepInViewport<HTMLDivElement>(
-    diff !== null && placement !== "sheet",
-  );
+  const { ref: diffRef, side: diffSide } =
+    useKeepInViewport<HTMLDivElement>(
+      diff !== null && placement !== "sheet",
+    );
+
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const [flipped, setFlipped] =
+    useState<PopoverPlacement | null>(null);
+
+  const [measured, setMeasured] = useState(false);
+
+  const [settled, setSettled] = useState(false);
+
+  const ready = measured || placement === "sheet";
+
+  useEffect(() => {
+    const timerId = window.setTimeout(
+      () => setMeasured(true),
+      POPOVER_SETTLE_MS,
+    );
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() =>
+      setSettled(true),
+    );
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [ready]);
+
+  useLayoutEffect(() => {
+    const element = rootRef.current;
+
+    if (!element || placement === "sheet") {
+      return;
+    }
+
+    function fit() {
+      const anchor = element?.offsetParent;
+      const area = element?.closest("[data-map-area]");
+
+      if (!element || !anchor || !area) {
+        return;
+      }
+
+      const anchorRect = anchor.getBoundingClientRect();
+      const areaRect = area.getBoundingClientRect();
+      const height = element.offsetHeight;
+
+      const [vertical, horizontal] = placement.split("-");
+
+      setMeasured(true);
+
+      const fitsAbove =
+        anchorRect.top - POPOVER_GAP - height >=
+        areaRect.top + POPOVER_MARGIN;
+
+      const fitsBelow =
+        anchorRect.bottom + POPOVER_GAP + height <=
+        areaRect.bottom - POPOVER_MARGIN;
+
+      if (vertical === "top" && !fitsAbove && fitsBelow) {
+        setFlipped(`bottom-${horizontal}` as PopoverPlacement);
+        return;
+      }
+
+      if (vertical === "bottom" && !fitsBelow && fitsAbove) {
+        setFlipped(`top-${horizontal}` as PopoverPlacement);
+        return;
+      }
+
+      setFlipped(null);
+    }
+
+    fit();
+
+    window.addEventListener("resize", fit);
+
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(fit);
+
+    observer?.observe(element);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [placement, hexagon]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -186,8 +291,11 @@ export function CellPopover({
   return (
     <div
       className={styles.cellPopover}
+      ref={rootRef}
       data-map-popover="true"
-      data-placement={placement}
+      data-placement={flipped ?? placement}
+      data-ready={ready}
+      data-settled={settled}
       data-diff-open={diff !== null}
       role="dialog"
       aria-label="Активность ячейки"
@@ -255,6 +363,7 @@ export function CellPopover({
             {diff?.title === article.title && (
               <div
                 className={styles.cellPopover__diff}
+                data-side={diffSide}
                 ref={diffRef}
                 onPointerEnter={cancelScheduledClose}
                 onPointerLeave={(pointerEvent) =>
