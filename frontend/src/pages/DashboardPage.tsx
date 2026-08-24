@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useDashboardData } from "../features/dashboard/useDashboardData";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import styles from "./DashboardPage.module.scss";
 import {
@@ -23,6 +24,8 @@ const PERIODS = [
 ];
 
 export function DashboardPage() {
+  useDocumentTitle("WikiPulse — Дашборд");
+
   const [period, setPeriod] = useState(PERIODS[0].value);
   const { data, loading, error, reload } = useDashboardData(period);
   const compactAxis = useMediaQuery(COMPACT_AXIS);

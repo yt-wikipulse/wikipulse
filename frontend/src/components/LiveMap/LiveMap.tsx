@@ -13,6 +13,7 @@ import {
   toViewport,
   type MapViewport,
 } from "./LiveMap.helpers";
+import { loadYmaps } from "./loadYmaps";
 import { mapCustomization } from "./mapCustomization";
 
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -163,7 +164,7 @@ export function LiveMap({
 
     async function createMap() {
       try {
-        await ymaps3.ready;
+        await loadYmaps();
 
         if (disposed || !containerRef.current) {
           return;

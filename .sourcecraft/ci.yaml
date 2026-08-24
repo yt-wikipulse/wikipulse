@@ -29,7 +29,7 @@ tasks:
           - mkdir -p ~/.ssh && chmod 700 ~/.ssh
           - echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           - chmod 600 ~/.ssh/id_ed25519
-          - ssh-keyscan -H 203.0.113.12 >> ~/.ssh/known_hosts
+          - ssh-keyscan -H 203.0.113.11 >> ~/.ssh/known_hosts
           # deploy/.env исключён: он создаётся на сервере один раз и хранит секреты
-          - rsync -az --delete --exclude '.git' --exclude 'node_modules' --exclude 'target' --exclude 'deploy/.env' ./ ubuntu@203.0.113.12:/opt/wikipulse/src/
-          - ssh ubuntu@203.0.113.12 'cd /opt/wikipulse/src/deploy && docker compose up -d --build --remove-orphans'
+          - rsync -az --delete --exclude '.git' --exclude 'node_modules' --exclude 'target' --exclude 'deploy/.env' ./ ubuntu@203.0.113.11:/opt/wikipulse/src/
+          - ssh ubuntu@203.0.113.11 'cd /opt/wikipulse/src/deploy && docker compose up -d --build --remove-orphans'

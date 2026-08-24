@@ -5,6 +5,9 @@ import react from "@vitejs/plugin-react";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    assetsInlineLimit: (filePath) => (filePath.endsWith(".woff2") ? false : undefined),
+  },
   server: {
     proxy: {
       "/api": {

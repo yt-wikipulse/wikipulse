@@ -1,5 +1,7 @@
 import { NavLink } from "react-router-dom";
 
+import ytLogo from "../../assets/yt-logo.svg";
+
 import styles from "./Header.module.scss";
 
 const TABS = [
@@ -21,8 +23,11 @@ export function Header({
   return (
     <header className={styles.header}>
       <div className={styles.header__brand}>
-        <span className={styles.header__dot} />
         <span className={styles.header__brandName}>WikiPulse</span>
+        <span className={styles.header__cross} aria-hidden="true">
+          ×
+        </span>
+        <img className={styles.header__ytLogo} src={ytLogo} alt="YTsaurus" />
       </div>
       <nav className={styles.header__nav}>
         {TABS.map((tab) => (

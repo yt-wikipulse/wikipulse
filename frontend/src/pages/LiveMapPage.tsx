@@ -15,6 +15,7 @@ import { MapStatus } from "../components/MapStatus/MapStatus";
 import { NearestEditPanel } from "../components/NearestEditPanel/NearestEditPanel";
 import { useLiveMapData } from "../features/live-map/useLiveMapData";
 import { useNearestEdit } from "../features/nearest-edit/useNearestEdit";
+import { SITE_TITLE, useDocumentTitle } from "../hooks/useDocumentTitle";
 
 import styles from "./LiveMapPage.module.scss";
 
@@ -33,6 +34,8 @@ function isSameViewport(
 }
 
 export function LiveMapPage() {
+  useDocumentTitle(SITE_TITLE);
+
   const [viewport, setViewport] =
     useState<MapViewport | null>(null);
 
@@ -45,7 +48,6 @@ export function LiveMapPage() {
   const {
     hexagons,
     loading,
-    isBackgroundRefreshing,
     error,
     retry,
   } = useLiveMapData(viewport);
@@ -101,7 +103,6 @@ export function LiveMapPage() {
       >
         <MapStatus
           loading={loading}
-          isBackgroundRefreshing={isBackgroundRefreshing}
           error={error}
           cellCount={hexagons.length}
           onRetry={retry}

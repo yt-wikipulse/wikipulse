@@ -4,7 +4,6 @@ import styles from "./MapStatus.module.scss";
 
 type MapStatusProps = {
   loading: boolean;
-  isBackgroundRefreshing: boolean;
   error: string | null;
   cellCount: number;
   onRetry: () => void;
@@ -12,7 +11,6 @@ type MapStatusProps = {
 
 export function MapStatus({
   loading,
-  isBackgroundRefreshing,
   error,
   cellCount,
   onRetry,
@@ -68,15 +66,7 @@ export function MapStatus({
 
   return (
     <div className={styles.mapStatus} ref={rootRef} tabIndex={-1}>
-      <div className={styles.mapStatus__row}>
-        <strong>Живая карта</strong>
-
-        <span
-          className={styles.mapStatus__refreshing}
-          data-visible={isBackgroundRefreshing}
-          aria-hidden="true"
-        />
-      </div>
+      <strong>Живая карта</strong>
 
       <span className={styles.mapStatus__count}>
         Ячеек: {cellCount}

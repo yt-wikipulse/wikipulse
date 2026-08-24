@@ -55,6 +55,21 @@ describe("h3ToPolygon", () => {
     expect(polygon[0]).toEqual([rawBoundary[0]?.[1], rawBoundary[0]?.[0]]);
     expect(polygon[polygon.length - 1]).toEqual(polygon[0]);
   });
+
+  it("разворачивает кольцо ячейки на 180-м меридиане в непрерывное", () => {
+    const polygon = h3ToPolygon("832261fffffffff");
+
+    const gaps = polygon
+      .slice(1)
+      .map(([lng], index) => Math.abs(lng - polygon[index][0]));
+
+    const longitudes = polygon.map(([lng]) => lng);
+
+    expect(Math.max(...gaps)).toBeLessThan(180);
+    expect(
+      Math.max(...longitudes) > 180 || Math.min(...longitudes) < -180,
+    ).toBe(true);
+  });
 });
 
 describe("getFillColor", () => {

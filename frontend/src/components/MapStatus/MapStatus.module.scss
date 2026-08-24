@@ -24,27 +24,9 @@
       0 8px 24px rgb(0 0 0 / 12%);
   }
 
-  &__row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
   &__count {
     color: var(--color-text-secondary);
     font-size: 13px;
-  }
-
-  &__refreshing {
-    width: 8px;
-    height: 8px;
-
-    border-radius: 50%;
-    background: var(--color-accent);
-
-    @media (prefers-reduced-motion: no-preference) {
-      animation: mapStatusPulse 1.2s ease-in-out infinite;
-    }
   }
 
   &__error,
@@ -77,16 +59,5 @@
         opacity: 0.9;
       }
     }
-  }
-}
-
-@keyframes mapStatusPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.3;
   }
 }
