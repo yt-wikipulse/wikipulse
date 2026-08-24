@@ -32,9 +32,9 @@
   --color-accent: #e8620c;
 
   /* typography */
-  --font-family-sans: Inter, Arial, Helvetica, sans-serif;
-  --font-family-brand: "Helvetica Neue", Helvetica, "Segoe UI", Arial,
-    sans-serif;
+  --font-family-sans:
+    "Manrope Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-brand: var(--font-family-sans);
 
   /* spacing */
   --space-1: 4px;
