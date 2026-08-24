@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import styles from "./NotFoundPage.module.scss";
 
 export function NotFoundPage() {
+  useDocumentTitle("WikiPulse — Страница не найдена");
+
   return (
     <main
       className={styles.notFoundPage}
