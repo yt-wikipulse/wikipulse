@@ -1,8 +1,7 @@
 import { useOutletContext } from "react-router-dom";
 
 export type AppShellContext = {
-  isNearestEditOpen: boolean;
-  closeNearestEdit: () => void;
+  headerSlotNode: HTMLElement | null;
 };
 
 export function useAppShellContext(): AppShellContext {

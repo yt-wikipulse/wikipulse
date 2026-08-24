@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
+import { LIVE_WINDOW_MINUTES } from "../../features/live-map/liveWindow";
 import { useKeepInViewport } from "../../hooks/useKeepInViewport";
 import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
@@ -311,7 +312,7 @@ export function CellPopover({
 
       <div className={styles.cellPopover__stat}>
         <span className={styles.cellPopover__statLabel}>
-          Правок за 30 минут
+          Правок за {LIVE_WINDOW_MINUTES} минут
         </span>
         <span className={styles.cellPopover__statValue}>
           {hexagon.events_count}

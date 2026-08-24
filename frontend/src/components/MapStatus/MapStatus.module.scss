@@ -1,21 +1,35 @@
 .mapStatus {
   position: absolute;
   z-index: 10;
-  top: var(--space-4);
+  bottom: var(--space-4);
   left: var(--space-4);
 
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
 
-  padding: var(--space-3);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
 
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-medium);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-sans);
+  font-size: 13px;
+  white-space: nowrap;
 
   background: rgb(255 255 255 / 94%);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-medium);
   box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
-  font-family: var(--font-family-sans);
+
+  &[data-state="error"] {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+
+    padding: var(--space-3);
+
+    white-space: normal;
+  }
 
   &:focus-visible {
     outline: none;
@@ -25,28 +39,51 @@
   }
 
   &__count {
-    color: var(--color-text-secondary);
-    font-size: 13px;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
   }
 
-  &__error,
-  &__warning {
-    margin: 0;
+  &__separator {
+    color: var(--color-border-default);
+  }
+
+  &__muted,
+  &__window {
+    color: var(--color-text-secondary);
+  }
+
+  &__error {
+    max-width: 220px;
 
     color: var(--color-text-warning);
-    font-size: 13px;
+  }
+
+  &__warning {
+    color: var(--color-text-warning);
+  }
+
+  &__srOnly {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   &__retry {
-    align-self: flex-start;
+    flex-shrink: 0;
     padding: 6px 12px;
 
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+
+    background: var(--color-accent);
     border: 0;
     border-radius: var(--radius-small);
-
-    color: #ffffff;
-    background: var(--color-accent);
-    font: inherit;
     cursor: pointer;
 
     &:focus-visible {
@@ -54,10 +91,15 @@
       box-shadow: var(--focus-ring);
     }
 
-    @media (hover: hover) {
+    @media (hover: hover) and (pointer: fine) {
       &:hover {
         opacity: 0.9;
       }
     }
+  }
+
+  @media (max-width: 767px) {
+    top: var(--space-4);
+    bottom: auto;
   }
 }

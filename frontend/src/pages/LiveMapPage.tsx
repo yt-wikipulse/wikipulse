@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 
 import { useAppShellContext } from "../app/appShellContext";
@@ -16,8 +17,11 @@ import { NearestEditPanel } from "../components/NearestEditPanel/NearestEditPane
 import { useLiveMapData } from "../features/live-map/useLiveMapData";
 import { useNearestEdit } from "../features/nearest-edit/useNearestEdit";
 import { SITE_TITLE, useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 import styles from "./LiveMapPage.module.scss";
+
+const COMPACT_HEADER = "(max-width: 767px)";
 
 function isSameViewport(
   current: MapViewport | null,
@@ -52,8 +56,20 @@ export function LiveMapPage() {
     retry,
   } = useLiveMapData(viewport);
 
-  const { isNearestEditOpen, closeNearestEdit } =
-    useAppShellContext();
+  const { headerSlotNode } = useAppShellContext();
+
+  const isCompactHeader = useMediaQuery(COMPACT_HEADER);
+
+  const [isNearestEditOpen, setIsNearestEditOpen] =
+    useState(false);
+
+  const closeNearestEdit = useCallback(() => {
+    setIsNearestEditOpen(false);
+  }, []);
+
+  const toggleNearestEdit = useCallback(() => {
+    setIsNearestEditOpen((current) => !current);
+  }, []);
 
   const {
     state: nearestEditState,
@@ -96,8 +112,47 @@ export function LiveMapPage() {
     [],
   );
 
+  const nearestEditButton = (
+    <button
+      className={styles.liveMapPage__nearestEdit}
+      type="button"
+      aria-pressed={isNearestEditOpen}
+      onClick={toggleNearestEdit}
+    >
+      <svg
+        className={styles.liveMapPage__nearestEditIcon}
+        viewBox="0 0 16 16"
+        aria-hidden="true"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="5.25"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M8 .75v2.5M8 12.75v2.5M.75 8h2.5M12.75 8h2.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+      </svg>
+
+      <span className={styles.liveMapPage__nearestEditLabel}>
+        Ближайшая правка
+      </span>
+    </button>
+  );
+
   return (
     <main className={styles.liveMapPage}>
+      {!isCompactHeader &&
+        headerSlotNode !== null &&
+        createPortal(nearestEditButton, headerSlotNode)}
+
       <section
         className={styles.liveMapPage__map}
       >
@@ -117,12 +172,16 @@ export function LiveMapPage() {
           onViewportChange={handleViewportChange}
         />
 
-        <NearestEditPanel
-          state={nearestEditState}
-          onRetry={retryNearestEdit}
-          onShowOnMap={handleShowOnMap}
-          onClose={closeNearestEdit}
-        />
+        <div className={styles.liveMapPage__controls}>
+          {isCompactHeader && nearestEditButton}
+
+          <NearestEditPanel
+            state={nearestEditState}
+            onRetry={retryNearestEdit}
+            onShowOnMap={handleShowOnMap}
+            onClose={closeNearestEdit}
+          />
+        </div>
       </section>
     </main>
   );
