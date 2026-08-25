@@ -43,19 +43,38 @@ describe("MapStatus", () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it("показывает счётчик ячеек без ошибок и без Retry, когда всё хорошо", () => {
+  it("показывает счётчик и окно, когда всё хорошо", () => {
     render(<MapStatus {...BASE_PROPS} />);
 
-    expect(screen.getByText("Живая карта")).toBeTruthy();
-    expect(screen.getByText(/Ячеек:\s*3/)).toBeTruthy();
+    expect(screen.getByText("3 ячейки")).toBeTruthy();
+    expect(screen.getByText("за 30 минут")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("показывает предупреждение без Retry, если данные уже есть, а фоновый запрос упал", () => {
-    render(<MapStatus {...BASE_PROPS} error="Не удалось загрузить данные карты" />);
+  it("склоняет ячейки по числу", () => {
+    const { rerender } = render(<MapStatus {...BASE_PROPS} cellCount={1} />);
+    expect(screen.getByText("1 ячейка")).toBeTruthy();
 
-    expect(screen.getByText(/Ячеек:\s*3/)).toBeTruthy();
+    rerender(<MapStatus {...BASE_PROPS} cellCount={11} />);
+    expect(screen.getByText("11 ячеек")).toBeTruthy();
+
+    rerender(<MapStatus {...BASE_PROPS} cellCount={128} />);
+    expect(screen.getByText("128 ячеек")).toBeTruthy();
+  });
+
+  it("не показывает ноль ячеек числом", () => {
+    render(<MapStatus {...BASE_PROPS} cellCount={0} />);
+
+    expect(screen.getByText("Нет правок")).toBeTruthy();
+  });
+
+  it("сохраняет счётчик и предупреждает, если фоновый запрос упал", () => {
+    render(
+      <MapStatus {...BASE_PROPS} error="Не удалось загрузить данные карты" />,
+    );
+
+    expect(screen.getByText("3 ячейки")).toBeTruthy();
     expect(
       screen.getByText("Не удалось загрузить данные карты"),
     ).toBeTruthy();

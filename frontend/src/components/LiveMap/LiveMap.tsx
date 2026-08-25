@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { BehaviorType, LngLat, LngLatBounds } from "@yandex/ymaps3-types";
+import type {
+  BehaviorType,
+  LngLat,
+  LngLatBounds,
+  YMapProps,
+} from "@yandex/ymaps3-types";
 import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
@@ -47,6 +52,11 @@ const INITIAL_LOCATION = {
 
 const ZOOM_RANGE = { min: 3, max: 21 };
 
+type DistributionPosition = YMapProps["distributionPosition"];
+
+const DISTRIBUTION_POSITION_WIDE: DistributionPosition = "bottom";
+const DISTRIBUTION_POSITION_COMPACT: DistributionPosition = "bottom left";
+
 const DASHBOARD_FOCUS_ZOOM = 8;
 
 const FOCUS_DURATION_MS = 500;
@@ -88,7 +98,7 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "panTilt",
 ];
 
-const COMPACT_POPOVER = "(max-width: 767px)";
+const COMPACT_LAYOUT = "(max-width: 767px)";
 
 const HIGHLIGHT_Z_INDEX = 10;
 
@@ -124,7 +134,13 @@ export function LiveMap({
     return element;
   });
 
-  const isCompact = useMediaQuery(COMPACT_POPOVER);
+  const isCompact = useMediaQuery(COMPACT_LAYOUT);
+
+  const distributionPosition = isCompact
+    ? DISTRIBUTION_POSITION_COMPACT
+    : DISTRIBUTION_POSITION_WIDE;
+
+  const distributionPositionRef = useRef(distributionPosition);
 
   const [popoverPlacement, setPopoverPlacement] =
     useState<PopoverPlacement>("top-center");
@@ -192,6 +208,7 @@ export function LiveMap({
             location: INITIAL_LOCATION,
             behaviors: MAP_BEHAVIORS,
             zoomRange: ZOOM_RANGE,
+            distributionPosition: distributionPositionRef.current,
           },
         );
 
@@ -298,6 +315,12 @@ export function LiveMap({
       mapRef.current = null;
     };
   }, [onViewportChange, onSelectedH3Change]);
+
+  useEffect(() => {
+    distributionPositionRef.current = distributionPosition;
+
+    mapRef.current?.update({ distributionPosition });
+  }, [distributionPosition, mapVersion]);
 
   useEffect(() => {
     hexagonsRef.current = hexagons;

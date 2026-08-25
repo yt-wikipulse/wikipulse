@@ -10,25 +10,12 @@ const TABS = [
 ];
 
 type HeaderProps = {
-  showNearestEdit?: boolean;
-  isNearestEditOpen?: boolean;
-  onNearestEditClick?: () => void;
+  slotRef?: (node: HTMLDivElement | null) => void;
 };
 
-export function Header({
-  showNearestEdit = false,
-  isNearestEditOpen = false,
-  onNearestEditClick,
-}: HeaderProps) {
+export function Header({ slotRef }: HeaderProps) {
   return (
     <header className={styles.header}>
-      <div className={styles.header__brand}>
-        <span className={styles.header__brandName}>WikiPulse</span>
-        <span className={styles.header__cross} aria-hidden="true">
-          ×
-        </span>
-        <img className={styles.header__ytLogo} src={ytLogo} alt="YTsaurus" />
-      </div>
       <nav className={styles.header__nav}>
         {TABS.map((tab) => (
           <NavLink key={tab.to} to={tab.to} className={styles.header__tab}>
@@ -36,16 +23,16 @@ export function Header({
           </NavLink>
         ))}
       </nav>
-      {showNearestEdit && (
-        <button
-          className={styles.header__nearestEdit}
-          type="button"
-          aria-pressed={isNearestEditOpen}
-          onClick={onNearestEditClick}
-        >
-          Ближайшая правка
-        </button>
-      )}
+
+      <div className={styles.header__brand}>
+        <span className={styles.header__brandName}>WikiPulse</span>
+        <span className={styles.header__cross} aria-hidden="true">
+          ×
+        </span>
+        <img className={styles.header__ytLogo} src={ytLogo} alt="YTsaurus" />
+      </div>
+
+      <div className={styles.header__slot} ref={slotRef} />
     </header>
   );
 }
