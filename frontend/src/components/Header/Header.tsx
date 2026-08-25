@@ -1,10 +1,12 @@
-import { NavLink } from "react-router-dom";
-
 import ytLogo from "../../assets/yt-logo.svg";
+import {
+  SegmentedTabs,
+  type SegmentedTabItem,
+} from "../SegmentedTabs/SegmentedTabs";
 
 import styles from "./Header.module.scss";
 
-const TABS = [
+const TABS: SegmentedTabItem[] = [
   { to: "/map", label: "Карта" },
   { to: "/dashboard", label: "Дашборд" },
 ];
@@ -16,13 +18,9 @@ type HeaderProps = {
 export function Header({ slotRef }: HeaderProps) {
   return (
     <header className={styles.header}>
-      <nav className={styles.header__nav}>
-        {TABS.map((tab) => (
-          <NavLink key={tab.to} to={tab.to} className={styles.header__tab}>
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
+      <div className={styles.header__nav}>
+        <SegmentedTabs items={TABS} ariaLabel="Разделы" />
+      </div>
 
       <div className={styles.header__brand}>
         <span className={styles.header__brandName}>WikiPulse</span>

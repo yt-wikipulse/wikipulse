@@ -91,7 +91,7 @@ export function MapStatus({
       </span>
 
       <span className={styles.mapStatus__separator} aria-hidden="true">
-        ·
+        •
       </span>
 
       <span className={styles.mapStatus__window}>

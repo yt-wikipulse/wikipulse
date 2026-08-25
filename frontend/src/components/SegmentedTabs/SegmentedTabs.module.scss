@@ -1,0 +1,68 @@
+.segmentedTabs {
+  --segmented-tab-width: 96px;
+  --segmented-tab-height: 30px;
+
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  padding: 2px;
+
+  background: var(--color-background-surface);
+  border-radius: 12px;
+
+  &__indicator {
+    position: absolute;
+    z-index: 0;
+    top: 2px;
+    left: 2px;
+
+    width: var(--segmented-tab-width);
+    height: var(--segmented-tab-height);
+
+    background: var(--color-background-page);
+    border: 1px solid rgb(0 0 0 / 4%);
+    border-radius: 10px;
+    box-shadow:
+      0 3px 8px rgb(0 0 0 / 12%),
+      0 3px 1px rgb(0 0 0 / 4%);
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: transform 0.3s ease;
+    }
+  }
+
+  &__tab {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: var(--segmented-tab-width);
+    height: var(--segmented-tab-height);
+
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    text-decoration: none;
+
+    border-radius: 10px;
+
+    &[aria-current="page"] {
+      color: var(--color-text-primary);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:not([aria-current="page"]):hover {
+        color: var(--color-text-primary);
+      }
+    }
+  }
+}
