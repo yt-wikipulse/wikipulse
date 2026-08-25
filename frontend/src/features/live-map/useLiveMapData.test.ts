@@ -143,14 +143,15 @@ describe("useLiveMapData", () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it("при viewport === null ничего не запрашивает", async () => {
+  it("при viewport === null ничего не запрашивает, но остаётся в loading", async () => {
     const fetchMock = vi.fn(() => jsonResponse({ hexagons: [] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    renderHook(() => useLiveMapData(null));
+    const { result } = renderHook(() => useLiveMapData(null));
 
     await flushMicrotasks();
 
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(true);
   });
 });

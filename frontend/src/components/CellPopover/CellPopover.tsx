@@ -355,7 +355,6 @@ export function CellPopover({
               href={article.url}
               target="_blank"
               rel="noreferrer"
-              data-active={diff?.title === article.title}
               onFocus={() => openDiff(article.title, 0)}
               onBlur={(blurEvent) => {
                 if (blurEvent.relatedTarget) {

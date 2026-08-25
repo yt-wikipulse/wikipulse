@@ -9,27 +9,27 @@
 
   text-align: center;
 
-  h1,
-  p {
+  h1 {
     margin: 0;
   }
 
-  p {
-    color: var(--color-text-secondary);
+  &__illustration {
+    width: min(360px, 80vw);
+    height: auto;
   }
 
   &__link {
     padding: 8px 14px;
 
-    color: var(--color-text-accent);
+    color: var(--color-text-primary);
     text-decoration: none;
 
-    background: var(--color-background-accent-soft);
-    border-radius: var(--radius-small);
+    background: var(--color-background-surface);
+    border-radius: var(--radius-medium);
 
     @media (hover: hover) and (pointer: fine) {
       &:hover {
-        background: var(--color-background-accent-soft-hover);
+        background: var(--color-background-interactive-hover);
       }
     }
   }

@@ -10,6 +10,13 @@
 
   animation: spinnerRotate 0.7s linear infinite;
 
+  &[data-size="large"] {
+    width: 40px;
+    height: 40px;
+
+    border-width: 3px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     animation-duration: 2.4s;
   }

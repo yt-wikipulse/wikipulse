@@ -5,7 +5,11 @@ import { Header } from "../components/Header/Header";
 import type { AppShellContext } from "./appShellContext";
 import styles from "./AppShell.module.scss";
 
-export function AppShell() {
+type AppShellProps = {
+  showTabs?: boolean;
+};
+
+export function AppShell({ showTabs = true }: AppShellProps) {
   const [headerSlotNode, setHeaderSlotNode] =
     useState<HTMLElement | null>(null);
 
@@ -16,7 +20,7 @@ export function AppShell() {
 
   return (
     <div className={styles.appShell}>
-      <Header slotRef={setHeaderSlotNode} />
+      <Header slotRef={setHeaderSlotNode} showTabs={showTabs} />
       <div className={styles.appShell__content}>
         <Outlet context={context} />
       </div>
