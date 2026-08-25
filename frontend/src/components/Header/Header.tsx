@@ -24,9 +24,20 @@ export function Header({ slotRef }: HeaderProps) {
 
       <div className={styles.header__brand}>
         <span className={styles.header__brandName}>WikiPulse</span>
-        <span className={styles.header__cross} aria-hidden="true">
-          ×
-        </span>
+        <svg
+          className={styles.header__cross}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
         <img className={styles.header__ytLogo} src={ytLogo} alt="YTsaurus" />
       </div>
 

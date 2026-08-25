@@ -42,8 +42,6 @@
     border: 0;
     border-radius: 50%;
     color: #667085;
-    font-size: 18px;
-    line-height: 1;
     background: transparent;
     cursor: pointer;
 
@@ -58,6 +56,21 @@
         background: #f2f4f7;
       }
     }
+  }
+
+  &__closeIcon {
+    display: block;
+    flex-shrink: 0;
+
+    width: 14px;
+    height: 14px;
+  }
+
+  &__spinnerRow {
+    display: flex;
+    justify-content: center;
+
+    margin: var(--space-2) 0;
   }
 
   &__stat {
@@ -105,13 +118,6 @@
     font-size: 13px;
   }
 
-  &__meta {
-    margin: 0;
-
-    color: var(--color-text-secondary);
-    font-size: 12px;
-  }
-
   &__warning {
     margin: 0;
 
@@ -119,7 +125,8 @@
     font-size: 13px;
   }
 
-  &__showOnMap {
+  &__showOnMap,
+  &__retry {
     align-self: stretch;
     padding: 6px 12px;
 
@@ -142,25 +149,6 @@
         color: var(--color-text-primary);
         background: var(--color-background-interactive-hover);
       }
-    }
-  }
-
-  &__retry {
-    align-self: flex-start;
-    padding: 6px 12px;
-
-    color: #ffffff;
-    font: inherit;
-    font-size: 13px;
-
-    background: var(--color-accent);
-    border: 0;
-    border-radius: var(--radius-small);
-    cursor: pointer;
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--focus-ring);
     }
   }
 }

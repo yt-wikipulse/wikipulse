@@ -1,0 +1,22 @@
+.spinner {
+  flex-shrink: 0;
+
+  width: 20px;
+  height: 20px;
+
+  border: 2px solid var(--color-background-accent-soft);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+
+  animation: spinnerRotate 0.7s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 2.4s;
+  }
+}
+
+@keyframes spinnerRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
