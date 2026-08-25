@@ -11,7 +11,7 @@
   min-height: 32px;
   padding: var(--space-1) var(--space-3);
 
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   font-family: var(--font-family-sans);
   font-size: 13px;
   white-space: nowrap;
@@ -39,16 +39,18 @@
   }
 
   &__count {
-    color: var(--color-text-primary);
     font-variant-numeric: tabular-nums;
   }
 
-  &__separator {
-    color: var(--color-border-default);
+  &__window {
+    color: var(--color-text-primary);
   }
 
-  &__muted,
-  &__window {
+  &__separator {
+    color: var(--color-text-secondary);
+  }
+
+  &__muted {
     color: var(--color-text-secondary);
   }
 

@@ -42,40 +42,12 @@
   &__nav {
     display: flex;
     justify-self: start;
-    gap: var(--space-1);
   }
 
   &__slot {
     display: flex;
     justify-self: end;
     align-items: center;
-  }
-
-  &__tab {
-    padding: 7px 13px;
-
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    text-decoration: none;
-
-    border-radius: var(--radius-small);
-
-    &[aria-current="page"] {
-      color: var(--color-text-accent);
-      background: var(--color-background-accent-soft);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--focus-ring);
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-      &:hover {
-        color: var(--color-text-primary);
-        background: var(--color-background-interactive-hover);
-      }
-    }
   }
 
   @media (max-width: 767px) {
