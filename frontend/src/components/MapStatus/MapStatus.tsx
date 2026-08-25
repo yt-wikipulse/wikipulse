@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { LIVE_WINDOW_MINUTES } from "../../features/live-map/liveWindow";
+import { Spinner } from "../Spinner/Spinner";
 
 import styles from "./MapStatus.module.scss";
 
@@ -49,8 +50,13 @@ export function MapStatus({
 
   if (loading) {
     return (
-      <div className={styles.mapStatus} ref={rootRef} tabIndex={-1}>
-        <span className={styles.mapStatus__muted}>Загрузка…</span>
+      <div
+        className={styles.mapStatus}
+        data-state="loading"
+        ref={rootRef}
+        tabIndex={-1}
+      >
+        <Spinner label="Загрузка" />
       </div>
     );
   }
@@ -91,16 +97,30 @@ export function MapStatus({
       </span>
 
       <span className={styles.mapStatus__separator} aria-hidden="true">
-        •
+        /
       </span>
 
       <span className={styles.mapStatus__window}>
-        за {LIVE_WINDOW_MINUTES} минут
+        {LIVE_WINDOW_MINUTES} минут
       </span>
 
       {error !== null && (
         <span className={styles.mapStatus__warning} role="alert">
-          <span aria-hidden="true">⚠</span>
+          <svg
+            className={styles.mapStatus__warningIcon}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m15 9-6 6" />
+            <path d="m9 9 6 6" />
+          </svg>
           <span className={styles.mapStatus__srOnly}>{error}</span>
         </span>
       )}

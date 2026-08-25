@@ -29,9 +29,13 @@
   }
 
   &__cross {
+    display: block;
+    flex-shrink: 0;
+
+    width: 11px;
+    height: 11px;
+
     color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1;
   }
 
   &__ytLogo {
@@ -62,6 +66,28 @@
 
     &__slot {
       display: none;
+    }
+  }
+
+  @media (max-width: 435px) {
+    gap: var(--space-2);
+
+    padding: 0 var(--space-3);
+
+    &__brand {
+      gap: 6px;
+    }
+
+    &__brandName {
+      font-size: 14px;
+    }
+
+    &__ytLogo {
+      height: 16px;
+    }
+
+    &__nav {
+      flex-shrink: 0;
     }
   }
 }

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import type { NearestEditState } from "../../features/nearest-edit/useNearestEdit";
 import { formatDistance } from "../../features/nearest-edit/nearestEdit.helpers";
+import { Spinner } from "../Spinner/Spinner";
 
 import styles from "./NearestEditPanel.module.scss";
 
@@ -11,8 +12,6 @@ type NearestEditPanelProps = {
   onShowOnMap: (h3Index: string, zoom: number) => void;
   onClose: () => void;
 };
-
-const SEARCH_STEPS_TOTAL = 3;
 
 function PanelBody({
   state,
@@ -29,9 +28,9 @@ function PanelBody({
 
     case "requesting-geo":
       return (
-        <p className={styles.nearestEditPanel__hint}>
-          Определяем ваше местоположение…
-        </p>
+        <div className={styles.nearestEditPanel__spinnerRow}>
+          <Spinner label="Определяем ваше местоположение" />
+        </div>
       );
 
     case "geo-denied":
@@ -41,16 +40,8 @@ function PanelBody({
             Доступ к геолокации запрещён.
           </p>
           <p className={styles.nearestEditPanel__hint}>
-            Разрешите его в настройках сайта — иконка слева от адреса — и
-            повторите.
+            Разрешите его в настройках сайта и повторите попытку.
           </p>
-          <button
-            className={styles.nearestEditPanel__retry}
-            type="button"
-            onClick={onRetry}
-          >
-            Повторить
-          </button>
         </>
       );
 
@@ -81,14 +72,9 @@ function PanelBody({
 
     case "searching":
       return (
-        <>
-          <p className={styles.nearestEditPanel__hint}>
-            Ищем правки в радиусе {state.radiusKm} км…
-          </p>
-          <p className={styles.nearestEditPanel__meta}>
-            Шаг {state.step} из {SEARCH_STEPS_TOTAL}
-          </p>
-        </>
+        <div className={styles.nearestEditPanel__spinnerRow}>
+          <Spinner label="Ищем ближайшую правку" />
+        </div>
       );
 
     case "found":
@@ -113,9 +99,7 @@ function PanelBody({
           <button
             className={styles.nearestEditPanel__showOnMap}
             type="button"
-            onClick={() =>
-              onShowOnMap(state.edit.h3Index, state.zoom)
-            }
+            onClick={() => onShowOnMap(state.edit.h3Index, state.zoom)}
           >
             Показать на карте
           </button>
@@ -192,15 +176,24 @@ export function NearestEditPanel({
           aria-label="Закрыть"
           onClick={onClose}
         >
-          ×
+          <svg
+            className={styles.nearestEditPanel__closeIcon}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
         </button>
       </div>
 
-      <PanelBody
-        state={state}
-        onRetry={onRetry}
-        onShowOnMap={onShowOnMap}
-      />
+      <PanelBody state={state} onRetry={onRetry} onShowOnMap={onShowOnMap} />
     </aside>
   );
 }

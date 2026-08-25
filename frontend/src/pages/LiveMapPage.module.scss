@@ -46,13 +46,12 @@
 
     background: transparent;
     border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-small);
+    border-radius: 10px;
     cursor: pointer;
 
     &[aria-pressed="true"] {
-      color: var(--color-text-accent);
-      background: var(--color-background-accent-soft);
-      border-color: transparent;
+      color: var(--color-text-primary);
+      background: var(--color-background-surface);
     }
 
     &:focus-visible {
@@ -61,14 +60,9 @@
     }
 
     @media (hover: hover) and (pointer: fine) {
-      &:hover {
+      &:not([aria-pressed="true"]):hover {
         color: var(--color-text-primary);
         background: var(--color-background-interactive-hover);
-      }
-
-      &[aria-pressed="true"]:hover {
-        color: var(--color-text-accent);
-        background: var(--color-background-accent-soft-hover);
       }
     }
   }
@@ -84,8 +78,8 @@
     &__nearestEdit {
       padding: 10px;
 
-      background: rgb(255 255 255 / 94%);
-      border-color: transparent;
+      background: var(--color-background-page);
+      border-color: var(--color-border-default);
       border-radius: var(--radius-medium);
       box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
 

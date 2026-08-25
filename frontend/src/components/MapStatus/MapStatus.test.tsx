@@ -18,7 +18,7 @@ describe("MapStatus", () => {
   it("показывает загрузку, пока данных ещё нет", () => {
     render(<MapStatus {...BASE_PROPS} loading />);
 
-    expect(screen.getByText("Загрузка…")).toBeTruthy();
+    expect(screen.getByRole("status", { name: "Загрузка" })).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -47,7 +47,7 @@ describe("MapStatus", () => {
     render(<MapStatus {...BASE_PROPS} />);
 
     expect(screen.getByText("3 ячейки")).toBeTruthy();
-    expect(screen.getByText("за 30 минут")).toBeTruthy();
+    expect(screen.getByText("30 минут")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
