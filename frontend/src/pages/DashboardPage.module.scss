@@ -10,6 +10,24 @@
 
   background: var(--color-background-surface);
 
+  &__view {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-6);
+
+    min-width: 0;
+    min-height: 0;
+  }
+
+  &__loading {
+    display: grid;
+    flex: 1;
+    place-items: center;
+
+    min-height: 0;
+  }
+
   &__head {
     display: flex;
     flex-wrap: wrap;
@@ -33,57 +51,6 @@
     font-weight: 600;
     line-height: 1.2;
     letter-spacing: -0.01em;
-  }
-
-  &__subtitle {
-    margin: 0;
-
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
-  &__periods {
-    display: flex;
-    gap: var(--space-1);
-
-    padding: var(--space-1);
-
-    background: var(--color-background-page);
-    border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-small);
-  }
-
-  &__period {
-    padding: 6px 12px;
-
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.2;
-    white-space: nowrap;
-
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-small);
-
-    cursor: pointer;
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: var(--focus-ring);
-    }
-
-    &[aria-pressed="true"] {
-      color: var(--color-text-accent);
-      background: var(--color-background-accent-soft);
-    }
-
-    @media (hover: hover) and (pointer: fine) {
-      &:hover[aria-pressed="false"] {
-        color: var(--color-text-primary);
-        background: var(--color-background-interactive-hover);
-      }
-    }
   }
 
   &__notice {
@@ -135,17 +102,14 @@
 
   &__grid {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-4);
 
     min-width: 0;
   }
 
   &__kpis {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-4);
+    display: contents;
   }
 
   &__kpi {
@@ -172,6 +136,10 @@
     background: var(--color-background-page);
     border: 1px solid var(--color-border-default);
     border-radius: var(--radius-medium);
+
+    &--chart {
+      grid-column: span 2;
+    }
 
     &--wide {
       grid-column: 1 / -1;
@@ -241,6 +209,9 @@
   }
 
   &__link {
+    justify-self: start;
+
+    max-width: 100%;
     overflow: hidden;
 
     color: var(--color-text-primary);
@@ -292,7 +263,6 @@
   &__chart {
     display: flex;
     align-items: flex-end;
-    justify-content: flex-end;
     gap: 3px;
 
     min-width: 0;
@@ -300,6 +270,8 @@
   }
 
   &__column {
+    position: relative;
+
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -308,8 +280,18 @@
     gap: var(--space-2);
 
     min-width: 0;
-    max-width: 56px;
     height: 100%;
+
+    &:hover,
+    &:focus-visible {
+      z-index: 2;
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+      border-radius: var(--radius-small);
+    }
   }
 
   &__columnTrack {
@@ -322,11 +304,74 @@
   }
 
   &__columnBar {
+    position: relative;
+
     width: 100%;
     min-height: 2px;
 
     background: var(--color-background-accent-soft);
     border-radius: 2px 2px 0 0;
+  }
+
+  &__column:hover &__columnBar,
+  &__column:focus-visible &__columnBar {
+    background: var(--color-background-accent-soft-hover);
+  }
+
+  &__tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    padding: 6px 8px;
+
+    white-space: nowrap;
+
+    background: var(--color-background-page);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-small);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 10%);
+
+    opacity: 0;
+    pointer-events: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      transition: opacity 0.15s ease;
+    }
+  }
+
+  &__column:hover &__tooltip,
+  &__column:focus-visible &__tooltip {
+    opacity: 1;
+  }
+
+  &__column:first-child &__tooltip {
+    left: 0;
+    transform: none;
+  }
+
+  &__column:last-child &__tooltip {
+    right: 0;
+    left: auto;
+    transform: none;
+  }
+
+  &__tooltipDate {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  &__tooltipValue {
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
   }
 
   &__columnLabel {
@@ -344,11 +389,18 @@
     }
 
     &__kpis {
+      display: grid;
+      grid-column: 1 / -1;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
 
       > :first-child {
         grid-column: 1 / -1;
       }
+    }
+
+    &__card--chart {
+      grid-column: auto;
     }
   }
 
@@ -359,15 +411,6 @@
     &__head {
       flex-direction: column;
       align-items: stretch;
-    }
-
-    &__periods {
-      justify-content: space-between;
-    }
-
-    &__period {
-      flex: 1;
-      text-align: center;
     }
 
     &__kpis {

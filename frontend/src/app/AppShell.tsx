@@ -1,5 +1,6 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useLocation, useOutlet } from "react-router-dom";
 
 import { Header } from "../components/Header/Header";
 import type { AppShellContext } from "./appShellContext";
@@ -18,11 +19,25 @@ export function AppShell({ showTabs = true }: AppShellProps) {
     [headerSlotNode],
   );
 
+  const location = useLocation();
+  const outlet = useOutlet(context);
+
   return (
     <div className={styles.appShell}>
       <Header slotRef={setHeaderSlotNode} showTabs={showTabs} />
       <div className={styles.appShell__content}>
-        <Outlet context={context} />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            className={styles.appShell__page}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {outlet}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
