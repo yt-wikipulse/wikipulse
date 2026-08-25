@@ -7,9 +7,10 @@
   display: flex;
   align-items: center;
 
+  width: fit-content;
   padding: 2px;
 
-  background: var(--color-background-surface);
+  background: var(--color-background-segmented-track);
   border-radius: 12px;
 
   @media (max-width: 435px) {
@@ -48,14 +49,22 @@
 
     width: var(--segmented-tab-width);
     height: var(--segmented-tab-height);
+    padding: 0;
 
     color: var(--color-text-secondary);
+    font: inherit;
     font-size: 13px;
+    white-space: nowrap;
     text-decoration: none;
 
+    background: transparent;
+    border: none;
     border-radius: 10px;
 
-    &[aria-current="page"] {
+    cursor: pointer;
+
+    &[aria-current="page"],
+    &[aria-pressed="true"] {
       color: var(--color-text-primary);
     }
 
@@ -65,7 +74,7 @@
     }
 
     @media (hover: hover) and (pointer: fine) {
-      &:not([aria-current="page"]):hover {
+      &:not([aria-current="page"], [aria-pressed="true"]):hover {
         color: var(--color-text-primary);
       }
     }

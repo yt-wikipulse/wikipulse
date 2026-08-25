@@ -5,6 +5,12 @@ const DAY_SECONDS = 86400;
 
 const AXIS_LABELS = 6;
 
+const BUCKET_LIMITS: Record<string, number> = {
+  "24h": 24,
+  "7d": 7,
+  "30d": 30,
+};
+
 const numberFormat = new Intl.NumberFormat("ru-RU");
 const pluralRules = new Intl.PluralRules("ru-RU");
 const hourFormat = new Intl.DateTimeFormat("ru-RU", {
@@ -14,6 +20,10 @@ const hourFormat = new Intl.DateTimeFormat("ru-RU", {
 const dayFormat = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit",
   month: "2-digit",
+});
+const dayLongFormat = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "long",
 });
 
 export function chartStepSeconds(period: string): number {
@@ -39,16 +49,26 @@ function toDailyBuckets(points: TrendPoint[]): TrendPoint[] {
     .sort((a, b) => a.bucket_ts - b.bucket_ts);
 }
 
+function capBuckets(points: TrendPoint[], period: string): TrendPoint[] {
+  const limit = BUCKET_LIMITS[period];
+
+  if (limit === undefined || points.length <= limit) {
+    return points;
+  }
+
+  return points.slice(-limit);
+}
+
 export function prepareBuckets(
   points: TrendPoint[],
   bucketSeconds: number,
   period: string,
 ): TrendPoint[] {
   if (points.length === 0 || bucketSeconds >= chartStepSeconds(period)) {
-    return points;
+    return capBuckets(points, period);
   }
 
-  return toDailyBuckets(points);
+  return capBuckets(toDailyBuckets(points), period);
 }
 
 export function axisLabelIndexes(
@@ -72,6 +92,18 @@ export function axisLabelIndexes(
 export function formatBucketLabel(ts: number, daily: boolean): string {
   const date = new Date(ts * 1000);
   return daily ? dayFormat.format(date) : hourFormat.format(date);
+}
+
+export function formatBucketRange(ts: number, daily: boolean): string {
+  const start = new Date(ts * 1000);
+
+  if (daily) {
+    return dayLongFormat.format(start);
+  }
+
+  const end = new Date((ts + HOUR_SECONDS) * 1000);
+
+  return `${dayFormat.format(start)}, ${hourFormat.format(start)} — ${hourFormat.format(end)}`;
 }
 
 export function formatCount(value: number): string {
