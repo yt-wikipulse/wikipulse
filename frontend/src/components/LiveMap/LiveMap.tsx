@@ -10,6 +10,7 @@ import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover, type PopoverPlacement } from "../CellPopover/CellPopover";
+import { Spinner } from "../Spinner/Spinner";
 import {
   getFeatureStyle,
   getFillColor,
@@ -620,9 +621,9 @@ export function LiveMap({
         )}
 
         {mapLoading && !mapError && (
-          <p className={styles.liveMap__loading}>
-            Загрузка…
-          </p>
+          <div className={styles.liveMap__loading}>
+            <Spinner label="Загрузка карты" size="large" />
+          </div>
         )}
       </div>
 

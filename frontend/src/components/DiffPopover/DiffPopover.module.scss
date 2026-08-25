@@ -76,8 +76,6 @@
     border: 0;
     border-radius: 50%;
     color: var(--color-text-secondary);
-    font-size: 18px;
-    line-height: 1;
     background: transparent;
     cursor: pointer;
 
@@ -92,6 +90,14 @@
         background: var(--color-background-interactive-hover);
       }
     }
+  }
+
+  &__closeIcon {
+    display: block;
+    flex-shrink: 0;
+
+    width: 14px;
+    height: 14px;
   }
 
   &__lines {
@@ -167,12 +173,37 @@
     gap: 6px;
 
     span {
+      position: relative;
+      overflow: hidden;
+
       height: 36px;
       border-radius: 10px;
       background: var(--color-background-skeleton);
 
       &:last-child {
         width: 82%;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        &::after {
+          content: "";
+
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+
+          width: 60%;
+
+          background: linear-gradient(
+            90deg,
+            transparent,
+            var(--color-background-skeleton-shimmer),
+            transparent
+          );
+
+          animation: diffSkeletonShimmer 1.4s ease-in-out infinite;
+        }
       }
     }
   }
@@ -189,9 +220,9 @@
     gap: 10px;
     padding: var(--space-3);
     border-radius: var(--radius-medium);
-    color: var(--color-text-warning);
+    color: var(--color-text-secondary);
     font-size: 13px;
-    background: var(--color-background-accent-soft);
+    background: var(--color-background-surface);
 
     span {
       flex: 1;
@@ -199,17 +230,23 @@
 
     button {
       padding: 6px var(--space-3);
-      border: 0;
+      border: 1px solid var(--color-border-default);
       border-radius: var(--radius-small);
-      color: var(--color-background-page);
+      color: var(--color-text-secondary);
       font-size: 12px;
-      font-weight: 500;
-      background: var(--color-accent);
+      background: transparent;
       cursor: pointer;
 
       &:focus-visible {
         outline: none;
         box-shadow: var(--focus-ring);
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          color: var(--color-text-primary);
+          background: var(--color-background-interactive-hover);
+        }
       }
     }
   }
@@ -219,12 +256,16 @@
   }
 
   &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
     color: var(--color-text-accent);
     font-size: 12px;
     font-weight: 500;
     text-decoration: none;
 
-    &:hover {
+    &:hover span {
       text-decoration: underline;
     }
 
@@ -233,6 +274,14 @@
       border-radius: var(--radius-small);
       box-shadow: var(--focus-ring);
     }
+  }
+
+  &__linkIcon {
+    display: block;
+    flex-shrink: 0;
+
+    width: 13px;
+    height: 13px;
   }
 }
 
@@ -245,4 +294,14 @@
 [data-placement="sheet"] .diffPopover {
   border: 0;
   box-shadow: none;
+}
+
+@keyframes diffSkeletonShimmer {
+  from {
+    translate: -100% 0;
+  }
+
+  to {
+    translate: 200% 0;
+  }
 }

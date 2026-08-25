@@ -49,13 +49,20 @@
   }
 
   &[data-placement="sheet"] {
+    --sheet-map-controls: 44px;
+    --sheet-map-distribution: 40px;
+
     position: absolute;
     z-index: 20;
-    right: var(--space-4);
-    bottom: var(--space-4);
+    right: calc(var(--space-4) + var(--sheet-map-controls));
+    bottom: calc(var(--space-4) + var(--sheet-map-distribution));
     left: var(--space-4);
 
     width: auto;
+    max-height: calc(
+      100% - var(--space-4) * 2 - var(--sheet-map-distribution)
+    );
+    overflow-y: auto;
 
     translate: none;
   }
@@ -117,7 +124,7 @@
   }
 
   &__sectionTitle {
-    margin: 0;
+    margin: 0 0 -8px;
 
     color: #667085;
     font-size: 12px;
@@ -190,11 +197,6 @@
         border-color: #d0d5dd;
         background: #f9fafb;
       }
-    }
-
-    &[data-active="true"] {
-      border-color: var(--color-accent);
-      background: var(--color-background-accent-soft);
     }
   }
 

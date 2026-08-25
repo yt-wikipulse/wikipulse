@@ -12,6 +12,8 @@ export function AppRoutes() {
                 <Route index element={<Navigate to="/map" replace />} />
                 <Route path="map" element={<LiveMapPage />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+            </Route>
+            <Route element={<AppShell showTabs={false} />}>
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>

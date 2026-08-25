@@ -19,7 +19,7 @@ type LiveMapDataState = {
 
 const INITIAL_STATE: LiveMapDataState = {
   hexagons: [],
-  loading: false,
+  loading: true,
   isBackgroundRefreshing: false,
   error: null,
 };

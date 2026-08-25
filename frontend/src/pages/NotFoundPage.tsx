@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import elephant from "../assets/404.svg";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import styles from "./NotFoundPage.module.scss";
 
@@ -11,8 +12,13 @@ export function NotFoundPage() {
       className={styles.notFoundPage}
       aria-labelledby="not-found-title"
     >
+      <img
+        className={styles.notFoundPage__illustration}
+        src={elephant}
+        alt=""
+        aria-hidden="true"
+      />
       <h1 id="not-found-title">Страница не найдена</h1>
-      <p>Проверь адрес или вернись к живой карте.</p>
       <Link className={styles.notFoundPage__link} to="/map">
         Вернуться к карте
       </Link>

@@ -26,6 +26,13 @@
     font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.15px;
+    text-decoration: none;
+
+    &:focus-visible {
+      outline: none;
+      border-radius: var(--radius-small);
+      box-shadow: var(--focus-ring);
+    }
   }
 
   &__cross {
@@ -36,6 +43,16 @@
     height: 11px;
 
     color: var(--color-text-secondary);
+  }
+
+  &__ytLink {
+    display: flex;
+
+    &:focus-visible {
+      outline: none;
+      border-radius: var(--radius-small);
+      box-shadow: var(--focus-ring);
+    }
   }
 
   &__ytLogo {
@@ -62,6 +79,10 @@
 
     &__brand {
       margin-left: auto;
+    }
+
+    &--withoutTabs &__brand {
+      margin: 0 auto;
     }
 
     &__slot {
