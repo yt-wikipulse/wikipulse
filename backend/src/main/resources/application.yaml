@@ -17,6 +17,9 @@ spring:
         size: 2
 
 app:
+  ymaps:
+    api-key: "${YMAPS_API_KEY:}"
+
   live:
     window-minutes: 30
     window-enabled: true
