@@ -1,3 +1,5 @@
+import { getConfig } from "../../api/config";
+
 const API_URL = "https://api-maps.yandex.ru/v3/";
 
 let loading: Promise<void> | null = null;
@@ -6,10 +8,23 @@ export function readApiKey(raw: string | undefined): string {
   const key = (raw ?? "").trim();
 
   if (!key) {
-    throw new Error("VITE_YMAPS_API_KEY не задан");
+    throw new Error("Ключ Яндекс Карт не задан на бэкенде");
   }
 
   return key;
+}
+
+function appendScript(key: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+
+    script.src = `${API_URL}?apikey=${encodeURIComponent(key)}&lang=ru_RU`;
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error("Не удалось загрузить API Яндекс Карт"));
+
+    document.head.append(script);
+  });
 }
 
 export function loadYmaps(): Promise<void> {
@@ -17,20 +32,16 @@ export function loadYmaps(): Promise<void> {
     return loading;
   }
 
-  loading = new Promise<void>((resolve, reject) => {
-    const key = readApiKey(import.meta.env.VITE_YMAPS_API_KEY);
+  loading = (async () => {
+    const config = await getConfig();
 
-    const script = document.createElement("script");
+    await appendScript(readApiKey(config.ymaps_api_key));
+    await ymaps3.ready;
+  })().catch((error: unknown) => {
+    loading = null;
 
-    script.src = `${API_URL}?apikey=${encodeURIComponent(key)}&lang=ru_RU`;
-    script.onload = () => resolve();
-    script.onerror = () => {
-      loading = null;
-      reject(new Error("Не удалось загрузить API Яндекс Карт"));
-    };
-
-    document.head.append(script);
-  }).then(() => ymaps3.ready);
+    throw error;
+  });
 
   return loading;
 }

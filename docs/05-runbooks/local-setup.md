@@ -55,7 +55,6 @@ curl -s "http://localhost:8080/api/v1/hexagons/active?min_lng=37.31&min_lat=55.5
 ```bash
 cd frontend
 pnpm install
-cp .env.example .env    # и вписать ключ в VITE_YMAPS_API_KEY
 pnpm dev
 ```
 

@@ -15,6 +15,10 @@ x-yt: &yt
 services:
   backend:
     <<: *yt
+    environment:
+      YT_PROXY: ${YT_PROXY:?}
+      YT_TOKEN: ${YT_TOKEN:?}
+      YMAPS_API_KEY: ${YMAPS_API_KEY:?}
     build:
       context: ..
       dockerfile: deploy/backend.Dockerfile
@@ -45,8 +49,6 @@ services:
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
-      args:
-        VITE_YMAPS_API_KEY: ${VITE_YMAPS_API_KEY:?}
     environment:
       DOMAIN: ${DOMAIN:?}
       ACME_EMAIL: ${ACME_EMAIL:?}
