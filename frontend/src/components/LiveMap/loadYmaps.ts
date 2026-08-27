@@ -2,19 +2,14 @@ const API_URL = "https://api-maps.yandex.ru/v3/";
 
 let loading: Promise<void> | null = null;
 
-export function readApiKeys(raw: string | undefined): string[] {
-  return (raw ?? "")
-    .split(",")
-    .map((key) => key.trim())
-    .filter(Boolean);
-}
+export function readApiKey(raw: string | undefined): string {
+  const key = (raw ?? "").trim();
 
-export function pickApiKey(keys: string[], random: number): string {
-  if (keys.length === 0) {
+  if (!key) {
     throw new Error("VITE_YMAPS_API_KEY не задан");
   }
 
-  return keys[Math.min(Math.floor(random * keys.length), keys.length - 1)];
+  return key;
 }
 
 export function loadYmaps(): Promise<void> {
@@ -23,10 +18,7 @@ export function loadYmaps(): Promise<void> {
   }
 
   loading = new Promise<void>((resolve, reject) => {
-    const key = pickApiKey(
-      readApiKeys(import.meta.env.VITE_YMAPS_API_KEY),
-      Math.random(),
-    );
+    const key = readApiKey(import.meta.env.VITE_YMAPS_API_KEY);
 
     const script = document.createElement("script");
 
