@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   BehaviorType,
@@ -10,6 +10,7 @@ import { cellToLatLng, getResolution, latLngToCell } from "h3-js";
 
 import type { ActiveHexagon } from "../../api/hexagons";
 import { CellPopover, type PopoverPlacement } from "../CellPopover/CellPopover";
+import { ErrorScreen } from "../ErrorScreen/ErrorScreen";
 import { Spinner } from "../Spinner/Spinner";
 import {
   getFeatureStyle,
@@ -31,8 +32,6 @@ export type { MapViewport };
 
 export type MapFocus = {
   h3Index: string;
-  // Зум, на котором эта ячейка была найдена: на нём бэкенд отдаёт ту же
-  // резолюцию, поэтому центр камеры совпадает с центром нарисованного гексагона.
   zoom: number;
   token: number;
 };
@@ -44,6 +43,7 @@ type LiveMapProps = {
   focus?: MapFocus | null;
   onSelectedH3Change: (h3: string | null) => void;
   onViewportChange: (viewport: MapViewport) => void;
+  onMapErrorChange: (error: string | null) => void;
 };
 
 const INITIAL_LOCATION = {
@@ -110,6 +110,7 @@ export function LiveMap({
   focus = null,
   onSelectedH3Change,
   onViewportChange,
+  onMapErrorChange,
 }: LiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +127,17 @@ export function LiveMap({
   const [mapVersion, setMapVersion] = useState(0);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapLoading, setMapLoading] = useState(true);
+  const [mapAttempt, setMapAttempt] = useState(0);
+
+  const retryMap = useCallback(() => {
+    setMapError(null);
+    setMapLoading(true);
+    setMapAttempt((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
+    onMapErrorChange(mapError);
+  }, [mapError, onMapErrorChange]);
 
   const [popoverElement] = useState(() => {
     const element = document.createElement("div");
@@ -315,7 +327,7 @@ export function LiveMap({
       mapRef.current?.destroy();
       mapRef.current = null;
     };
-  }, [onViewportChange, onSelectedH3Change]);
+  }, [onViewportChange, onSelectedH3Change, mapAttempt]);
 
   useEffect(() => {
     distributionPositionRef.current = distributionPosition;
@@ -612,12 +624,20 @@ export function LiveMap({
         data-map-area="true"
       >
         {mapError && (
-          <p
+          <div
             className={styles.liveMap__error}
             role="alert"
           >
-            {mapError}
-          </p>
+            <ErrorScreen
+              title={mapError}
+              description="Сервис карт недоступен или не указан ключ Яндекс Карт"
+              action={
+                <button type="button" onClick={retryMap}>
+                  Попробовать снова
+                </button>
+              }
+            />
+          </div>
         )}
 
         {mapLoading && !mapError && (

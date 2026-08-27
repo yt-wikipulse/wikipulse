@@ -22,11 +22,7 @@
     display: grid;
     place-items: center;
 
-    margin: 0;
-    padding: 24px;
-
-    color: #b54708;
-    background: #ffffff;
+    background: var(--color-background-page);
   }
 
   &__loading {

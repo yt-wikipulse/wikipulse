@@ -46,6 +46,11 @@ export function LiveMapPage() {
   const [selectedH3, setSelectedH3] =
     useState<string | null>(null);
 
+  const [mapError, setMapError] =
+    useState<string | null>(null);
+
+  const mapFailed = mapError !== null;
+
   const [searchParams] = useSearchParams();
   const focusH3 = searchParams.get("h3");
 
@@ -74,7 +79,7 @@ export function LiveMapPage() {
   const {
     state: nearestEditState,
     retry: retryNearestEdit,
-  } = useNearestEdit(isNearestEditOpen);
+  } = useNearestEdit(isNearestEditOpen && !mapFailed);
 
   const [mapFocus, setMapFocus] =
     useState<MapFocus | null>(null);
@@ -149,19 +154,22 @@ export function LiveMapPage() {
 
   return (
     <main className={styles.liveMapPage}>
-      {!isCompactHeader &&
+      {!mapFailed &&
+        !isCompactHeader &&
         headerSlotNode !== null &&
         createPortal(nearestEditButton, headerSlotNode)}
 
       <section
         className={styles.liveMapPage__map}
       >
-        <MapStatus
-          loading={loading}
-          error={error}
-          cellCount={hexagons.length}
-          onRetry={retry}
-        />
+        {!mapFailed && (
+          <MapStatus
+            loading={loading}
+            error={error}
+            cellCount={hexagons.length}
+            onRetry={retry}
+          />
+        )}
 
         <LiveMap
           hexagons={hexagons}
@@ -170,18 +178,21 @@ export function LiveMapPage() {
           focus={mapFocus}
           onSelectedH3Change={setSelectedH3}
           onViewportChange={handleViewportChange}
+          onMapErrorChange={setMapError}
         />
 
-        <div className={styles.liveMapPage__controls}>
-          {isCompactHeader && nearestEditButton}
+        {!mapFailed && (
+          <div className={styles.liveMapPage__controls}>
+            {isCompactHeader && nearestEditButton}
 
-          <NearestEditPanel
-            state={nearestEditState}
-            onRetry={retryNearestEdit}
-            onShowOnMap={handleShowOnMap}
-            onClose={closeNearestEdit}
-          />
-        </div>
+            <NearestEditPanel
+              state={nearestEditState}
+              onRetry={retryNearestEdit}
+              onShowOnMap={handleShowOnMap}
+              onClose={closeNearestEdit}
+            />
+          </div>
+        )}
       </section>
     </main>
   );
