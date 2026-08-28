@@ -1,11 +1,11 @@
-import { MotionConfig } from "framer-motion"
+import { MotionConfig } from "framer-motion";
 
-import { AppRoutes } from "./routes"
+import { AppRoutes } from "./routes";
 
 export default function App() {
-    return (
-        <MotionConfig reducedMotion="user">
-            <AppRoutes />
-        </MotionConfig>
-    )
+  return (
+    <MotionConfig reducedMotion="user">
+      <AppRoutes />
+    </MotionConfig>
+  );
 }
