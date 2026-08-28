@@ -7,14 +7,13 @@ import { Spinner } from "../components/Spinner/Spinner";
 import { useDashboardData } from "../features/dashboard/useDashboardData";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { formatNumber, pluralizeEdits } from "../lib/format";
 import styles from "./DashboardPage.module.scss";
 import {
   axisLabelIndexes,
   formatBucketLabel,
   formatBucketRange,
-  formatCount,
   isDailyChart,
-  pluralizeEdits,
   prepareBuckets,
 } from "./DashboardPage.helpers";
 
@@ -125,7 +124,7 @@ export function DashboardPage() {
                 <article className={styles.dashboardPage__kpi}>
                   <h2 className={styles.dashboardPage__label}>Всего правок</h2>
                   <p className={styles.dashboardPage__value}>
-                    {formatCount(totalEdits)}
+                    {formatNumber(totalEdits)}
                   </p>
                 </article>
 
@@ -137,7 +136,7 @@ export function DashboardPage() {
                   {topArticle ? (
                     <p className={styles.dashboardPage__caption}>
                       <span className={styles.dashboardPage__accent}>
-                        {formatCount(topArticle.edits_count)}
+                        {formatNumber(topArticle.edits_count)}
                       </span>{" "}
                       {pluralizeEdits(topArticle.edits_count)}
                     </p>
@@ -152,10 +151,10 @@ export function DashboardPage() {
                   {topPlace ? (
                     <p className={styles.dashboardPage__caption}>
                       <span className={styles.dashboardPage__accent}>
-                        {formatCount(topPlace.edits_count)}
+                        {formatNumber(topPlace.edits_count)}
                       </span>{" "}
                       {pluralizeEdits(topPlace.edits_count)} ·{" "}
-                      {formatCount(topPlace.articles_count)} статей
+                      {formatNumber(topPlace.articles_count)} статей
                     </p>
                   ) : null}
                 </article>
@@ -178,7 +177,7 @@ export function DashboardPage() {
                         {article.title}
                       </a>
                       <span className={styles.dashboardPage__rowValue}>
-                        {formatCount(article.edits_count)}
+                        {formatNumber(article.edits_count)}
                       </span>
                       <span className={styles.dashboardPage__track}>
                         <span
@@ -206,7 +205,7 @@ export function DashboardPage() {
                       className={styles.dashboardPage__column}
                       role="listitem"
                       tabIndex={0}
-                      aria-label={`${formatBucketRange(bucket.bucket_ts, daily)} — ${formatCount(bucket.edits_count)} ${pluralizeEdits(bucket.edits_count)}`}
+                      aria-label={`${formatBucketRange(bucket.bucket_ts, daily)} — ${formatNumber(bucket.edits_count)} ${pluralizeEdits(bucket.edits_count)}`}
                     >
                       <span className={styles.dashboardPage__columnTrack}>
                         <span
@@ -225,7 +224,7 @@ export function DashboardPage() {
                             <span
                               className={styles.dashboardPage__tooltipValue}
                             >
-                              {formatCount(bucket.edits_count)}{" "}
+                              {formatNumber(bucket.edits_count)}{" "}
                               {pluralizeEdits(bucket.edits_count)}
                             </span>
                           </span>
@@ -258,7 +257,7 @@ export function DashboardPage() {
                         {place.top_title}
                       </Link>
                       <span className={styles.dashboardPage__rowValue}>
-                        {formatCount(place.edits_count)}
+                        {formatNumber(place.edits_count)}
                       </span>
                       <span className={styles.dashboardPage__track}>
                         <span

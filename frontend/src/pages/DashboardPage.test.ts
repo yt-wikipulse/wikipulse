@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { pluralizeEdits } from "../lib/format";
 import {
   axisLabelIndexes,
   isDailyChart,
-  pluralizeEdits,
   prepareBuckets,
 } from "./DashboardPage.helpers";
 

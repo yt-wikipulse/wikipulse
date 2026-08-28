@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { ActiveHexagon, HexagonEvent } from "../../api/hexagons";
 import { LIVE_WINDOW_MINUTES } from "../../features/live-map/liveWindow";
+import { pluralizeEdits } from "../../lib/format";
 import { useKeepInViewport } from "../../hooks/useKeepInViewport";
 import { DiffPopover } from "../DiffPopover/DiffPopover";
 import styles from "./CellPopover.module.scss";
@@ -45,25 +46,6 @@ type ArticleSummary = {
   editsCount: number;
   latest: HexagonEvent;
 };
-
-function pluralizeEdits(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod100 >= 11 && mod100 <= 14) {
-    return "правок";
-  }
-
-  if (mod10 === 1) {
-    return "правка";
-  }
-
-  if (mod10 >= 2 && mod10 <= 4) {
-    return "правки";
-  }
-
-  return "правок";
-}
 
 function summarizeTopArticles(
   events: HexagonEvent[],
