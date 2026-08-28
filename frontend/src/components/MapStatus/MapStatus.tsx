@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { LIVE_WINDOW_MINUTES } from "../../features/live-map/liveWindow";
+import { plural } from "../../lib/format";
 import { Spinner } from "../Spinner/Spinner";
 
 import styles from "./MapStatus.module.scss";
@@ -12,19 +13,14 @@ type MapStatusProps = {
   onRetry: () => void;
 };
 
+const CELL_FORMS = {
+  one: "ячейка",
+  few: "ячейки",
+  many: "ячеек",
+};
+
 function formatCells(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) {
-    return `${count} ячейка`;
-  }
-
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} ячейки`;
-  }
-
-  return `${count} ячеек`;
+  return `${count} ${plural(count, CELL_FORMS)}`;
 }
 
 export function MapStatus({

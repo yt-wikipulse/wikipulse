@@ -1,9 +1,9 @@
 import type { DiffSegment } from "../../api/wikiDiff";
+import { formatNumber, plural } from "../../lib/format";
 
 const MINUTE_SECONDS = 60;
 const HOUR_SECONDS = 60 * MINUTE_SECONDS;
 
-const numberFormat = new Intl.NumberFormat("ru-RU");
 
 export function formatEditAge(
   eventTs: number,
@@ -25,26 +25,17 @@ export function formatEditAge(
 export function formatSizeDelta(lengthUpdate: number): string {
   const sign = lengthUpdate < 0 ? "−" : "+";
 
-  return `${sign}${numberFormat.format(Math.abs(lengthUpdate))} Б`;
+  return `${sign}${formatNumber(Math.abs(lengthUpdate))} Б`;
 }
 
+const LINE_FORMS = {
+  one: "строка",
+  few: "строки",
+  many: "строк",
+};
+
 export function pluralizeLines(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod100 >= 11 && mod100 <= 14) {
-    return "строк";
-  }
-
-  if (mod10 === 1) {
-    return "строка";
-  }
-
-  if (mod10 >= 2 && mod10 <= 4) {
-    return "строки";
-  }
-
-  return "строк";
+  return plural(count, LINE_FORMS);
 }
 
 const CONTEXT_BEFORE = 40;

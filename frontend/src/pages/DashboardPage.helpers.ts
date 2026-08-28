@@ -11,8 +11,6 @@ const BUCKET_LIMITS: Record<string, number> = {
   "30d": 30,
 };
 
-const numberFormat = new Intl.NumberFormat("ru-RU");
-const pluralRules = new Intl.PluralRules("ru-RU");
 const hourFormat = new Intl.DateTimeFormat("ru-RU", {
   hour: "2-digit",
   minute: "2-digit",
@@ -104,19 +102,4 @@ export function formatBucketRange(ts: number, daily: boolean): string {
   const end = new Date((ts + HOUR_SECONDS) * 1000);
 
   return `${dayFormat.format(start)}, ${hourFormat.format(start)} — ${hourFormat.format(end)}`;
-}
-
-export function formatCount(value: number): string {
-  return numberFormat.format(value);
-}
-
-export function pluralizeEdits(value: number): string {
-  switch (pluralRules.select(value)) {
-    case "one":
-      return "правка";
-    case "few":
-      return "правки";
-    default:
-      return "правок";
-  }
 }
