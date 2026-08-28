@@ -56,10 +56,13 @@ hosting.
 frontend/src/
 ├── app/          # bootstrap приложения, routes и общий shell
 ├── pages/        # композиция конкретного маршрута и route-local state
+├── features/     # orchestration: polling, cancellation, async state
 ├── components/   # UI и адаптеры внешних визуальных библиотек
 ├── api/          # HTTP, transport DTO и сериализация query
-├── mocks/        # временные development fixtures
-├── types/        # существующие прикладные типы
+├── hooks/        # общие хуки
+├── lib/          # общие чистые функции: форматирование, склонения
+├── styles/       # semantic token foundation
+├── assets/       # изображения
 ├── main.tsx      # BrowserRouter и React root
 └── index.css     # глобальный CSS foundation
 ```
@@ -123,48 +126,26 @@ listeners Яндекс.Карт): они являются контрактом �
 orchestration: polling, cancellation, loading/error state или несколько
 связанных UI-компонентов. Создавать полный FSD-каркас заранее не нужно.
 
-## Текущий поток данных карты
-
-Карта получает данные из текущего backend endpoint через REST adapter:
+## Поток данных карты
 
 ```text
 Yandex Map viewport: bbox + zoom
     ↓
 LiveMapPage: viewport + selectedH3
     ↓
-useLiveMapData: request + cancellation + loading/error
+useLiveMapData: debounce + polling + cancellation + loading/error
     ↓
 api/hexagons.ts → backend
     ↓
 ActiveHexagon[]
     ├──→ LiveMap: H3 → polygon → Yandex Map features
-    └──→ sidebar выбранной ячейки и ссылки на статьи
+    └──→ CellPopover: выбранная ячейка и ссылки на статьи
 ```
 
-Frontend fixtures удалены. Текущий UI использует только поля утверждённого
-`ActiveHexagon`, поэтому отдельная visual model пока не нужна. Явный mapper
+Frontend fixtures удалены. UI использует только поля утверждённого
+`ActiveHexagon`, поэтому отдельная visual model не нужна. Явный mapper
 добавляется только если форма или ответственность UI-модели действительно
 разойдётся с transport DTO.
-
-Текущий срез делает запрос после получения нового viewport и отменяет
-предыдущий при следующем изменении или unmount. Polling и отдельный debounce
-добавляются следующим этапом.
-
-## Целевой поток MVP v1
-
-```text
-Yandex Map viewport: bbox + zoom
-    ↓
-feature orchestration: debounce + request + polling + cancellation
-    ↓
-api/hexagons.ts
-    ↓
-REST API
-    ↓
-ячейки и события
-    ├──→ LiveMap: polygons
-    └──→ sidebar: выбранная ячейка и ссылки на статьи
-```
 
 Точный endpoint, query и response shape не повторяются здесь. Они определены в
 [REST-контракте](../03-contracts/rest-api.md). Если contract, backend, frontend
@@ -209,7 +190,7 @@ Orchestration живой карты отвечает за:
 - `loading`, `refreshing`, `error`, `empty` и `success`;
 - сохранение последних хороших данных при временной ошибке refresh.
 
-`LiveMap` и sidebar получают уже подготовленные данные и не владеют HTTP
+`LiveMap` и `CellPopover` получают уже подготовленные данные и не владеют HTTP
 lifecycle.
 
 ## Дашборд
