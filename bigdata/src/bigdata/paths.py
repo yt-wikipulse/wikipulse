@@ -33,6 +33,12 @@ MARTS_TOP_GEO = f"{MARTS_DIR}/top_geo"
 CONSUMERS_DIR = f"{BASE}/consumers"
 CONSUMER_ENRICH = f"{CONSUMERS_DIR}/c_enrich"
 CONSUMER_ARCHIVE = f"{CONSUMERS_DIR}/c_archive"
+CONSUMER_BACKEND = f"{CONSUMERS_DIR}/c_backend"
+"""
+Консьюмер бэкенда на ``q_enriched``. Регистрируется non-vital: живая карта
+показывает последние полчаса, и её отставание не повод запрещать очереди
+тримиться. Архив за очередью следит vital-консьюмером ``c_archive``.
+"""
 
 CHECKPOINTS_DIR = f"{BASE}/checkpoints"
 CHECKPOINT_ENRICH = f"{CHECKPOINTS_DIR}/c_enrich"

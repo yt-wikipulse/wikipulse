@@ -125,9 +125,13 @@ def enable_auto_trim(path):
     print(f"  auto_trim включён на {path}")
 
 
-def create_consumer(consumer_path, queue_path, description):
+def create_consumer(consumer_path, queue_path, description, vital=True):
     """
-    Создаёт консьюмера и регистрирует его на очередь как vital.
+    Создаёт консьюмера и регистрирует его на очередь.
+
+    Vital-консьюмер держит трим: очередь не срежут дальше того места, до
+    которого он дочитал. Non-vital на трим не влияет — таким регистрируется
+    читатель, которому отставание не страшно.
 
     Регистрация ищется сравнением полного пути: совпадение по последнему
     сегменту приняло бы за свой чужой консьюмер с таким же именем
@@ -146,8 +150,8 @@ def create_consumer(consumer_path, queue_path, description):
         yt.create("queue_consumer", consumer_path, recursive=True)
         yt.mount_table(consumer_path, sync=True)
         print(f"  создан {consumer_path} — {description}")
-    yt.register_queue_consumer(queue_path, consumer_path, vital=True)
-    print(f"  {consumer_path} -> {queue_path} (vital)")
+    yt.register_queue_consumer(queue_path, consumer_path, vital=vital)
+    print(f"  {consumer_path} -> {queue_path} ({'vital' if vital else 'non-vital'})")
 
 
 def main():
@@ -168,6 +172,8 @@ def main():
     print("\nConsumers:")
     create_consumer(paths.CONSUMER_ENRICH, paths.Q_RAW, "consumer для enrich-стрима")
     create_consumer(paths.CONSUMER_ARCHIVE, paths.Q_ENRICHED, "consumer архиватора")
+    create_consumer(paths.CONSUMER_BACKEND, paths.Q_ENRICHED, "consumer бэкенда",
+                    vital=False)
 
     print("\nАвтотрим очередей:")
     enable_auto_trim(paths.Q_RAW)
