@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-    source ~/a-summer-school
-    uv run scheduler            # демон: цикл каждые 5 минут
-    uv run scheduler --once     # один цикл (проверка)
-"""
 import argparse
 import logging
 import os
@@ -13,17 +8,12 @@ import sys
 import time
 from pathlib import Path
 
-import yt.wrapper as yt
+from bigdata import paths
+from bigdata.runtime import proxy_host, require_env
+from bigdata.scripts.upload_artifacts import upload_job_script
 
-BASE = "//home/wikipulse"
 SPYT_MARTS_LOCAL = Path(__file__).with_name("spyt_marts.py")
-SPYT_MARTS_REMOTE = f"{BASE}/src/spyt_marts.py"
-SPYT_MARTS_SPARK = f"yt:///{BASE.lstrip('/')}/src/spyt_marts.py"
-
-PROXY_HOST = "your-cluster.example.com"
-SPARK_MASTER = f"ytsaurus://https://{PROXY_HOST}"
 SPYT_DEPS_ZIP = "yt:///home/wikipulse/lib/spyt_deps.zip"
-H3_ZIP = f"yt:///{BASE.lstrip('/')}/lib/h3.zip"
 
 FAST_INTERVAL = 300
 SLOW_INTERVAL = 3600
@@ -41,25 +31,27 @@ logging.basicConfig(
 log = logging.getLogger("scheduler")
 
 
-def build_spark_submit(hours: int, yt_token: str,
+def build_spark_submit(hours: int,
                        top_n: int | None = None,
                        h3_res: int | None = None) -> list[str]:
+    host = proxy_host()
+    py_files = ",".join((SPYT_DEPS_ZIP, paths.spark_url(paths.LIB_BIGDATA_ZIP)))
     cmd = [
         "spark-submit",
-        "--master", SPARK_MASTER,
+        "--master", f"ytsaurus://https://{host}",
         "--deploy-mode", "cluster",
         "--num-executors", "2",
         "--executor-memory", "2g",
         "--executor-cores", "1",
         "--driver-memory", "2g",
         "--conf", "spark.hadoop.yt.proxy.role=http",
-        "--conf", f"spark.yarn.appMasterEnv.YT_TOKEN={yt_token}",
-        "--conf", f"spark.yarn.appMasterEnv.YT_PROXY={PROXY_HOST}",
+        "--conf", f"spark.yarn.appMasterEnv.YT_PROXY={host}",
+        "--conf", f"spark.yarn.appMasterEnv.YT_BASE_PATH={paths.BASE}",
         "--conf", "spark.pyspark.python=/usr/bin/python3.11",
         "--conf", "spark.shuffle.useOldFetchProtocol=true",
-        "--py-files", SPYT_DEPS_ZIP,
-        "--files", H3_ZIP,
-        SPYT_MARTS_SPARK,
+        "--py-files", py_files,
+        "--files", paths.spark_url(paths.LIB_H3_ZIP),
+        paths.spark_url(paths.SRC_SPYT_MARTS),
         "--hours", str(hours),
     ]
     if top_n is not None:
@@ -70,14 +62,6 @@ def build_spark_submit(hours: int, yt_token: str,
 
 
 def resolve_spark_env() -> dict[str, str]:
-    """PATH для spark-шагов: каталог найденного spark-submit первым.
-
-    spark-submit — шелл-скрипт, который определяет SPARK_HOME через
-    питоновский find_spark_home.py. Под `uv run` первым в PATH лежит venv
-    проекта без pyspark, скрипт падает и SPARK_HOME остаётся пустым
-    (/bin/spark-class, код 126). Каталог самого spark-submit вперёд —
-    и `python` внутри скрипта берётся из окружения с pyspark.
-    """
     env = os.environ.copy()
     spark_submit = shutil.which("spark-submit")
     if spark_submit:
@@ -90,15 +74,8 @@ def windows_due(last_slow: float, now: float, slow_interval: int) -> bool:
     return now - last_slow >= slow_interval
 
 
-def upload_marts_script():
-    data = SPYT_MARTS_LOCAL.read_bytes()
-    yt.write_file(SPYT_MARTS_REMOTE, data)
-    log.info("spyt_marts.py залит в Cypress: %d байт", len(data))
-
-
 def run_step(name: str, cmd: list[str], timeout: int = STEP_TIMEOUT,
              env: dict[str, str] | None = None) -> bool:
-    """Запускает команду, логирует длительность. True — успех."""
     start = time.monotonic()
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True,
@@ -119,7 +96,8 @@ def run_step(name: str, cmd: list[str], timeout: int = STEP_TIMEOUT,
 def run_cycle(state: dict, top_n: int | None, h3_res: int | None,
               spark_env: dict[str, str]):
     try:
-        upload_marts_script()
+        size = upload_job_script(SPYT_MARTS_LOCAL)
+        log.info("spyt_marts.py залит в Cypress: %d байт", size)
     except Exception as e:
         log.error("заливка spyt_marts.py не удалась: %s", e)
 
@@ -130,9 +108,8 @@ def run_cycle(state: dict, top_n: int | None, h3_res: int | None,
         windows += list(SLOW_WINDOWS)
         state["last_slow"] = time.time()
 
-    token = os.environ.get("YT_TOKEN", "")
     for hours in windows:
-        run_step(f"marts {hours}h", build_spark_submit(hours, token, top_n, h3_res),
+        run_step(f"marts {hours}h", build_spark_submit(hours, top_n, h3_res),
                  env=spark_env)
 
     log.info("цикл завершён: окна %s", ", ".join(f"{h}ч" for h in windows))
@@ -155,18 +132,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def check_env():
-    missing = [v for v in ("YT_PROXY", "YT_TOKEN") if not os.environ.get(v)]
-    if missing:
-        print(f"ОШИБКА: не задано: {', '.join(missing)}.")
-        print("Выполни: source ~/a-summer-school")
-        sys.exit(1)
-    log.info("Прокси: %s", os.environ["YT_PROXY"])
-
-
 def main():
     args = parse_args()
-    check_env()
+    require_env("YT_PROXY", "YT_TOKEN")
+    log.info("Прокси: %s | база: %s", proxy_host(), paths.BASE)
 
     spark_bin = shutil.which("spark-submit")
     if not spark_bin:

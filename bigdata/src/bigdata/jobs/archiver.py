@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""
-source ~/a-summer-school
-uv run archiver
-"""
 import logging
-import os
-import sys
 
 import yt.wrapper as yt
 
-BASE = "//home/wikipulse"
-Q_ENRICHED = f"{BASE}/q_enriched"
-T_HISTORY = f"{BASE}/history/t_history"
+from bigdata.paths import Q_ENRICHED, T_HISTORY
+from bigdata.runtime import require_env
 
 CURSOR_ATTR = "archiver_last_row_index"
 PAGE_SIZE = 5000
@@ -45,10 +38,7 @@ def fetch_page(cursor: int, limit: int) -> list[dict]:
 
 
 def main():
-    if not os.environ.get("YT_PROXY"):
-        print("ОШИБКА: YT_PROXY не задан.")
-        print("Выполни: source ~/a-summer-school")
-        sys.exit(1)
+    require_env("YT_PROXY", "YT_TOKEN")
 
     cursor = read_cursor()
     total = 0

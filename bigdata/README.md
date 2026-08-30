@@ -1,237 +1,335 @@
 # WikiPulse BigData
 
-Управление таблицами YTsaurus, ингестор, SPYT-jobs, агрегация витрин.
+Пайплайн поверх YTsaurus: поток правок Википедии → очередь → обогащение
+координатами и H3 → история → витрины дашборда.
+
+```text
+SSE recentchange
+      │  ingestor            обычный python, вне кластера
+      ▼
+   q_raw ──────────── consumer c_enrich
+      │  spyt_enrich         SPYT structured streaming, на кластере
+      ▼
+ q_enriched ──────── consumer c_archive
+      │  archiver            обычный python, курсор в атрибуте таблицы
+      ▼
+history/t_history
+      │  spyt_marts          SPYT batch, на кластере
+      ▼
+marts/{trends,top_articles,top_geo}
+```
+
+Шедулер (`scheduler`) гоняет `archiver` + `spyt_marts` по расписанию. Бэкенд
+в этой схеме читает `q_enriched` (живая карта) и `marts/*` (дашборд) сам,
+эта часть — в корневом [README](../README.md).
 
 ## Структура
 
-```
+```text
 bigdata/
-├── requirements.txt          ← зависимости (версии из гайда хакатона)
-├── config/
-│   └── hackathon.yaml        ← пути к таблицам team12
-├── scripts/                  ← одноразовые скрипты (CLI)
-│   ├── init_tables.py        ← создать все таблицы на кластере
-│   └── load_dict_coords.py   ← загрузить справочник координат
-├── jobs/                     ← постоянно/периодически работающие
-│   ├── ingestor.py           ← SSE → Q_RAW (работает на твоём ноуте)
-│   ├── spyt_enrich.py        ← Q_RAW → JOIN → Q_ENRICHED (на кластере)
-│   ├── archiver.py           ← Q_ENRICHED → T_HISTORY (на ноуте)
-│   ├── spyt_marts.py         ← T_HISTORY → витрины дашборда (на кластере)
-│   └── scheduler.py          ← гоняет archiver + spyt_marts по расписанию
-└── README.md                 ← этот файл
+├── pyproject.toml                   ← зависимости и entry points
+├── implementation-notes.md          ← почему сделано именно так
+├── src/bigdata/
+│   ├── paths.py                     ← все пути в Cypress, единственный источник
+│   ├── runtime.py                   ← окружение: прокси, токен, User-Agent, h3
+│   ├── scripts/
+│   │   ├── init_tables.py           ← создать таблицы, очереди, консьюмеров
+│   │   ├── load_dict_coords_full.py ← справочник координат из дампа Wikidata
+│   │   └── upload_artifacts.py      ← собрать и залить артефакты SPYT
+│   └── jobs/
+│       ├── ingestor.py              ← SSE → q_raw
+│       ├── spyt_enrich.py           ← q_raw → q_enriched (на кластере)
+│       ├── archiver.py              ← q_enriched → t_history
+│       ├── spyt_marts.py            ← t_history → витрины (на кластере)
+│       └── scheduler.py             ← archiver + spyt_marts по расписанию
+└── tests/
+    ├── test_paths.py
+    ├── test_runtime.py
+    ├── test_scheduler.py
+    ├── test_spyt_marts.py
+    └── test_upload_artifacts.py
 ```
 
-## Быстрый старт
+Ни один путь в Cypress не зашит в модули: всё строится в `paths.py` от
+`YT_BASE_PATH`. Меняешь корень — меняешь одну переменную.
 
-### 0. Один раз на машину (установка окружения)
+## Установка
 
 ```bash
-# Python 3.12
-python3.12 -V || brew install python@3.12
-
-# Виртуальное окружение
-python3.12 -m venv ~/spyt-summer-school
-source ~/spyt-summer-school/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# DNS для кластера (без этого ничего не работает!)
-echo "203.0.113.10 rpc-proxy.example.com" \
-  | sudo tee -a /etc/hosts
-
-# Файл входа (создай вручную, вставь свой токен)
-cat > ~/a-summer-school << 'EOF'
-source ~/spyt-summer-school/bin/activate
-export YT_PROXY=https://your-cluster.example.com/
-export YT_TOKEN=ТВОЙ_ТОКЕН_СЮДА
-source spyt-env
-EOF
+python3.12 -m venv .venv
+. .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e .              # клиент YTsaurus, ингестор, архиватор, шедулер
+pip install -e ".[spark]"     # плюс локальный pyspark, если он нужен вне кластера
 ```
 
-### 1. Перед каждой сессией работы
+`pip install -e .` ставит и CLI `yt` — он приходит с `ytsaurus-client`, отдельно
+его ставить не нужно. Все команды проверки ниже — это он.
+
+`spark-submit` берётся из окружения SPYT, а не из этого пакета: на кластере
+драйвер запускается своим питоном (`spark.pyspark.python`), а локальный
+`pyspark` нужен только для отладки. Как поставить SPYT —
+[`setup/spyt-env.md`](../setup/spyt-env.md).
+
+## Entry points
+
+Всё, что можно запустить, объявлено в `[project.scripts]` и после
+`pip install -e .` доступно по имени:
+
+| Команда | Модуль | Что делает |
+|---|---|---|
+| `init-tables` | `scripts/init_tables.py` | создаёт каталоги, очереди, консьюмеров, историю и витрины |
+| `upload-artifacts` | `scripts/upload_artifacts.py` | собирает и заливает `bigdata.zip`, `h3.zip` и скрипты джоб |
+| `load-dict-coords-full` | `scripts/load_dict_coords_full.py` | наполняет справочник координат из дампа Wikidata |
+| `ingestor` | `jobs/ingestor.py` | читает SSE Wikimedia и пишет в `q_raw` |
+| `archiver` | `jobs/archiver.py` | переливает `q_enriched` в `history/t_history` |
+| `scheduler` | `jobs/scheduler.py` | `archiver` + `spyt_marts` по расписанию |
+
+`spyt_enrich.py` и `spyt_marts.py` в этой таблице нет намеренно: они не
+запускаются локально, их запускает `spark-submit` на кластере из
+`{base}/src/`, куда их кладёт `upload-artifacts`.
+
+## Переменные окружения
+
+| Переменная | Обязательна | По умолчанию | Зачем |
+|---|---|---|---|
+| `YT_PROXY` | да | — | адрес HTTP-прокси кластера, со схемой или без |
+| `YT_TOKEN` | да | — | токен YTsaurus |
+| `YT_BASE_PATH` | нет | `//home/wikipulse` | корень всех таблиц проекта |
+| `WIKIPULSE_CONTACT` | нет | `https://github.com/yt-wikipulse/wikipulse` | контакт в `User-Agent` запросов к Wikimedia |
+
+`WIKIPULSE_CONTACT` — не косметика: Wikimedia требует в `User-Agent` рабочий
+способ связи, и это условие их User-Agent policy, а не пожелание.
+
+В примерах ниже `YT_PROXY` подставляется в `--master` целиком, поэтому задавай
+его со схемой: `export YT_PROXY=https://<proxy-host>`. В путях Cypress
+используется `yt:/$YT_BASE_PATH/...`: одиночный слэш после `yt:` плюс путь,
+начинающийся с `//`, даёт ровно `yt:///...`, как ждёт SPYT.
+
+Токен нигде не передаётся аргументом командной строки: ни в спеку YT-операции,
+ни в Spark UI он не попадает. Джобы на кластере читают его из
+`YT_SECURE_VAULT_YT_TOKEN`, который YTsaurus кладёт в окружение операции сам.
+
+## Порядок запуска
+
+Шаги 1–3 выполняются один раз на кластер, 4–8 — это то, что работает
+постоянно. `deploy/compose.yml` поднимает в контейнерах шаги 4 и 8; шаги
+1–3 всё равно делаются руками, до первого запуска compose.
+
+### 1. Таблицы
 
 ```bash
-source ~/a-summer-school
-yt whoami              # проверка доступа
+init-tables
+yt list $YT_BASE_PATH
 ```
 
-### 2. Создать таблицы (один раз)
+Идемпотентно: существующие таблицы не пересоздаются, размонтированные
+монтируются, консьюмеры при необходимости регистрируются заново. Обеим
+очередям включается `auto_trim_config`, и на `q_enriched` регистрируется
+vital-консьюмер `c_archive` — без него автотрим срезал бы очередь сразу,
+не дожидаясь архиватора.
+
+### 2. Артефакты для SPYT
 
 ```bash
-python scripts/init_tables.py
+upload-artifacts             # bigdata.zip + h3.zip + скрипты джоб
+upload-artifacts --skip-h3   # если h3.zip уже лежит в {base}/lib
 ```
 
-Проверка:
-```bash
-yt list //home/wikipulse
+Собирает и кладёт в Cypress:
+
+- `{base}/lib/bigdata.zip` — сам пакет, чтобы джобы на кластере видели
+  `bigdata.paths` (уходит в `--py-files`);
+- `{base}/lib/h3.zip` — колесо `h3` под питон кластера (уходит в `--files`,
+  джоба распаковывает его сама);
+- `{base}/src/spyt_enrich.py`, `{base}/src/spyt_marts.py` — сами джобы.
+
+**Без этого шага любая SPYT-джоба падает с `ModuleNotFoundError: bigdata`.**
+Он обязателен и на чистом кластере, и после любой правки джоб или `paths.py`.
+
+`h3.zip` в git не хранится — он собирается здесь и каждый раз заново:
+
+```
+pip install h3 --target <tmp> \
+  --platform manylinux2014_x86_64 --python-version 3.11 --only-binary=:all:
 ```
 
-### 3. Загрузить справочник координат
+`h3` — расширение на C, и колесо должно совпасть с питоном и архитектурой
+узлов кластера. Константы `CLUSTER_PYTHON` и `CLUSTER_PLATFORM` в
+`src/bigdata/scripts/upload_artifacts.py` задают именно это и должны совпадать
+со `spark.pyspark.python` в командах запуска ниже. Другой образ кластера —
+правь обе константы вместе.
 
-```bash
-# Быстрый вариант — 100 тестовых элементов из Wikidata API
-python scripts/load_dict_coords.py --sample
-
-# Проверка
-yt select-rows "* from [//home/wikipulse/dict/coords] limit 10"
-```
-
-### 4. Запустить ингестор (SSE → Q_RAW)
-
-Это **не** spark-джоба. Обычный Python, работает на твоём ноуте.
-
-```bash
-python jobs/ingestor.py
-```
-
-В терминале увидишь:
-```
-2026-08-08 ... [INFO] записано 100 | in=450 out=100 filtered=350 | last=...
-```
-
-Проверь, что очередь наполняется:
-```bash
-yt select-rows "* from [//home/wikipulse/q_raw] limit 5" --format json
-```
-
-### 5. Загрузить enrich-скрипт на кластер
-
-Spark-джобы запускаются **на кластере** (`--deploy-mode cluster`), поэтому
-сначала нужно загрузить скрипт в Cypress:
+### 3. Справочник координат
 
 ```bash
-# Заливаем скрипт как файл
-yt write //home/wikipulse/src --file-from src/bigdata/jobs/spyt_enrich.py
+load-dict-coords-full --max-rows 10000   # проверочный прогон
+load-dict-coords-full                    # весь дамп Wikidata, долго
+
+yt get $YT_BASE_PATH/dict/coords/@row_count
+yt read-table "$YT_BASE_PATH/dict/coords[:#10]" --format '<encode_utf8=false>json'
 ```
 
-### 6. Запустить SPYT-enrich (Q_RAW → Q_ENRICHED)
+Проверка здесь через `read-table`, а не `select-rows`, потому что загрузчик
+оставляет `dict/coords` **статической** отсортированной таблицей, а
+`select-rows` и `lookup_rows` работают только со смонтированной динамической.
+Перед шагом 5 таблицу нужно перевести в динамическую вручную; почему это не
+зашито в скрипт — в [`implementation-notes.md`](implementation-notes.md),
+раздел `paths.py / DICT_COORDS`.
+
+### 4. Ингестор
+
+```bash
+ingestor
+yt select-rows "* from [$YT_BASE_PATH/q_raw] limit 5" --format '<encode_utf8=false>json'
+```
+
+Работает 24/7. В заголовках запросов уходит `WIKIPULSE_CONTACT` — задай его,
+если гоняешь ингестор долго.
+
+### 5. Обогащение (постоянная джоба на кластере)
 
 ```bash
 spark-submit \
-  --master ytsaurus://https://your-cluster.example.com \
+  --master ytsaurus://$YT_PROXY \
   --deploy-mode cluster \
-  --num-executors 2 \
+  --num-executors 1 --executor-memory 1g --executor-cores 1 \
+  --driver-memory 2g \
+  --conf spark.hadoop.yt.proxy.role=http \
+  --conf spark.yarn.appMasterEnv.YT_PROXY=$YT_PROXY \
+  --conf spark.yarn.appMasterEnv.YT_BASE_PATH=$YT_BASE_PATH \
   --conf spark.pyspark.python=/usr/bin/python3.11 \
-  --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
-  yt:///home/wikipulse/src/spyt_enrich.py
+  --py-files yt:///home/wikipulse/lib/spyt_deps.zip,yt:/$YT_BASE_PATH/lib/bigdata.zip \
+  --files yt:/$YT_BASE_PATH/lib/h3.zip \
+  yt:/$YT_BASE_PATH/src/spyt_enrich.py
 ```
 
-Эта джоба работает **постоянно** (24/7), пока не остановишь.
-В логе появится ссылка на операцию — следи за статусом в Web UI.
+`spyt_deps.zip` — общий архив зависимостей стенда, на котором писался проект,
+а не часть репозитория: на своём кластере замени путь или убери его из
+`--py-files` (см. «Что нужно поправить под свой кластер»). Остальные два
+`yt:`-пути принадлежат проекту и берутся из `paths.py`.
 
-Проверь результат:
+Джоба читает `q_raw` через консьюмер `c_enrich` и работает 24/7, пока её не
+остановить. Правки статей, которых нет в справочнике координат, она молча
+отбрасывает — поэтому `q_enriched` заметно короче `q_raw`, а в логе каждого
+батча есть строка `hit=NN%`. Низкий hit означает не поломку джобы, а неполный
+или несмонтированный `dict/coords`.
+
 ```bash
-yt select-rows "* from [//home/wikipulse/q_enriched] \
-  where has_geo = true limit 10" --format json
+yt select-rows "* from [$YT_BASE_PATH/q_enriched] limit 10" --format '<encode_utf8=false>json'
 ```
 
-### 7. Запустить архиватор (Q_ENRICHED → T_HISTORY)
+### 6. Архиватор
 
-Копирует новые строки очереди в статическую историю — источник витрин.
-Курсор хранится в атрибуте `history/t_history/@archiver_last_row_index`,
-поэтому перезапуск ничего не теряет и не дублирует.
 ```bash
-uv run archiver
+archiver
+yt read-table "$YT_BASE_PATH/history/t_history[:#5]" --format '<encode_utf8=false>json'
+yt get $YT_BASE_PATH/history/t_history/@archiver_last_row_index
 ```
 
-Обычно запускается шедулером каждые 5 минут — см. раздел 9.
-Разово, руками:
-```bash
-uv run archiver
-```
+`t_history` — статическая таблица, поэтому проверка через `read-table`.
+Курсор лежит в её атрибуте `@archiver_last_row_index`, перезапуск ничего не
+теряет и не дублирует. Обычно архиватор гоняет шедулер (шаг 8) — руками он
+нужен только для разового прогона.
 
-Проверка:
-```bash
-yt select-rows "* from [//home/wikipulse/history/t_history] limit 5" --format json
-```
+### 7. Витрины (разовый расчёт)
 
-⚠️ Очередь `q_enriched` живёт ограниченное время: если строки вычищаются
-быстрее, чем раз в час, — запускай архиватор чаще.
-
-### 8. Запустить агрегатор витрин (T_HISTORY → marts/*)
-
-Загрузить скрипт:
-```bash
-yt write //home/wikipulse/src --file-from src/bigdata/jobs/spyt_marts.py
-```
-
-Запустить агрегацию за последние 24 часа:
 ```bash
 spark-submit \
-  --master ytsaurus://https://your-cluster.example.com \
+  --master ytsaurus://$YT_PROXY \
   --deploy-mode cluster \
   --num-executors 2 --executor-memory 2g --executor-cores 1 \
   --driver-memory 2g \
   --conf spark.hadoop.yt.proxy.role=http \
-  --conf spark.yarn.appMasterEnv.YT_TOKEN=$YT_TOKEN \
-  --conf spark.yarn.appMasterEnv.YT_PROXY=your-cluster.example.com \
+  --conf spark.yarn.appMasterEnv.YT_PROXY=$YT_PROXY \
+  --conf spark.yarn.appMasterEnv.YT_BASE_PATH=$YT_BASE_PATH \
   --conf spark.pyspark.python=/usr/bin/python3.11 \
   --conf spark.shuffle.useOldFetchProtocol=true \
-  --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
-  --files yt:///home/wikipulse/lib/h3.zip \
-  yt:///home/wikipulse/src/spyt_marts.py --hours 24
+  --py-files yt:///home/wikipulse/lib/spyt_deps.zip,yt:/$YT_BASE_PATH/lib/bigdata.zip \
+  --files yt:/$YT_BASE_PATH/lib/h3.zip \
+  yt:/$YT_BASE_PATH/src/spyt_marts.py --hours 24
 ```
 
-⚠️ `spark.shuffle.useOldFetchProtocol=true` — обязательный костыль для кластера:
-sandbox'и executor'ов на одном узле не видят /tmp друг друга, host-local
-чтение шафлов падает с `NoSuchFileException .../blockmgr-*/shuffle_*`.
-Старый протокол фетча отключает host-local чтение полностью.
-Альтернатива: `--num-executors 1` (без соседа на узле механизм не запускается).
+Параметры: `--hours` (окно, 24), `--top-n` (размер топов, 100), `--h3-res`
+(резолюция H3 для топа мест, 6). Запуск идемпотентен: витрины
+перезаписываются по ключам.
 
-Параметры: `--hours` (окно, по умолчанию 24), `--top-n` (размер топов,
-по умолчанию 100), `--h3-res` (резолюция H3 топа мест, по умолчанию 4).
-Запуск идемпотентен: витрины перезаписываются по ключам, повторный запуск
-безопасен.
-
-Проверь витрины:
-```bash
-# Топ статей
-yt select-rows "* from [//home/wikipulse/marts/top_articles] \
-  where period = \"24h\" order by rank limit 10" --format json
-
-# Топ гео-мест
-yt select-rows "* from [//home/wikipulse/marts/top_geo] \
-  where period = \"24h\" order by rank limit 10" --format json
-
-# Тренды по часам
-yt select-rows "* from [//home/wikipulse/marts/trends] \
-  order by bucket_ts desc limit 24" --format json
-```
-
-### 9. Шедулер витрин (archiver + marts по расписанию)
-
-Один процесс вместо крона. Каждый цикл (5 минут): заливает актуальный
-`spyt_marts.py` в Cypress, запускает `archiver` и пересчитывает витрину
-за 24 часа. Раз в час дополнительно — витрины за неделю (168h) и месяц (720h).
+Витрины — динамические таблицы, их видно через `select-rows`:
 
 ```bash
-uv run scheduler            # демон
-uv run scheduler --once     # один цикл для проверки
+yt select-rows "* from [$YT_BASE_PATH/marts/top_articles] where period = \"24h\" order by rank limit 10" --format '<encode_utf8=false>json'
+yt select-rows "* from [$YT_BASE_PATH/marts/top_geo]      where period = \"24h\" order by rank limit 10" --format '<encode_utf8=false>json'
+yt select-rows "* from [$YT_BASE_PATH/marts/trends] order by bucket_ts desc limit 24" --format json
 ```
 
-Параметры: `--interval` (сек, по умолчанию 300), `--slow-interval`
-(сек, 3600), `--top-n` и `--h3-res` (передаются в spyt_marts).
-Запускается на машине с настроенным `spark-submit`
-(`source ~/a-summer-school`). Шедулер сам подставляет окружение
-spark-submit (его bin первым в PATH), поэтому работает под `uv run`
-даже при активированном `spyt-summer-school`.
+### 8. Шедулер
 
-Шедулер идемпотентен: падение любого шага не роняет цикл, наложения
-циклов нет (однопоточный; если цикл длился дольше интервала — следующий
-стартует сразу). Витрины получают ключи period `24h` / `168h` / `720h`.
+```bash
+scheduler            # демон
+scheduler --once     # один цикл для проверки
+```
 
-⚠️ Не запускай одновременно archiver из `deploy/compose.yml` — два
-архиватора гоняются за курсором и плодят дубли в `t_history`.
+Каждый цикл (5 минут): заливает актуальный `spyt_marts.py`, запускает
+`archiver`, пересчитывает витрину за 24 часа. Раз в час дополнительно —
+окна 168ч и 720ч. Параметры: `--interval`, `--slow-interval`, `--top-n`,
+`--h3-res`.
+
+Пока шедулер работает, не запускай `archiver` руками: два архиватора гоняются
+за одним курсором и плодят дубли в `t_history`. В `deploy/compose.yml`
+отдельного архиватора по этой же причине нет — там только `ingestor` и
+`scheduler`.
+
+## Тесты
+
+```bash
+pip install pytest
+pytest
+```
+
+`pip install -e .` для тестов не нужен — `pythonpath = ["src"]` в
+`pyproject.toml` даёт `pytest` найти пакет без установки. Зависимости из
+`[project]` при этом нужны: модули импортируют `yt.wrapper` и `h3` на верхнем
+уровне, так что либо шаг «Установка» уже сделан, либо ставь их отдельно.
+
+Тесты не ходят ни в кластер, ни в Spark — только чистые функции: вычисление
+путей (`test_paths`), нормализация прокси, фолбэк токена на secure vault и
+`User-Agent` (`test_runtime`), сборка командной строки `spark-submit` — в том
+числе проверка, что токен в неё не попадает (`test_scheduler`), ранжирование
+витрин (`test_spyt_marts`), импорт пакета из собранного `bigdata.zip`
+(`test_upload_artifacts`).
+Прогон занимает пару секунд.
+
+## Что нужно поправить под свой кластер
+
+- `SPYT_DEPS_ZIP` в `src/bigdata/jobs/scheduler.py` и `--py-files` в командах
+  выше указывают на `//home/wikipulse/lib/spyt_deps.zip` — это общий архив
+  зависимостей конкретного стенда, на котором писался проект. На своём
+  кластере замени путь или убери его из `--py-files`.
+- `spark.pyspark.python=/usr/bin/python3.11` — питон воркеров конкретного
+  образа. Он же задаёт `CLUSTER_PYTHON` для сборки `h3.zip`.
+- `spark.shuffle.useOldFetchProtocol=true` — обход конкретной проблемы
+  с шафлами, см. [`implementation-notes.md`](implementation-notes.md).
+- Перевод `dict/coords` в динамическую таблицу — шаг 3, тоже не универсальный:
+  он требует `unique_keys` и уникальности пар `(wiki, title)` на твоём дампе.
 
 ## Частые проблемы
 
-**`Unable to locate a Java Runtime`** — нет Java 17. См. гайд, пункт 3.
+**`Unable to locate a Java Runtime`** — для `spark-submit` нужна Java 17.
 
 **`Master must either be yarn or start with spark, k8s, or local`** —
-не выполнен `source ~/a-summer-school`.
+не подгружено окружение SPYT (`spark-env`), `spark-submit` не тот.
 
-**Клиент висит на подключении** — не прописан DNS в `/etc/hosts`.
-См. гайд, пункт 5.
+**`ModuleNotFoundError: bigdata`** в логе операции — не выполнен
+`upload-artifacts` (шаг 2), либо `bigdata.zip` не попал в `--py-files`.
 
-**`Unicode symbols with codes greater than 255`** — при JSON-формате
-добавь опцию `encode_utf8=false` (кириллица).
+**`NoSuchFileException .../blockmgr-*/shuffle_*`** — нужен
+`spark.shuffle.useOldFetchProtocol=true` либо `--num-executors 1`.
+
+**`Unicode symbols with codes greater than 255`** — при JSON-формате в `yt`
+нужен `--format '<encode_utf8=false>json'`; в командах выше он уже стоит
+везде, где в выдаче бывает кириллица.
+
+**`select-rows` не работает по `dict/coords` или `history/t_history`** — это
+не поломка: обе таблицы статические, читать их надо через `read-table`.
+
+Почему код написан именно так — в [`implementation-notes.md`](implementation-notes.md);
+комментариев в коде проект не держит.

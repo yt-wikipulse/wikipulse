@@ -2,18 +2,33 @@
 name = "bigdata"
 version = "0.1.0"
 description = "WikiPulse YTsaurus pipeline"
+readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+    { name = "Андрей Проваторов" },
+    { name = "Николай Тельпуховский" },
+    { name = "Михаил Кужанов" },
+    { name = "Максим Корсунский" },
+    { name = "Владимир Корякин" },
+    { name = "Михаил Агей" },
+]
 dependencies = [
     "requests>=2.34.2",
     "ytsaurus-client>=0.13.53",
-    "ytsaurus-yson>=0.4.10",
     "orjson>=3.10.0",
     "h3>=4.5.0",
+]
+
+[project.optional-dependencies]
+spark = [
+    "pyspark>=4.2.0",
 ]
 
 [project.scripts]
 init-tables           = "bigdata.scripts.init_tables:main"
 load-dict-coords-full = "bigdata.scripts.load_dict_coords_full:main"
+upload-artifacts      = "bigdata.scripts.upload_artifacts:main"
 ingestor              = "bigdata.jobs.ingestor:main"
 archiver              = "bigdata.jobs.archiver:main"
 scheduler             = "bigdata.jobs.scheduler:main"
@@ -29,3 +44,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bigdata"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

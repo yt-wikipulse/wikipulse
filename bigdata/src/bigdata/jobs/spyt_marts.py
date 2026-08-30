@@ -1,60 +1,13 @@
 #!/usr/bin/env python3
-"""
-    yt write-file //home/wikipulse/src/spyt_marts.py < src/bigdata/jobs/spyt_marts.py
-
-    spark-submit \
-      --master ytsaurus://https://your-cluster.example.com \
-      --deploy-mode cluster \
-      --num-executors 2 --executor-memory 2g --executor-cores 1 \
-      --driver-memory 2g \
-      --conf spark.hadoop.yt.proxy.role=http \
-      --conf spark.yarn.appMasterEnv.YT_TOKEN=$YT_TOKEN \
-      --conf spark.yarn.appMasterEnv.YT_PROXY=your-cluster.example.com \
-      --conf spark.pyspark.python=/usr/bin/python3.11 \
-      --conf spark.shuffle.useOldFetchProtocol=true \
-      --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
-      --files yt:///home/wikipulse/lib/h3.zip \
-      yt:///home/wikipulse/src/spyt_marts.py --hours 24
-"""
 import argparse
-import os
-import sys
 import time
-import zipfile
 
-try:
-    import h3
-except ImportError:
+from bigdata import paths
+from bigdata.runtime import load_h3, yt_client
 
-    if not os.path.exists("/tmp/h3_extracted"):
-        if os.path.exists("h3.zip"):
-            with zipfile.ZipFile("h3.zip", "r") as zip_ref:
-                zip_ref.extractall("/tmp/h3_extracted")
-    sys.path.insert(0, "/tmp/h3_extracted")
-    import h3
-
-import yt.wrapper as yt
-
-BASE = "//home/wikipulse"
-T_HISTORY          = f"{BASE}/history/t_history"
-MARTS_TRENDS       = f"{BASE}/marts/trends"
-MARTS_TOP_ARTICLES = f"{BASE}/marts/top_articles"
-MARTS_TOP_GEO      = f"{BASE}/marts/top_geo"
-PROXY = "https://your-cluster.example.com/"
+h3 = load_h3()
 
 INSERT_CHUNK = 50000
-
-_yt_client = None
-
-def get_yt_client():
-    global _yt_client
-    if _yt_client is None:
-        token = os.environ.get("YT_TOKEN") or os.environ.get("YT_SECURE_VAULT_YT_TOKEN") or ""
-        current_proxy = os.environ.get("YT_PROXY") or PROXY
-        if not current_proxy.startswith("http"):
-            current_proxy = f"https://{current_proxy}"
-        _yt_client = yt.YtClient(proxy=current_proxy, token=token)
-    return _yt_client
 
 
 def with_ranks(rows: list[dict], top_n: int, period: str) -> list[dict]:
@@ -169,18 +122,18 @@ def main():
     period = f"{args.hours}h"
 
     spark = SparkSession.builder.appName("wikipulse-marts").getOrCreate()
-    client = get_yt_client()
+    client = yt_client()
 
     now = int(time.time())
     window_start = now - args.hours * 3600
 
-    print(f"Читаю {T_HISTORY} за {args.hours} ч (event_ts >= {window_start})")
+    print(f"Читаю {paths.T_HISTORY} за {args.hours} ч (event_ts >= {window_start})")
     print("-" * 60)
 
     history = (
         spark.read
         .format("yt")
-        .load(T_HISTORY)
+        .load(paths.T_HISTORY)
         .select(
             F.col("event_id").cast(T.StringType()).alias("event_id"),
             F.col("title").cast(T.StringType()).alias("title"),
@@ -199,18 +152,18 @@ def main():
         return
 
     trend_rows = compute_trends(history, period)
-    insert_chunks(client, MARTS_TRENDS, trend_rows)
-    mark_computed(client, MARTS_TRENDS, args.hours)
+    insert_chunks(client, paths.MARTS_TRENDS, trend_rows)
+    mark_computed(client, paths.MARTS_TRENDS, args.hours)
     print(f"marts/trends: {len(trend_rows)} часовых бакетов")
 
     article_rows = compute_top_articles(history, args.top_n, period)
-    insert_chunks(client, MARTS_TOP_ARTICLES, article_rows)
-    mark_computed(client, MARTS_TOP_ARTICLES, args.hours, top_n=args.top_n)
+    insert_chunks(client, paths.MARTS_TOP_ARTICLES, article_rows)
+    mark_computed(client, paths.MARTS_TOP_ARTICLES, args.hours, top_n=args.top_n)
     print(f"marts/top_articles: {len(article_rows)} статей")
 
     geo_rows = compute_top_geo(history, spark, args.top_n, args.h3_res, period)
-    insert_chunks(client, MARTS_TOP_GEO, geo_rows)
-    mark_computed(client, MARTS_TOP_GEO, args.hours, top_n=args.top_n, h3_res=args.h3_res)
+    insert_chunks(client, paths.MARTS_TOP_GEO, geo_rows)
+    mark_computed(client, paths.MARTS_TOP_GEO, args.hours, top_n=args.top_n, h3_res=args.h3_res)
     print(f"marts/top_geo: {len(geo_rows)} мест (h3 res {args.h3_res})")
 
     print("=" * 60)

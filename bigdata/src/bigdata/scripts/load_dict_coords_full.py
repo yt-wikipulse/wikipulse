@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-"""
-    source ~/a-summer-school
-    uv run load-dict-coords-full
-    uv run load-dict-coords-full --max-rows 10000   # тест
-"""
 import json
+import gzip
 import time
 import logging
 import argparse
@@ -12,12 +8,11 @@ import argparse
 import requests
 import yt.wrapper as yt
 
-BASE = "//home/wikipulse"
-DICT_COORDS = f"{BASE}/dict/coords"
+from bigdata.paths import DICT_COORDS, DICT_COORDS_TMP
+from bigdata.runtime import USER_AGENT
 
 DUMP_URL = "https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz"
 BATCH_SIZE = 50000
-UA = "WikiPulse/0.1 (https://github.com/wikpulse; contact@wikpulse.org)"
 
 try:
     import orjson
@@ -86,8 +81,7 @@ def stream_dump(max_rows: int | None = None):
     log.info("Открываю поток: %s", DUMP_URL)
     log.info("JSON парсер: %s", _JSON_LIB)
 
-    headers = {"User-Agent": UA}
-    import gzip
+    headers = {"User-Agent": USER_AGENT}
     response = requests.get(DUMP_URL, headers=headers, stream=True, timeout=120)
     response.raise_for_status()
     decompressed = gzip.GzipFile(fileobj=response.raw)
@@ -145,7 +139,7 @@ def main():
     args = parser.parse_args()
 
     dict_coords_path = DICT_COORDS
-    tmp_path = f"{BASE}/dict/coords_tmp"
+    tmp_path = DICT_COORDS_TMP
 
     log.info("Создаю временную таблицу: %s", tmp_path)
     tmp_schema = [

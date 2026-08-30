@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-Запуск:
-    source ~/a-summer-school
-    uv run ingestor
-"""
 import json
 import time
 import logging
@@ -11,8 +6,9 @@ import logging
 import requests
 import yt.wrapper as yt
 
-BASE = "//home/wikipulse"
-Q_RAW = f"{BASE}/q_raw"
+from bigdata.paths import Q_RAW
+from bigdata.runtime import USER_AGENT
+
 SSE_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
 BATCH_SIZE = 100
 
@@ -70,7 +66,7 @@ def event_to_row(evt: dict) -> dict | None:
 def stream_sse(url: str, last_event_id: str | None = None):
     headers = {
         "Accept": "text/event-stream",
-        "User-Agent": "WikiPulse/0.1 (https://github.com/wikpulse; contact@wikpulse.org)",
+        "User-Agent": USER_AGENT,
     }
     if last_event_id:
         headers["Last-Event-ID"] = last_event_id
