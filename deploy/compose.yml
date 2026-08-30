@@ -1,54 +1,52 @@
 name: wikipulse
 
-x-yt: &yt
-  environment:
-    YT_PROXY: ${YT_PROXY:?}
-    YT_TOKEN: ${YT_TOKEN:?}
-  # кластерный RPC-proxy не резолвится публичным DNS (см. bigdata/README.md);
-  # узел Wikimedia, который отдаёт DNS по умолчанию (esams), из ru-central1
-  # недоступен, поэтому поток читаем через eqiad
-  extra_hosts:
-    - "rpc-proxy.example.com:203.0.113.10"
-    - "stream.wikimedia.org:208.80.154.224"
+x-service: &service
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
   restart: unless-stopped
+
+x-yt-env: &yt-env
+  YT_PROXY: ${YT_PROXY:?}
+  YT_TOKEN: ${YT_TOKEN:?}
+  YT_BASE_PATH: ${YT_BASE_PATH:-//home/wikipulse}
 
 services:
   backend:
-    <<: *yt
-    environment:
-      YT_PROXY: ${YT_PROXY:?}
-      YT_TOKEN: ${YT_TOKEN:?}
-      YMAPS_API_KEY: ${YMAPS_API_KEY:?}
+    <<: *service
     build:
       context: ..
       dockerfile: deploy/backend.Dockerfile
-    # В application.yaml лежат временные значения для разработки: окно
-    # выключено, очередь читается с начала. На проде это съедает память.
-    command:
-      - "--app.live.window-enabled=true"
-      - "--app.poller.start-from-beginning=false"
+    environment:
+      <<: *yt-env
+      YMAPS_API_KEY: ${YMAPS_API_KEY:-}
 
   ingestor:
-    <<: *yt
+    <<: *service
     build:
       context: ..
       dockerfile: deploy/bigdata.Dockerfile
     command: ingestor
+    environment:
+      <<: *yt-env
+      WIKIPULSE_CONTACT: ${WIKIPULSE_CONTACT:-}
 
   scheduler:
-    <<: *yt
+    <<: *service
     build:
       context: ..
       dockerfile: deploy/bigdata.Dockerfile
-    # Гоняет archiver и spyt_marts по расписанию — заменил sleep-петлю.
-    # spark-submit в этом образе отсутствует, поэтому шаги витрин пишут
-    # предупреждение и пропускаются; переливка истории работает.
     command: scheduler
+    environment: *yt-env
 
   web:
+    <<: *service
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
+    cap_add:
+      - NET_BIND_SERVICE
     environment:
       DOMAIN: ${DOMAIN:?}
       ACME_EMAIL: ${ACME_EMAIL:?}
@@ -57,10 +55,8 @@ services:
       - "443:443"
     volumes:
       - caddy:/data
-      - /opt/wikipulse/certs:/etc/caddy/certs:ro
     depends_on:
       - backend
-    restart: unless-stopped
 
 volumes:
   caddy:

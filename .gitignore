@@ -17,6 +17,7 @@ dumps/
 *.parquet
 
 # --- IDE и редакторы ---
+
 .idea/
 .vscode/
 *.iml
@@ -54,9 +55,10 @@ venv/
 *.egg-info/
 
 # --- Прочее ---
-context.md
 tmp/
 .tmp/
 
-# локальные переменные деплоя
+# локальная конфигурация стенда (шаблоны рядом, с суффиксом .example)
 deploy/.env
+deploy/compose.override.yml
+deploy/tls-file.caddy

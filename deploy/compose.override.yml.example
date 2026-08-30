@@ -1,0 +1,18 @@
+services:
+  backend:
+    extra_hosts:
+      - "rp-0.rpc-proxies.<namespace>.svc.cluster.local:203.0.113.10"
+
+  ingestor:
+    extra_hosts:
+      - "rp-0.rpc-proxies.<namespace>.svc.cluster.local:203.0.113.10"
+      - "stream.wikimedia.org:203.0.113.20"
+
+  scheduler:
+    extra_hosts:
+      - "rp-0.rpc-proxies.<namespace>.svc.cluster.local:203.0.113.10"
+
+  web:
+    volumes:
+      - ./tls-file.caddy:/etc/caddy/tls/tls-file.caddy:ro
+      - /opt/wikipulse/certs:/etc/caddy/certs:ro
