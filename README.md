@@ -83,8 +83,8 @@ The first quick-start step below runs without a cluster and without a maps key.
 ### 1. The whole product, with no cluster at all
 
 The backend has a `mock` profile that replays real edits from fixtures in
-`backend/src/main/resources/fixtures/`; the H3 cells attached to them are
-synthetic. Start it:
+`backend/src/main/resources/fixtures/`, H3 cells included, so the map shows
+those edits where they actually happened. Start it:
 
 ```bash
 cd backend
