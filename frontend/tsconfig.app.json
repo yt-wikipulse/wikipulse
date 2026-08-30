@@ -6,6 +6,7 @@
     "module": "esnext",
     "types": ["vite/client", "@yandex/ymaps3-types"],
     "allowArbitraryExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */

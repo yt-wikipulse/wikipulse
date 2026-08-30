@@ -1,3 +1,18 @@
+import { requestJson } from "./http";
+
+export type WikiDiffFailure = "no-parent-revision" | "mediawiki-error";
+
+export class WikiDiffError extends Error {
+  reason: WikiDiffFailure;
+
+  constructor(reason: WikiDiffFailure) {
+    super(reason);
+
+    this.name = "WikiDiffError";
+    this.reason = reason;
+  }
+}
+
 export type DiffSegment = {
   text: string;
   changed: boolean;
@@ -54,22 +69,16 @@ function apiUrl(articleUrl: string, params: Record<string, string>): string {
   return `${new URL(articleUrl).origin}/w/api.php?${query}`;
 }
 
-async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(url, { signal });
-
-  if (!response.ok) {
-    throw new Error(`MediaWiki ответил ${response.status}`);
-  }
-
-  return response.json();
-}
-
 async function fetchLatestRevisions(
   articleUrl: string,
   title: string,
   signal?: AbortSignal,
 ): Promise<Revisions> {
-  const payload = (await fetchJson(
+  const payload = await requestJson<{
+    query?: {
+      pages?: { revisions?: { revid?: number; parentid?: number }[] }[];
+    };
+  }>(
     apiUrl(articleUrl, {
       action: "query",
       prop: "revisions",
@@ -78,16 +87,12 @@ async function fetchLatestRevisions(
       rvlimit: "1",
     }),
     signal,
-  )) as {
-    query?: {
-      pages?: { revisions?: { revid?: number; parentid?: number }[] }[];
-    };
-  };
+  );
 
   const revision = payload.query?.pages?.[0]?.revisions?.[0];
 
   if (!revision?.revid || !revision.parentid) {
-    throw new Error("У статьи нет предыдущей ревизии");
+    throw new WikiDiffError("no-parent-revision");
   }
 
   return { fromRev: revision.parentid, toRev: revision.revid };
@@ -157,7 +162,10 @@ export async function fetchWikiDiff(
     parseRevisions(event.diff_url) ??
     (await fetchLatestRevisions(event.url, event.title, signal));
 
-  const payload = (await fetchJson(
+  const payload = await requestJson<{
+    compare?: { body?: string };
+    error?: { info?: string };
+  }>(
     apiUrl(event.url, {
       action: "compare",
       fromrev: String(revisions.fromRev),
@@ -165,10 +173,10 @@ export async function fetchWikiDiff(
       prop: "diff",
     }),
     signal,
-  )) as { compare?: { body?: string }; error?: { info?: string } };
+  );
 
   if (payload.error) {
-    throw new Error(payload.error.info ?? "MediaWiki вернул ошибку");
+    throw new WikiDiffError("mediawiki-error");
   }
 
   const lines = parseCompareBody(payload.compare?.body ?? "");

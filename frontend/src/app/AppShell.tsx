@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLocation, useOutlet } from "react-router-dom";
 
 import { Header } from "../components/Header/Header";
+import { Spinner } from "../components/Spinner/Spinner";
 import type { AppShellContext } from "./appShellContext";
 import styles from "./AppShell.module.scss";
 
@@ -35,7 +36,15 @@ export function AppShell({ showTabs = true }: AppShellProps) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {outlet}
+            <Suspense
+              fallback={
+                <div className={styles.appShell__fallback}>
+                  <Spinner label="Загрузка страницы" size="large" />
+                </div>
+              }
+            >
+              {outlet}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </div>

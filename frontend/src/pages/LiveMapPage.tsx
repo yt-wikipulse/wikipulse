@@ -17,11 +17,9 @@ import { NearestEditPanel } from "../components/NearestEditPanel/NearestEditPane
 import { useLiveMapData } from "../features/live-map/useLiveMapData";
 import { useNearestEdit } from "../features/nearest-edit/useNearestEdit";
 import { SITE_TITLE, useDocumentTitle } from "../hooks/useDocumentTitle";
-import { useMediaQuery } from "../hooks/useMediaQuery";
+import { COMPACT_LAYOUT, useMediaQuery } from "../hooks/useMediaQuery";
 
 import styles from "./LiveMapPage.module.scss";
-
-const COMPACT_HEADER = "(max-width: 767px)";
 
 function isSameViewport(
   current: MapViewport | null,
@@ -63,7 +61,7 @@ export function LiveMapPage() {
 
   const { headerSlotNode } = useAppShellContext();
 
-  const isCompactHeader = useMediaQuery(COMPACT_HEADER);
+  const isCompactHeader = useMediaQuery(COMPACT_LAYOUT);
 
   const [isNearestEditOpen, setIsNearestEditOpen] =
     useState(false);
@@ -154,6 +152,10 @@ export function LiveMapPage() {
 
   return (
     <main className={styles.liveMapPage}>
+      <h1 className={styles.liveMapPage__srOnly}>
+        Живая карта правок Википедии
+      </h1>
+
       {!mapFailed &&
         !isCompactHeader &&
         headerSlotNode !== null &&

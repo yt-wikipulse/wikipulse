@@ -1,27 +1,17 @@
-/*
- * Semantic token foundation.
- *
- * Здесь живут только значения, выражающие роль интерфейса и повторяющиеся
- * между компонентами. Уникальная геометрия компонента, размеры иконок и
- * цвета, вычисляемые из данных карты, остаются локальными.
- */
-
 :root {
-  /* surfaces */
   --color-background-page: #ffffff;
   --color-background-surface: #f7f6f3;
   --color-background-interactive-hover: #f2f0ec;
   --color-background-segmented-track: #eeede9;
   --color-background-accent-soft: #fbe9dc;
   --color-background-accent-soft-hover: #f7d8c2;
+  --color-background-map-canvas: #e9eef4;
 
-  /* text */
   --color-text-primary: #1b1a18;
   --color-text-secondary: #6b6862;
   --color-text-accent: #a8450a;
   --color-text-warning: #b54708;
 
-  /* diff правки */
   --color-diff-added-bg: #e8f3ea;
   --color-diff-added-accent: #1f7a45;
   --color-diff-removed-bg: #fbe9e7;
@@ -29,16 +19,14 @@
   --color-background-skeleton: #efece7;
   --color-background-skeleton-shimmer: #f9f8f5;
 
-  /* lines and accent */
   --color-border-default: #e7e4de;
+  --color-border-strong: #d0d5dd;
   --color-accent: #e8620c;
 
-  /* typography */
   --font-family-sans:
     "Manrope Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-family-brand: var(--font-family-sans);
 
-  /* spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -47,10 +35,8 @@
   --space-6: 24px;
   --space-7: 28px;
 
-  /* radii */
   --radius-small: 7px;
   --radius-medium: 12px;
 
-  /* focus */
   --focus-ring: 0 0 0 3px rgb(232 98 12 / 30%);
 }

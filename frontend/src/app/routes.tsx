@@ -1,9 +1,15 @@
+import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { DashboardPage } from "../pages/DashboardPage";
 import { LiveMapPage } from "../pages/LiveMapPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { AppShell } from "./AppShell";
+
+const DashboardPage = lazy(() =>
+  import("../pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
 
 export function AppRoutes() {
   return (

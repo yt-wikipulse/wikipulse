@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   BehaviorType,
+  Customization,
   LngLat,
   LngLatBounds,
   YMapProps,
@@ -23,9 +24,8 @@ import {
   type MapViewport,
 } from "./LiveMap.helpers";
 import { loadYmaps } from "./loadYmaps";
-import { mapCustomization } from "./mapCustomization";
 
-import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { COMPACT_LAYOUT, useMediaQuery } from "../../hooks/useMediaQuery";
 import styles from "./LiveMap.module.scss";
 
 export type { MapViewport };
@@ -98,8 +98,6 @@ const MAP_BEHAVIORS: BehaviorType[] = [
   "mouseTilt",
   "panTilt",
 ];
-
-const COMPACT_LAYOUT = "(max-width: 767px)";
 
 const HIGHLIGHT_Z_INDEX = 10;
 
@@ -209,7 +207,12 @@ export function LiveMap({
 
     async function createMap() {
       try {
-        await loadYmaps();
+        const [, customization] = await Promise.all([
+          loadYmaps(),
+          import("./mapCustomization.json").then(
+            (module) => module.default as Customization,
+          ),
+        ]);
 
         if (disposed || !containerRef.current) {
           return;
@@ -226,9 +229,7 @@ export function LiveMap({
         );
 
         map.addChild(
-          new ymaps3.YMapDefaultSchemeLayer({
-            customization: mapCustomization,
-          }),
+          new ymaps3.YMapDefaultSchemeLayer({ customization }),
         );
 
         map.addChild(

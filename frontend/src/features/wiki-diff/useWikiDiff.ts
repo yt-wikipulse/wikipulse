@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { fetchWikiDiff, type WikiDiff } from "../../api/wikiDiff";
+import {
+  fetchWikiDiff,
+  WikiDiffError,
+  type WikiDiff,
+  type WikiDiffFailure,
+} from "../../api/wikiDiff";
+import { describeError } from "../../lib/errorMessage";
+
+const FAILURE_MESSAGES: Record<WikiDiffFailure, string> = {
+  "no-parent-revision": "У статьи нет предыдущей ревизии",
+  "mediawiki-error": "MediaWiki вернул ошибку",
+};
 
 type WikiDiffTarget = {
   title: string;
@@ -42,9 +53,9 @@ export function useWikiDiff(target: WikiDiffTarget) {
           diff: null,
           loading: false,
           error:
-            error instanceof Error
-              ? error.message
-              : "Не удалось загрузить diff",
+            error instanceof WikiDiffError
+              ? FAILURE_MESSAGES[error.reason]
+              : describeError(error, "Не удалось загрузить diff"),
         });
       });
 

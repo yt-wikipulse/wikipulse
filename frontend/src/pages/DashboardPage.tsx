@@ -91,7 +91,7 @@ export function DashboardPage() {
         >
           {error ? (
             <section className={styles.dashboardPage__notice} role="alert">
-              <p>Не удалось загрузить дашборд: {error}</p>
+              <p>{error}</p>
               <button
                 type="button"
                 className={styles.dashboardPage__retry}

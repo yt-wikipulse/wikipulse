@@ -41,19 +41,19 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    color: #667085;
+    color: var(--color-text-secondary);
     background: transparent;
     cursor: pointer;
 
     &:focus-visible {
-      outline: 3px solid rgb(0 117 255 / 30%);
-      outline-offset: 2px;
+      outline: none;
+      box-shadow: var(--focus-ring);
     }
 
     @media (hover: hover) {
       &:hover {
-        color: #1d2939;
-        background: #f2f4f7;
+        color: var(--color-text-primary);
+        background: var(--color-background-interactive-hover);
       }
     }
   }

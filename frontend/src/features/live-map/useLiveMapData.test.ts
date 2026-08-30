@@ -15,9 +15,11 @@ function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
 
-async function flushMicrotasks() {
+const VIEWPORT_SETTLE_MS = 120;
+
+async function settle() {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(VIEWPORT_SETTLE_MS);
   });
 }
 
@@ -42,7 +44,7 @@ describe("useLiveMapData", () => {
 
     expect(result.current.loading).toBe(true);
 
-    await flushMicrotasks();
+    await settle();
 
     expect(result.current.loading).toBe(false);
     expect(result.current.hexagons).toHaveLength(1);
@@ -54,7 +56,7 @@ describe("useLiveMapData", () => {
 
     const { result } = renderHook(() => useLiveMapData(VIEWPORT));
 
-    await flushMicrotasks();
+    await settle();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.current.loading).toBe(false);
 
@@ -72,14 +74,14 @@ describe("useLiveMapData", () => {
 
     const { result } = renderHook(() => useLiveMapData(VIEWPORT));
 
-    await flushMicrotasks();
+    await settle();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.retry();
     });
 
-    await flushMicrotasks();
+    await settle();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -97,7 +99,7 @@ describe("useLiveMapData", () => {
 
     const { result } = renderHook(() => useLiveMapData(VIEWPORT));
 
-    await flushMicrotasks();
+    await settle();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     act(() => {
@@ -130,7 +132,7 @@ describe("useLiveMapData", () => {
 
     const { result } = renderHook(() => useLiveMapData(VIEWPORT));
 
-    await flushMicrotasks();
+    await settle();
     expect(result.current.hexagons).toHaveLength(1);
     expect(result.current.error).toBeNull();
 
@@ -149,7 +151,7 @@ describe("useLiveMapData", () => {
 
     const { result } = renderHook(() => useLiveMapData(null));
 
-    await flushMicrotasks();
+    await settle();
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.current.loading).toBe(true);

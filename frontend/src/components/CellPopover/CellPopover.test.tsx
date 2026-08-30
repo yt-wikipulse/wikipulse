@@ -41,6 +41,18 @@ describe("CellPopover", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("не блокирующая панель: aside с подписью, а не role=\"dialog\"", () => {
+    const { container } = render(
+      <CellPopover hexagon={hexagonWithTitles(["Москва"])} onClose={() => {}} />,
+    );
+
+    const root = container.querySelector('[data-map-popover="true"]')!;
+
+    expect(root.tagName).toBe("ASIDE");
+    expect(root.getAttribute("aria-label")).toBe("Активность ячейки");
+    expect(root.getAttribute("role")).toBeNull();
+  });
+
   it("показывает число правок за окно", () => {
     render(
       <CellPopover
@@ -263,7 +275,6 @@ describe("CellPopover", () => {
       expect(screen.getByText("новый текст статьи")).toBeTruthy();
     });
 
-    // После тапа браузер снимает фокус со ссылки, relatedTarget при этом пуст.
     fireEvent.blur(row, { relatedTarget: null });
 
     expect(screen.getByText("новый текст статьи")).toBeTruthy();
@@ -387,7 +398,6 @@ describe("CellPopover", () => {
       .getByText("новый текст статьи")
       .closest('[class*="cellPopover__diff"]')!;
 
-    // Курсор уходит со строки и тут же попадает на карточку.
     fireEvent.pointerLeave(row, { pointerType: "mouse" });
     fireEvent.pointerEnter(card, { pointerType: "mouse" });
 

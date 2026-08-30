@@ -1,6 +1,4 @@
-import type { Customization } from "@yandex/ymaps3-types";
-
-export const mapCustomization: Customization = [
+[
     {
         "tags": "country",
         "elements": "geometry.fill",
@@ -6737,4 +6735,4 @@ export const mapCustomization: Customization = [
             "visibility": "off"
         }
     }
-];
+]

@@ -64,7 +64,7 @@
     cursor: pointer;
 
     &[aria-current="page"],
-    &[aria-pressed="true"] {
+    &[aria-checked="true"] {
       color: var(--color-text-primary);
     }
 
@@ -74,7 +74,7 @@
     }
 
     @media (hover: hover) and (pointer: fine) {
-      &:not([aria-current="page"], [aria-pressed="true"]):hover {
+      &:not([aria-current="page"], [aria-checked="true"]):hover {
         color: var(--color-text-primary);
       }
     }

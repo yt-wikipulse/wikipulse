@@ -1,5 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
+export const COMPACT_LAYOUT = "(max-width: 767px)";
+
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (onChange: () => void) => {

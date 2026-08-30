@@ -2,16 +2,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   build: {
     assetsInlineLimit: (filePath) => (filePath.endsWith(".woff2") ? false : undefined),
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [{ name: "h3", test: /node_modules[\\/]h3-js[\\/]/ }],
+        },
+      },
+    },
   },
   server: {
     proxy: {
       "/api": {
-        // Порт бэкенда переопределяется, если 8080 занят чем-то ещё.
         target: process.env.BACKEND_URL ?? "http://localhost:8080",
         changeOrigin: true,
       },

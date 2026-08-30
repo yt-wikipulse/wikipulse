@@ -12,7 +12,7 @@
   min-height: 0;
 
   overflow: hidden;
-  background: #e9eef4;
+  background: var(--color-background-map-canvas);
 
   &__error {
     position: absolute;

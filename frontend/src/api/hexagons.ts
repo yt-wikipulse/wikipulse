@@ -1,3 +1,5 @@
+import { requestJson } from "./http";
+
 export type HexagonEvent = {
   id: string;
   title: string;
@@ -25,7 +27,7 @@ export type GetActiveHexagonsParams = {
   zoom: number;
 };
 
-export async function getActiveHexagons(
+export function getActiveHexagons(
   params: GetActiveHexagonsParams,
   signal?: AbortSignal,
 ): Promise<ActiveHexagonsResponse> {
@@ -37,13 +39,8 @@ export async function getActiveHexagons(
     zoom: String(params.zoom),
   });
 
-  const response = await fetch(`/api/v1/hexagons/active?${query}`, {
+  return requestJson<ActiveHexagonsResponse>(
+    `/api/v1/hexagons/active?${query}`,
     signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load active hexagons: ${response.status}`);
-  }
-
-  return response.json() as Promise<ActiveHexagonsResponse>;
+  );
 }

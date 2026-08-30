@@ -30,4 +30,10 @@
       min-height: 0;
     }
   }
+
+  &__fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

@@ -94,7 +94,7 @@ export function CellPopover({
       diff !== null && placement !== "sheet",
     );
 
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
 
   const [flipped, setFlipped] =
     useState<PopoverPlacement | null>(null);
@@ -272,7 +272,7 @@ export function CellPopover({
   );
 
   return (
-    <div
+    <aside
       className={styles.cellPopover}
       ref={rootRef}
       data-map-popover="true"
@@ -280,7 +280,6 @@ export function CellPopover({
       data-ready={ready}
       data-settled={settled}
       data-diff-open={diff !== null}
-      role="dialog"
       aria-label="Активность ячейки"
     >
       <button
@@ -376,6 +375,6 @@ export function CellPopover({
           </li>
         ))}
       </ul>
-    </div>
+    </aside>
   );
 }

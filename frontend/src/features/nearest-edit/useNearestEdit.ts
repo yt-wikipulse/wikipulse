@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { getActiveHexagons } from "../../api/hexagons";
+import { describeError } from "../../lib/errorMessage";
 import {
   requestGeoPosition,
   type GeoUnavailableReason,
@@ -99,10 +100,10 @@ export function useNearestEdit(isOpen: boolean) {
 
           setState({
             status: "request-failed",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Не удалось найти ближайшую правку",
+            message: describeError(
+              error,
+              "Не удалось найти ближайшую правку",
+            ),
           });
 
           return;

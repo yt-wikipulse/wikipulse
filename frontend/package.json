@@ -1,5 +1,7 @@
 {
-  "name": "frontend",
+  "name": "wikipulse-frontend",
+  "description": "WikiPulse web client: live map of Wikipedia edits and historical dashboard over YTsaurus",
+  "license": "Apache-2.0",
   "private": true,
   "version": "0.0.0",
   "type": "module",

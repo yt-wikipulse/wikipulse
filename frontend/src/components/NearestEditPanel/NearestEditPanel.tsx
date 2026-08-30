@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { LIVE_WINDOW_MINUTES } from "../../features/live-map/liveWindow";
 import type { NearestEditState } from "../../features/nearest-edit/useNearestEdit";
 import { formatDistance } from "../../features/nearest-edit/nearestEdit.helpers";
 import { Spinner } from "../Spinner/Spinner";
@@ -110,7 +111,7 @@ function PanelBody({
       return (
         <>
           <p className={styles.nearestEditPanel__hint}>
-            За последние 30 минут рядом ничего не правили.
+            За последние {LIVE_WINDOW_MINUTES} минут рядом ничего не правили.
           </p>
           <button
             className={styles.nearestEditPanel__retry}
@@ -165,7 +166,6 @@ export function NearestEditPanel({
   return (
     <aside
       className={styles.nearestEditPanel}
-      role="dialog"
       aria-label="Ближайшая правка"
     >
       <div className={styles.nearestEditPanel__head}>

@@ -1,3 +1,5 @@
+import { requestJson } from "./http";
+
 export type TrendPoint = {
   bucket_ts: number;
   edits_count: number;
@@ -32,7 +34,7 @@ export type GetDashboardParams = {
   limit: number;
 };
 
-export async function getDashboard(
+export function getDashboard(
   params: GetDashboardParams,
   signal?: AbortSignal,
 ): Promise<DashboardResponse> {
@@ -41,11 +43,8 @@ export async function getDashboard(
     limit: String(params.limit),
   });
 
-  const response = await fetch(`/api/v1/dashboard?${query}`, { signal });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load dashboard: ${response.status}`);
-  }
-
-  return response.json() as Promise<DashboardResponse>;
+  return requestJson<DashboardResponse>(
+    `/api/v1/dashboard?${query}`,
+    signal,
+  );
 }

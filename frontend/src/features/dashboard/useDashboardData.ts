@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { getDashboard, type DashboardResponse } from "../../api/dashboard";
+import { describeError } from "../../lib/errorMessage";
 
 const TOP_LIMIT = 5;
 
@@ -42,10 +43,7 @@ export function useDashboardData(period: string) {
         setResult({
           key,
           data: null,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Не удалось загрузить дашборд",
+          error: describeError(error, "Не удалось загрузить дашборд"),
         });
       });
 

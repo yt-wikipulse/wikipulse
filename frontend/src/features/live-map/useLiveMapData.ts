@@ -5,6 +5,7 @@ import {
   type ActiveHexagon,
   type GetActiveHexagonsParams,
 } from "../../api/hexagons";
+import { describeError } from "../../lib/errorMessage";
 
 const POLL_INTERVAL_MS = 2_500;
 
@@ -86,10 +87,7 @@ export function useLiveMapData(
           ...current,
           loading: false,
           isBackgroundRefreshing: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Не удалось загрузить данные карты",
+          error: describeError(error, "Не удалось загрузить данные карты"),
         }));
       } finally {
         isFetching = false;
@@ -98,26 +96,29 @@ export function useLiveMapData(
 
     loadHexagonsRef.current = () => void loadHexagons();
 
-    let settleId: number | undefined;
-
-    if (hasDataRef.current) {
-      settleId = window.setTimeout(
-        () => void loadHexagons(),
-        VIEWPORT_SETTLE_MS,
-      );
-    } else {
-      void loadHexagons();
+    function loadWhenVisible() {
+      if (!document.hidden) {
+        void loadHexagons();
+      }
     }
 
-    const intervalId = window.setInterval(
+    const settleId = window.setTimeout(
       () => void loadHexagons(),
+      VIEWPORT_SETTLE_MS,
+    );
+
+    const intervalId = window.setInterval(
+      loadWhenVisible,
       POLL_INTERVAL_MS,
     );
+
+    document.addEventListener("visibilitychange", loadWhenVisible);
 
     return () => {
       cancelled = true;
       window.clearTimeout(settleId);
       window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", loadWhenVisible);
       activeController?.abort();
     };
   }, [viewport]);
