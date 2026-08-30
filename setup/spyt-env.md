@@ -1,50 +1,63 @@
-# Работа с кластером YTsaurus: настройка окружения и запуск джоб
+# Окружение для YTsaurus и SPYT
 
-## 1\. Доступы
+Как настроить машину, чтобы ходить в кластер YTsaurus и запускать на нём
+SPYT-джобы этого репозитория. Инструкция не привязана к конкретному кластеру:
+свои значения вы подставляете в переменные окружения.
 
-Запросите у куратора логин, пароль и токен. Токен нужен для консоли и кода,
-логин с паролем — для веб-интерфейса.
+Что понадобится знать про свой кластер:
 
-Директория вашей команды одна из: `//home/wikipulse`,
-`//home/wikipulse`, `//home/wikipulse`.
+| Что | Где взять |
+|---|---|
+| HTTP-прокси кластера | адрес его веб-интерфейса |
+| Токен | веб-интерфейс кластера, раздел с токенами в настройках пользователя |
+| Версия SPYT | у администратора кластера или на странице кластера |
+| Каталог, в который вам можно писать | у администратора кластера |
 
-## 2\. Python
+Публичная демо-инсталляция YTsaurus годится, чтобы пройти инструкцию целиком
+и убедиться, что окружение живое.
 
-Нужен **Python 3.11 или 3.12**. Проверьте, что у вас:
+## 1. Токен
+
+Токен выпускается в веб-интерфейсе кластера: страница настроек пользователя,
+раздел с токенами. Тот же токен использует и `yt`-клиент, и код.
+
+Токен никуда не публикуйте: не коммитьте в репозиторий, не вставляйте в код и
+не передавайте в аргументах командной строки — они видны в списке процессов.
+Скомпрометированный токен отзывается в веб-интерфейсе, а не удалением из файла.
+
+## 2. Python
+
+Нужен **Python 3.11 или 3.12**: `ytsaurus-spyt` пока не собирается под более
+новые версии, а 3.10 и ниже не поддерживаются клиентом.
 
 ```
 python3 -V
 ```
 
-Если версия ниже 3.11:
-
-
-|Система|Команда|
+| Система | Команда |
 |:---|:---|
-|macOS|`brew install python@3.12`|
-|Ubuntu / Debian|`sudo apt install python3.12 python3.12-venv`|
-|Windows|`winget install Python.Python.3.12`|
+| macOS | `brew install python@3.12` |
+| Ubuntu / Debian | `sudo apt install python3.12 python3.12-venv` |
+| Windows | `winget install Python.Python.3.12` |
 
-На маках из коробки обычно стоит 3.9, так что этот шаг почти наверняка нужен.
+На macOS из коробки обычно стоит более старая версия, так что этот шаг почти
+наверняка нужен.
 
-## 3\. Java
+## 3. Java
 
-Нужна **Java 17**. Проверьте:
+Нужна **Java 17** — её требует Spark, на котором работает SPYT.
 
 ```
 java -version
 ```
 
-Если Java нет или она старше:
-
-
-|Система|Команда|
+| Система | Команда |
 |:---|:---|
-|macOS|`brew install openjdk@17`|
-|Ubuntu / Debian|`sudo apt install openjdk-17-jdk`|
-|Windows|`winget install Microsoft.OpenJDK.17`|
+| macOS | `brew install openjdk@17` |
+| Ubuntu / Debian | `sudo apt install openjdk-17-jdk` |
+| Windows | `winget install Microsoft.OpenJDK.17` |
 
-На macOS Homebrew не подключает Java к системе автоматически, поэтому нужен
+Homebrew не подключает Java к системе автоматически, поэтому на macOS нужен
 ещё один шаг:
 
 ```
@@ -54,20 +67,20 @@ sudo ln -sfn $(brew --prefix openjdk@17)/libexec/openjdk.jdk \
 
 После этого `java -version` должна показать 17.
 
-## 4\. Клиент YTsaurus и SPYT
+## 4. Клиент YTsaurus и SPYT
 
 **macOS и Linux:**
 
 ```
-python3.12 -m venv ~/spyt-summer-school
-source ~/spyt-summer-school/bin/activate
+python3.12 -m venv ~/venv-spyt
+source ~/venv-spyt/bin/activate
 ```
 
 **Windows (PowerShell):**
 
 ```
-py -3.12 -m venv $HOME\spyt-summer-school
-$HOME\spyt-summer-school\Scripts\Activate.ps1
+py -3.12 -m venv $HOME\venv-spyt
+$HOME\venv-spyt\Scripts\Activate.ps1
 ```
 
 Дальше одинаково:
@@ -77,6 +90,16 @@ pip install --upgrade pip
 pip install ytsaurus-client ytsaurus-spyt==2.11.0 pyspark==4.2.0
 ```
 
+Про версии:
+
+- версия `ytsaurus-spyt` должна совпадать с версией SPYT, установленной на
+  кластере: клиент и кластер обмениваются артефактами одной версии;
+- версия `pyspark` задаётся выбранной версией SPYT, отдельно её не поднимают —
+  несовпадение проявляется невнятной ошибкой сериализации уже внутри джобы;
+- Python на ваших машине и на вычислительных узлах кластера — разные вещи,
+  совпадение версий не требуется, но собранные C-расширения должны быть под
+  тот Python, который стоит на узлах.
+
 Проверка:
 
 ```
@@ -84,130 +107,132 @@ python -V
 yt --version
 ```
 
-## 5\. Адрес прокси
-
-Временная особенность нашего кластера: он сообщает клиенту внутренний адрес,
-который снаружи не разрешается. Пропишите его вручную, один раз на машину.
-
-**macOS и Linux:**
-
-```
-echo "203.0.113.10 rpc-proxy.example.com" | sudo tee -a /etc/hosts
-```
-
-**Windows** (PowerShell от имени администратора):
-
-```
-Add-Content -Path $env:WINDIR\System32\drivers\etc\hosts `
-  -Value "203.0.113.10 rpc-proxy.example.com"
-```
-
-Проверка (везде одинаково):
-
-```
-python3 -c "import socket; print(socket.getaddrinfo('rpc-proxy.example.com', 9013)[0][4][0])"
-```
-
-Должно напечатать `203.0.113.10`.
-
-## 6\. Файл для быстрого входа
+## 5. Переменные окружения
 
 Чтобы не вводить настройки каждый раз, сохраните их в файл.
 
-**macOS и Linux** — файл `~/a-summer-school`:
+**macOS и Linux** — файл `~/.yt-env`:
 
 ```
-source ~/spyt-summer-school/bin/activate
-export YT_PROXY=https://your-cluster.example.com/
+source ~/venv-spyt/bin/activate
+export YT_PROXY=<адрес HTTP-прокси кластера>
 export YT_TOKEN=<ваш токен>
+export YT_BASE_PATH=//home/wikipulse
 source spyt-env
 ```
 
-Перед работой:
+**Windows (PowerShell)** — файл `$HOME\yt-env.ps1`:
 
 ```
-source ~/a-summer-school
-```
-
-**Windows (PowerShell)** — файл `$HOME\a-summer-school.ps1`:
-
-```
-& $HOME\spyt-summer-school\Scripts\Activate.ps1
-$env:YT_PROXY = "https://your-cluster.example.com/"
+& $HOME\venv-spyt\Scripts\Activate.ps1
+$env:YT_PROXY = "<адрес HTTP-прокси кластера>"
 $env:YT_TOKEN = "<ваш токен>"
+$env:YT_BASE_PATH = "//home/wikipulse"
 $env:SPARK_CONF_DIR = (python -c "import spyt, os; print(os.path.join(spyt.__path__[0], 'conf'))")
 ```
 
 Перед работой:
 
 ```
-. $HOME\a-summer-school.ps1
+source ~/.yt-env          # macOS и Linux
+. $HOME\yt-env.ps1        # Windows
 ```
 
 Последняя строка в обоих вариантах делает одно и то же — включает конфигурацию
 SPYT. Без неё `spark-submit` не понимает адрес кластера и падает с сообщением
 про master.
 
-Токен никуда не публикуйте: не коммитьте в репозиторий и не вставляйте в код.
+`YT_PROXY` и `YT_TOKEN` читают и бэкенд, и джобы пайплайна. `YT_BASE_PATH` —
+корень, от которого строятся все пути проекта в YT; по умолчанию
+`//home/wikipulse`. Подставьте каталог, в который вам разрешено писать.
 
-## 7\. Проверка доступа
+## 6. Проверка связности
 
 ```
 yt whoami
-yt list //home/wikipulse
+yt list $YT_BASE_PATH
 ```
 
-Первая команда покажет вашего пользователя, вторая — список команд.
+Первая команда должна назвать вашего пользователя — это подтверждает, что
+токен принят. Вторая должна отработать без ошибки прав: если каталога ещё нет,
+создайте его `yt create map_node $YT_BASE_PATH --recursive`.
 
-## 8\. Первая джоба
+Обе команды ходят по HTTP. Бэкенд ходит в кластер по RPC — это другой порт
+(обычно 9013) и другой набор прокси, и из домашних и офисных сетей он часто
+закрыт, даже когда веб-интерфейс и `yt` работают. Если бэкенд на профиле `yt`
+висит на подключении, а `yt whoami` отвечает, проверяйте именно RPC-порт.
 
-Готовый пример уже лежит на кластере, создавать ничего не нужно. Подставьте
-свою команду в последний аргумент и запустите:
+## 7. Первая джоба
+
+Минимальная проверка, что SPYT работает и джоба доезжает до кластера.
+Положите рядом файл `hello.py`:
+
+```python
+import sys
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("hello").getOrCreate()
+spark.createDataFrame([(1, "hello"), (2, "world")], ["id", "text"]) \
+    .write.format("yt").mode("overwrite").save(sys.argv[1])
+spark.stop()
+```
+
+и запустите:
 
 ```
 spark-submit \
-  --master ytsaurus://https://your-cluster.example.com \
+  --master ytsaurus://https://<хост HTTP-прокси> \
   --deploy-mode cluster \
   --num-executors 1 \
-  --conf spark.pyspark.python=/usr/bin/python3.11 \
-  --py-files yt:///home/wikipulse/lib/spyt_deps.zip \
-  yt:///home/example/hello.py //home/wikipulse/<ваша команда>/result
+  hello.py $YT_BASE_PATH/hello
 ```
 
-В логе появится ссылка на операцию — по ней удобно смотреть статус и логи
-в веб-интерфейсе.
+`--master` принимает адрес прокси вместе со схемой: `ytsaurus://https://<хост>`.
+В самой `YT_PROXY` схема необязательна — код проекта дописывает `https://` сам.
 
-Проверьте результат:
-
-```
-yt read-table //home/wikipulse/<ваша команда>/result --format json
-```
-
-Ожидаемый вывод:
+В логе появится ссылка на операцию: по ней удобно смотреть статус и логи
+в веб-интерфейсе. Результат:
 
 ```
-{"id":1,"text":"hello"}
-{"id":2,"text":"world"}
-{"id":3,"text":"spyt"}
+yt read-table $YT_BASE_PATH/hello --format json
 ```
 
-## Почему в команде запуска лишние параметры
+## 8. Зависимости, которых нет на узлах кластера
 
-`--conf spark.pyspark.python` и `--py-files` нужны из-за особенностей нашего
-кластера: на его вычислительных узлах по умолчанию стоит слишком старый Python,
-а часть библиотек не установлена, поэтому мы указываем нужную версию и
-привозим библиотеки с собой. Когда это поправят, команда станет короче.
+Вычислительные узлы кластера не устанавливают пакеты по требованию: что не
+предустановлено, джоба привозит с собой.
+
+- **Чистый Python** едет через `--py-files` обычным zip-архивом.
+- **Пакеты с C-расширениями** (в этом проекте — `h3`) собираются под ту версию
+  Python и ту архитектуру, что стоят на узлах, и едут через `--files`, а джоба
+  распаковывает архив и добавляет его в `sys.path`. В репозитории такого
+  архива нет: команда `upload-artifacts` собирает `h3.zip` под нужные версию
+  Python и платформу и кладёт его в `{YT_BASE_PATH}/lib` — подробности
+  в `bigdata/README.md`.
+- **Версия интерпретатора на узле** задаётся явно, если она отличается от
+  дефолтной: `--conf spark.pyspark.python=/usr/bin/python3.11`.
+
+Эти параметры — не украшение команды запуска, а обход конкретных ограничений
+конкретного кластера. На кластере, где нужные библиотеки предустановлены,
+команда становится короче.
 
 ## Если что-то не работает
 
 **`Unable to locate a Java Runtime`** — не установлена Java, см. пункт 3.
 
-**`Master must either be yarn or start with spark, k8s, or local`** — не выполнен
-вход из пункта 6 в текущем терминале.
+**`Master must either be yarn or start with spark, k8s, or local`** — не
+подключена конфигурация SPYT, см. пункт 5.
 
-**Клиент долго висит и падает на подключении** — не прописан адрес прокси,
-см. пункт 5.
+**Клиент долго висит и падает на подключении, хотя веб-интерфейс открывается**
+— кластер сообщает клиенту внутренний адрес RPC-прокси, который снаружи не
+разрешается. Проверьте, что имя из ошибки резолвится; если нет — пропишите его
+в `/etc/hosts` (Windows: `%WINDIR%\System32\drivers\etc\hosts`) в паре
+с внешним адресом, который вам дал администратор кластера.
 
-**`Unicode symbols with codes greater than 255 are not supported`** — при работе
-с JSON-форматом добавьте опцию `encode_utf8=false`, иначе не пройдут строки
-с кириллицей.
+**`Unicode symbols with codes greater than 255 are not supported`** — при
+работе с JSON-форматом добавьте опцию `encode_utf8=false`, иначе не пройдут
+строки с кириллицей.
+
+**Джоба падает на `import` пакета, который есть у вас локально** — пакет не
+доехал до узлов, см. пункт 8.

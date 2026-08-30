@@ -4,41 +4,36 @@
 причина оказалась глупой: следующий человек потратит те же полчаса.
 
 Формат записи: симптом (по возможности дословный текст ошибки), причина,
-что делать. Порядок запуска — в [local-setup.md](local-setup.md).
+что делать. Запись, описывающая уже исправленный баг, удаляется: runbook не
+должен учить обходу несуществующей проблемы.
+
+Порядок запуска — в [local-setup.md](local-setup.md), кластер и пайплайн — в
+[local-cluster.md](local-cluster.md), грабли деплоя и кластера —
+в [deploy/README.md](../../deploy/README.md), раздел «Грабли, на которые уже
+наступили».
 
 ## Бэкенд
-
-### `BUILD FAILURE` на `testCompile`, `EnrichedEvent cannot be applied to given types`
-
-```
-InMemoryRecentEventsCacheTest.java:[130,16] constructor EnrichedEvent
-in record ... cannot be applied to given types;
-required: long,java.lang.String,...,long
-found:    java.lang.String,java.lang.String,...
-```
-
-Тест отстал от текущей сигнатуры record `EnrichedEvent`: в main-коде шесть
-полей, в тесте четыре. Падает любой `./mvnw`, который компилирует тесты, в том
-числе обычный `spring-boot:run`.
-
-Обход — `-Dmaven.test.skip=true`. Настоящее исправление на треке B: привести
-тест к актуальной сигнатуре. После этого обход убрать из инструкций.
-
-### `Could not resolve placeholder 'YT_PROXY'` при старте
-
-`QEnrichedRepository` помечен `@Repository` без ограничения по профилю,
-поэтому Spring создаёт его и на профиле `mock` и требует переменные окружения.
-
-Задать заглушки: `YT_PROXY=localhost YT_TOKEN=dummy`. На `mock` значения
-никуда не уходят.
 
 ### Порт 8080 занят
 
 ```bash
-lsof -iTCP:8080 -sTCP:LISTEN -n -P
+lsof -iTCP:8080 -sTCP:LISTEN -n -P     # macOS, Linux
+netstat -ano | findstr :8080           # Windows
 ```
 
-Обычно это предыдущий, не до конца остановленный `spring-boot:run`.
+Обычно это предыдущий, не до конца остановленный `spring-boot:run`. Занять
+другой порт можно на лету:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8099
+```
+
+### `Could not resolve placeholder` при старте на профиле `mock`
+
+Профиль `mock` не требует ни одной переменной окружения. Если плейсхолдер
+всё же не резолвится, значит, у бина, который его читает, потерялась
+аннотация `@Profile("yt")` — чинить надо её, а не подставлять заглушки в
+окружение. Какие переменные кто читает — в [configuration.md](configuration.md).
 
 ## Фронтенд
 
@@ -52,14 +47,17 @@ lock-файле. Причина — устаревший локальный `nod
 cd frontend && pnpm install
 ```
 
-### На `/map` вместо данных ошибка загрузки ячеек
+### На `/map` вместо данных «Не удалось загрузить данные карты: сервер ответил 502»
 
-`Failed to load active hexagons: 502` (или другой код) означает, что запрос до
-бэкенда не дошёл. Две частые причины:
+Код в сообщении означает, что запрос до бэкенда не дошёл или он ответил
+ошибкой. Две частые причины:
 
 - бэкенд не поднят — проверить `curl` из [local-setup.md](local-setup.md);
 - открыт `pnpm preview` вместо `pnpm dev`. В `vite.config.ts` прокси `/api`
   объявлен только для `server`, поэтому в preview запросы уходят в никуда.
+
+Сообщение «Сервер не ответил вовремя» вместо кода — это таймаут запроса
+(10 секунд), а не ошибка бэкенда.
 
 ### Карта не отрисовывается, вместо неё пустой прямоугольник
 
