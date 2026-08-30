@@ -9,6 +9,7 @@ secrets/
 # --- Данные (дампы Википедии/Wikidata сюда не коммитим) ---
 data/
 dumps/
+yt-snapshot/
 *.bz2
 *.gz
 *.7z
