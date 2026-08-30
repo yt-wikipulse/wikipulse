@@ -8,6 +8,8 @@ of those edits. Both halves are fed by the same pipeline, and the pipeline runs
 entirely on **YTsaurus + SPYT**: no Kafka, no separate warehouse for the marts,
 no second storage system anywhere in the picture.
 
+https://github.com/user-attachments/assets/ae7f853a-2940-4482-8193-c351c03d13f1
+
 The point of this repository is the shape of the service, not the map. It is a
 worked example of what an application on YTsaurus looks like end to end —
 queues with consumers and auto-trim, a dictionary looked up from a streaming
