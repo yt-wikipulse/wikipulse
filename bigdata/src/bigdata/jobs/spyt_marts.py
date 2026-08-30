@@ -8,14 +8,25 @@
 ``YT_PROXY`` — через ``spark.yarn.appMasterEnv.*``.
 """
 import argparse
+import functools
 import time
 
 from bigdata import paths
 from bigdata.runtime import load_h3, yt_client
 
-h3 = load_h3()
-
 INSERT_CHUNK = 50000
+
+
+@functools.lru_cache(maxsize=1)
+def worker_h3():
+    """
+    ``h3`` внутри воркера Spark, один раз на процесс.
+
+    ``load_h3`` распаковывает ``h3.zip`` из рабочего каталога джобы, поэтому
+    вызывать его на каждую строку нельзя. На драйвере модуль не нужен вовсе:
+    ячейки сворачиваются на executor'ах.
+    """
+    return load_h3()
 
 
 def with_ranks(rows: list[dict], top_n: int, period: str) -> list[dict]:
@@ -70,25 +81,25 @@ def compute_top_articles(df, top_n: int, period: str) -> list[dict]:
     return with_ranks(rows, top_n, period)
 
 
-def compute_top_geo(df, spark, top_n: int, h3_res: int, period: str) -> list[dict]:
+def compute_top_geo(df, top_n: int, h3_res: int, period: str) -> list[dict]:
     """
     Топ мест: ячейки ``h3_r9`` сворачиваются до ``h3_res`` и агрегируются.
 
-    Уникальные ячейки окна собираются на драйвер и там же переводятся
-    в родителей — UDF на executor'ах потребовал бы ``h3`` в их окружении.
-    Потолок приёма — память драйвера: он держит список всех различных
-    ячеек окна, и на достаточно длинном окне этот список перестанет
-    помещаться.
+    Свёртка идёт UDF'ом на executor'ах: ``h3`` приезжает к ним архивом
+    ``h3.zip`` через ``--files``. На драйвер не собирается ничего, кроме
+    готового топа, поэтому длина окна упирается в кластер, а не в память
+    одного процесса.
     """
     from pyspark.sql import functions as F
+    from pyspark.sql import types as T
 
-    distinct_cells = [r["h3_r9"] for r in df.select("h3_r9").distinct().collect()]
-    print(f"Уникальных h3_r9 в окне: {len(distinct_cells)}")
-    parent_pairs = [(c, h3.cell_to_parent(c, h3_res)) for c in distinct_cells]
-    parent_df = spark.createDataFrame(parent_pairs, ["h3_r9", "h3_parent"])
+    to_parent = F.udf(
+        lambda cell: worker_h3().cell_to_parent(cell, h3_res),
+        T.StringType(),
+    )
 
     per_article = (
-        df.join(parent_df, "h3_r9")
+        df.withColumn("h3_parent", to_parent(F.col("h3_r9")))
         .groupBy("h3_parent", "title", "url")
         .agg(F.count(F.lit(1)).alias("edits_count"))
     )
@@ -193,7 +204,7 @@ def main():
     mark_computed(client, paths.MARTS_TOP_ARTICLES, args.hours, top_n=args.top_n)
     print(f"marts/top_articles: {len(article_rows)} статей")
 
-    geo_rows = compute_top_geo(history, spark, args.top_n, args.h3_res, period)
+    geo_rows = compute_top_geo(history, args.top_n, args.h3_res, period)
     insert_chunks(client, paths.MARTS_TOP_GEO, geo_rows)
     mark_computed(client, paths.MARTS_TOP_GEO, args.hours, top_n=args.top_n, h3_res=args.h3_res)
     print(f"marts/top_geo: {len(geo_rows)} мест (h3 res {args.h3_res})")

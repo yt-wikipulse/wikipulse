@@ -64,12 +64,21 @@ def yt_token() -> str:
     )
 
 
-def yt_client():
+def yt_client(proxy: str | None = None):
+    """
+    Клиент YTsaurus, один на процесс.
+
+    Адрес можно передать явно: на executor'ах Spark переменной ``YT_PROXY``
+    нет — она задаётся только для драйвера, — поэтому джоба берёт адрес
+    на драйвере и кладёт его в замыкание. Токен так протаскивать не нужно:
+    YTsaurus сам кладёт его в ``YT_SECURE_VAULT_YT_TOKEN`` во всех джобах
+    операции.
+    """
     global _yt_client
     if _yt_client is None:
         import yt.wrapper as yt
 
-        _yt_client = yt.YtClient(proxy=proxy_url(), token=yt_token())
+        _yt_client = yt.YtClient(proxy=proxy or proxy_url(), token=yt_token())
     return _yt_client
 
 

@@ -53,7 +53,7 @@ export YT_TOKEN=dummy
 export YT_BASE_PATH=//home/wikipulse
 ```
 
-**Бэкенду нужен тот же адрес без схемы** — `YT_PROXY=localhost:8000`.
+**Бэкенду нужен тот же адрес и с той же схемой** — `YT_PROXY=http://localhost:8000`: без неё и он, и `bigdata` подставят `https://`.
 Java-клиент получает значение как есть, а `bigdata` дописывает `https://`,
 если схемы нет, и на локальном кластере по HTTP это ломается.
 
@@ -75,9 +75,9 @@ init-tables
 yt list $YT_BASE_PATH
 ```
 
-Проходит на минимальном кластере целиком: каталоги, обе очереди, оба
-консьюмера с регистрацией `vital`, `auto_trim_config`, справочник, история и
-три витрины. Queue agent `run_local_cluster.sh` поднимает сам.
+Проходит на минимальном кластере целиком: каталоги, обе очереди, три
+консьюмера с регистрацией, `auto_trim_config`, справочник, история и три
+витрины. Queue agent `run_local_cluster.sh` поднимает сам.
 
 ## 5. Наполнить `q_raw`
 
@@ -97,16 +97,16 @@ yt select-rows "* from [$YT_BASE_PATH/q_raw] limit 5" --format '<encode_utf8=fal
 
 ```bash
 cd backend
-SPRING_PROFILES_ACTIVE=yt YT_PROXY=localhost:8000 YT_TOKEN=dummy \
+SPRING_PROFILES_ACTIVE=yt YT_PROXY=http://localhost:8000 YT_TOKEN=dummy \
   YT_BASE_PATH=//home/wikipulse ./mvnw spring-boot:run
 ```
 
 Профиль `yt` — тот же, что и в проде. Пустые таблицы не ошибка: дашборд отдаёт
 корректный ответ с нулями, карта — пустой список.
 
-Смоук-тест без SPYT — положить строку в `q_enriched` руками. Поллер на старте
-перематывает очередь в конец (`skipToLatest`), так что вставлять надо уже
-после запуска бэкенда:
+Смоук-тест без SPYT — положить строку в `q_enriched` руками. Порядок не
+важен: поллер продолжает чтение с оффсета консьюмера `c_backend`, поэтому
+строку он подберёт и если она легла в очередь до запуска бэкенда.
 
 ```python
 import time, h3

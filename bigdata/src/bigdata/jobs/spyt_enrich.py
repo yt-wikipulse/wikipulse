@@ -10,52 +10,62 @@
 
 Джоба запускается на кластере одиночным файлом, рядом с ней пакета нет:
 ``bigdata`` приезжает в ``--py-files`` архивом ``bigdata.zip``, а
-``YT_BASE_PATH`` и ``YT_PROXY`` — через ``spark.yarn.appMasterEnv.*``.
-Executor'ам они не нужны, пути используются только в драйвере.
+``YT_BASE_PATH`` и ``YT_PROXY`` — через ``spark.yarn.appMasterEnv.*``,
+то есть только драйверу. Пути и адрес прокси драйвер считает у себя
+и передаёт executor'ам аргументами замыкания.
 """
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql import types as T
+import functools
 
 from bigdata import paths
-from bigdata.runtime import load_h3, yt_client
-
-h3 = load_h3()
+from bigdata.runtime import load_h3, proxy_url, yt_client
 
 INSERT_CHUNK = 50000
 
 
-def enrich_batch(batch_df, batch_id):
+@functools.lru_cache(maxsize=1)
+def worker_h3():
     """
-    Обрабатывает один микробатч стрима.
+    ``h3`` внутри воркера Spark, один раз на процесс.
 
-    Справочник читается точечным ``lookup_rows`` по ключам батча, а не
-    broadcast join'ом: ``dict/coords`` — динамическая таблица на десятки
-    миллионов строк, её полное чтение на каждый пятисекундный батч дороже
-    сотни точечных ключей. События без координат отбрасываются.
-
-    ``try/except`` здесь нет намеренно. Spark считает батч успешным, если
-    функция вернула управление без исключения, и коммитит оффсеты: с
-    перехватом ошибка YTsaurus означала бы тихую потерю событий. Цена —
-    постоянная ошибка останавливает стрим целиком.
+    ``load_h3`` распаковывает ``h3.zip`` из рабочего каталога джобы, поэтому
+    вызывать его на каждую строку нельзя.
     """
-    client = yt_client()
+    return load_h3()
 
-    rows = batch_df.collect()
-    if not rows:
-        return
 
-    keys = [{"wiki": r["wiki"], "title": r["title"]} for r in rows]
-    found = list(client.lookup_rows(paths.DICT_COORDS, keys, format="json"))
+def enrich_partition(rows, proxy: str, dict_coords: str, q_enriched: str):
+    """
+    Обогащает одну партицию микробатча целиком на executor'е: и точечный
+    ``lookup_rows`` справочника, и вставка в очередь идут оттуда же, где
+    лежат строки, а не через драйвер.
 
-    coord_map = {}
-    for c in found:
-        if c:
-            coord_map[(c["wiki"], c["title"])] = (c["lat"], c["lon"])
+    Справочник читается ``lookup_rows`` по ключам партиции, а не broadcast
+    join'ом: ``dict/coords`` — динамическая таблица на десятки миллионов
+    строк, её полное чтение на каждый пятисекундный батч дороже сотни
+    точечных ключей. События без координат отбрасываются.
+
+    Пути и адрес прокси приходят аргументами, а не из ``paths``: на
+    executor'е переменных окружения проекта нет, и вычислить их там нельзя.
+
+    Возвращает одну пару «пришло, обогащено» — из них драйвер собирает
+    hit rate батча, не стягивая к себе сами строки.
+    """
+    batch = list(rows)
+    if not batch:
+        return [(0, 0)]
+
+    client = yt_client(proxy)
+    h3 = worker_h3()
+
+    keys = [{"wiki": r["wiki"], "title": r["title"]} for r in batch]
+    coords = {
+        (c["wiki"], c["title"]): (c["lat"], c["lon"])
+        for c in client.lookup_rows(dict_coords, keys, format="json") if c
+    }
 
     enriched = []
-    for r in rows:
-        pair = coord_map.get((r["wiki"], r["title"]))
+    for r in batch:
+        pair = coords.get((r["wiki"], r["title"]))
         if pair:
             lat, lon = pair
             enriched.append({
@@ -69,14 +79,42 @@ def enrich_batch(batch_df, batch_id):
             })
 
     for i in range(0, len(enriched), INSERT_CHUNK):
-        client.insert_rows(paths.Q_ENRICHED, enriched[i:i + INSERT_CHUNK],
+        client.insert_rows(q_enriched, enriched[i:i + INSERT_CHUNK],
                            durability="sync", format="json")
 
-    hit = len(enriched) / max(len(rows), 1) * 100
-    print(f"[batch {batch_id}] in={len(rows)} enriched={len(enriched)} hit={hit:.0f}%")
+    return [(len(batch), len(enriched))]
+
+
+def enrich_batch(batch_df, batch_id, proxy: str):
+    """
+    Обрабатывает один микробатч стрима, раздав партиции executor'ам.
+
+    ``try/except`` здесь нет намеренно. Spark считает батч успешным, если
+    функция вернула управление без исключения, и коммитит оффсеты: с
+    перехватом ошибка YTsaurus означала бы тихую потерю событий. Цена —
+    постоянная ошибка останавливает стрим целиком.
+    """
+    stats = batch_df.rdd.mapPartitions(
+        functools.partial(enrich_partition,
+                          proxy=proxy,
+                          dict_coords=paths.DICT_COORDS,
+                          q_enriched=paths.Q_ENRICHED)
+    ).collect()
+
+    total_in = sum(s[0] for s in stats)
+    total_out = sum(s[1] for s in stats)
+    if total_in == 0:
+        return
+
+    hit = total_out / total_in * 100
+    print(f"[batch {batch_id}] in={total_in} enriched={total_out} hit={hit:.0f}%")
 
 
 def main():
+    from pyspark.sql import SparkSession
+    from pyspark.sql import functions as F
+    from pyspark.sql import types as T
+
     spark = SparkSession.builder.appName("wikipulse-enrich").getOrCreate()
 
     raw_stream = (
@@ -98,7 +136,7 @@ def main():
 
     query = (
         safe_stream.writeStream
-        .foreachBatch(enrich_batch)
+        .foreachBatch(functools.partial(enrich_batch, proxy=proxy_url()))
         .trigger(processingTime="5 seconds")
         .option("checkpointLocation", paths.spark_url(paths.CHECKPOINT_ENRICH))
         .start()
