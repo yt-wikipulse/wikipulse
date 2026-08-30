@@ -3,7 +3,7 @@ spring:
     name: wiki-pulse-project
 
   profiles:
-    default: yt
+    default: mock
 
   jackson:
     property-naming-strategy: SNAKE_CASE
@@ -17,28 +17,9 @@ spring:
       pool:
         size: 2
 
-app:
-  ymaps:
-    api-key: "${YMAPS_API_KEY:}"
-
-  live:
-    window-minutes: 30
-    zoom-min: 0
-    zoom-max: 30
-    zoom-r3-max: 6
-    zoom-r4-max: 7
-    zoom-r5-max: 9
-    zoom-r6-max: 11
-    zoom-r8-max: 13
-    hexagon-events-cap: 50
-
-  poller:
-    interval-ms: 500
-    max-pages-per-tick: 10
-
 yt:
-  proxy: "${YT_PROXY}"
-  token: "${YT_TOKEN}"
+  proxy: "${YT_PROXY:localhost}"
+  token: "${YT_TOKEN:test-token}"
   base-path: "${YT_BASE_PATH://home/wikipulse}"
 
   table:

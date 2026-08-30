@@ -8,23 +8,44 @@
         <version>4.1.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.springboot.web</groupId>
+    <groupId>tech.wikipulse</groupId>
     <artifactId>wiki-pulse-project</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>wiki-pulse-project</name>
-    <description>wiki-pulse-project</description>
-    <url/>
+    <description>WikiPulse backend: live map and dashboard over YTsaurus</description>
+    <url>https://github.com/yt-wikipulse/wikipulse</url>
     <licenses>
-        <license/>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Андрей Проваторов</name>
+        </developer>
+        <developer>
+            <name>Николай Тельпуховский</name>
+        </developer>
+        <developer>
+            <name>Михаил Кужанов</name>
+        </developer>
+        <developer>
+            <name>Максим Корсунский</name>
+        </developer>
+        <developer>
+            <name>Владимир Корякин</name>
+        </developer>
+        <developer>
+            <name>Михаил Агей</name>
+        </developer>
     </developers>
     <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
+        <connection>scm:git:https://github.com/yt-wikipulse/wikipulse.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/yt-wikipulse/wikipulse.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/yt-wikipulse/wikipulse</url>
     </scm>
     <properties>
         <java.version>17</java.version>
