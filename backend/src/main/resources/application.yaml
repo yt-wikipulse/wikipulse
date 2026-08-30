@@ -41,6 +41,9 @@ yt:
   token: "${YT_TOKEN}"
   base-path: "${YT_BASE_PATH://home/wikipulse}"
 
+  consumer:
+    q_enriched: "${yt.base-path}/consumers/c_backend"
+
   table:
     q_enriched: "${yt.base-path}/q_enriched"
     marts:

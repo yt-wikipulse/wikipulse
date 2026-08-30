@@ -43,7 +43,7 @@ public class YtAggregatesRepository {
             @Value("${yt.table.marts.top_articles}") String topArticlesTable,
             @Value("${yt.table.marts.top_geo}") String topGeoTable) {
         this.client = YTsaurusClient.builder()
-                .setCluster(proxy)
+                .setCluster(YtProxy.withScheme(proxy))
                 .setAuth(YTsaurusClientAuth.builder().setToken(token).build())
                 .build();
         this.trendsTable = trendsTable;

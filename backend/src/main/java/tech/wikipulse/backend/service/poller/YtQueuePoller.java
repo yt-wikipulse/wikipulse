@@ -10,10 +10,13 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Единственный писатель {@link RecentEventsCache} на профиле {@code yt}:
- * вычитывает очередь {@code q_enriched} страницами и укладывает события в кэш
- * живой карты.
+ * вычитывает очередь {@code q_enriched} через консьюмера и укладывает
+ * события в кэш живой карты.
  */
 @Component
 @Profile("yt")
@@ -25,10 +28,11 @@ public class YtQueuePoller {
     private final int maxPagesPerTick;
 
     /**
-     * Позиция в очереди; {@code null} означает, что поллер ещё не стартовал
-     * и первый тик уйдёт на перемотку в конец.
+     * Оффсеты партиций очереди; {@code null} означает, что поллер ещё
+     * не стартовал и первый тик уйдёт на чтение позиции из консьюмера.
      */
-    private Long lastSeenRowIndex = null;
+    private Map<Integer, Long> offsets = null;
+    private int partitions = 0;
 
     /**
      * Сколько тиков подряд не удалось прочитать очередь. Первые четыре
@@ -59,47 +63,62 @@ public class YtQueuePoller {
         } catch (YtReadException e) {
             ytFailStreak++;
             if (ytFailStreak >= 5) {
-                log.error("YT недоступен {} тиков подряд, курсор={}", ytFailStreak, lastSeenRowIndex, e);
+                log.error("YT недоступен {} тиков подряд, оффсеты={}", ytFailStreak, offsets, e);
             } else {
-                log.warn("не прочитал порцию из очереди, курсор={}", lastSeenRowIndex, e);
+                log.warn("не прочитал порцию из очереди, оффсеты={}", offsets, e);
             }
         } catch (RuntimeException e) {
-            log.error("баг в поллере, курсор={}", lastSeenRowIndex, e);
+            log.error("баг в поллере, оффсеты={}", offsets, e);
         }
     }
 
     /**
-     * Один проход по очереди: не более {@code maxPagesPerTick} страниц.
+     * Один проход по всем партициям очереди, не более
+     * {@code maxPagesPerTick} страниц на каждую.
      *
-     * <p>Первый тик после старта ничего не читает в кэш, а ставит курсор
-     * в конец очереди: истории бэкенду не нужно (окно кэша — 30 минут),
-     * а чтение живой очереди с начала означало бы миллионы строк в память
-     * одной пачкой. Следствие — после рестарта полное окно набирается
-     * только через 30 минут.
+     * <p>Первый тик после старта поднимает позицию из консьюмера, а не
+     * перематывает очередь в конец: рестарт продолжает чтение оттуда, где
+     * оно прервалось, и окно кэша набирается сразу, а не за тридцать минут.
+     * На пустом консьюмере чтение начинается с начала очереди — догон идёт
+     * порциями по тику и упирается в окно кэша, которое выбросит всё
+     * старое само.
      *
-     * <p>Курсор двигается в {@code finally}: страница, на которой упала
+     * <p>Консьюмер двигается в {@code finally}: страница, на которой упала
      * укладка, теряет битые события, но не встаёт навсегда. Ошибка самого
-     * чтения ({@link YtReadException}) вылетает до {@code finally}, курсор
+     * чтения ({@link YtReadException}) вылетает до {@code finally}, позиция
      * остаётся на месте и следующий тик перечитает ту же порцию.
      */
     private void tick() {
-        if (lastSeenRowIndex == null) {
-            lastSeenRowIndex = repository.skipToLatest();
-            return;
+        if (offsets == null) {
+            partitions = repository.partitionCount();
+            offsets = new HashMap<>(repository.committedOffsets());
+            log.info("поллер стартовал: партиций {}, оффсеты {}", partitions, offsets);
         }
 
+        for (int partition = 0; partition < partitions; partition++) {
+            readPartition(partition);
+        }
+    }
+
+    private void readPartition(int partition) {
+        long offset = offsets.getOrDefault(partition, 0L);
         int pages = 0;
         QEnrichedRepository.EventsPage page;
 
         do {
-            page = repository.fetchAfter(lastSeenRowIndex);
+            page = repository.pull(partition, offset, repository.batchSize());
+            if (page.events().isEmpty()) {
+                return;
+            }
 
             try {
                 for (EnrichedEvent event : page.events()) {
                     consume(event);
                 }
             } finally {
-                lastSeenRowIndex = page.lastRowIndex();
+                repository.advance(partition, offset, page.nextOffset());
+                offset = page.nextOffset();
+                offsets.put(partition, offset);
             }
             pages++;
 
