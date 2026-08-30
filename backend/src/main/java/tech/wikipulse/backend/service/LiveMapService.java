@@ -106,7 +106,7 @@ public class LiveMapService {
             throw new BadRequestException("min_lng/min_lat must be less than max_lng/max_lat");
         }
         if (zoom < zoomMin || zoom > zoomMax) {
-            throw new BadRequestException("zoom must be between 0 and 30");
+            throw new BadRequestException("zoom must be between " + zoomMin + " and " + zoomMax);
         }
     }
 
