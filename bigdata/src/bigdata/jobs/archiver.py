@@ -8,6 +8,10 @@
 ``q_enriched`` фактически не срабатывает: очередь растёт, но данные
 не теряются. Курсор пишется после успешной записи страницы, то есть
 доставка at-least-once — дедуп по ``event_id`` делает ``spyt_marts``.
+
+``$row_index`` нумеруется внутри таблета, поэтому чтение ограничено нулевым
+таблетом — тем же, который читает бэкенд. При партиционировании ``q_enriched``
+обоих читателей надо учить обходить таблеты по очереди.
 """
 import logging
 
@@ -43,7 +47,7 @@ def fetch_page(cursor: int, limit: int) -> list[dict]:
     query = (
         f"[$row_index] as row_index, event_id, title, url, h3_r9, event_ts, "
         f"length_update, diff_url "
-        f"from [{Q_ENRICHED}] where [$row_index] > {cursor} limit {limit}"
+        f"from [{Q_ENRICHED}] where [$tablet_index] = 0 and [$row_index] > {cursor} limit {limit}"
     )
     return list(yt.select_rows(query))
 
