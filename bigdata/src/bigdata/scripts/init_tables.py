@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import yt.wrapper as yt
+from yt import yson
 
 from bigdata import paths
 from bigdata.runtime import proxy_url, require_env
@@ -27,12 +28,14 @@ Q_ENRICHED_SCHEMA = [
     {"name": "diff_url", "type": "string"},
 ]
 
-DICT_COORDS_SCHEMA = [
+DICT_COORDS_SCHEMA = yson.YsonList([
     {"name": "wiki",  "type": "string", "sort_order": "ascending"},
     {"name": "title", "type": "string", "sort_order": "ascending"},
     {"name": "lat",   "type": "double"},
     {"name": "lon",   "type": "double"},
-]
+])
+DICT_COORDS_SCHEMA.attributes["strict"] = True
+DICT_COORDS_SCHEMA.attributes["unique_keys"] = True
 
 T_HISTORY_SCHEMA = [
     {"name": "event_id", "type": "string"},
@@ -149,8 +152,8 @@ def main():
     enable_auto_trim(paths.Q_RAW)
     enable_auto_trim(paths.Q_ENRICHED)
 
-    print("\nСправочник (static table):")
-    create_static_table(paths.DICT_COORDS, DICT_COORDS_SCHEMA, "координаты статей")
+    print("\nСправочник (dynamic table):")
+    create_dynamic_table(paths.DICT_COORDS, DICT_COORDS_SCHEMA, "координаты статей")
 
     print("\nИстория (static table):")
     create_static_table(paths.T_HISTORY, T_HISTORY_SCHEMA,

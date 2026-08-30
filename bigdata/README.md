@@ -169,12 +169,12 @@ yt get $YT_BASE_PATH/dict/coords/@row_count
 yt read-table "$YT_BASE_PATH/dict/coords[:#10]" --format '<encode_utf8=false>json'
 ```
 
-Проверка здесь через `read-table`, а не `select-rows`, потому что загрузчик
-оставляет `dict/coords` **статической** отсортированной таблицей, а
-`select-rows` и `lookup_rows` работают только со смонтированной динамической.
-Перед шагом 5 таблицу нужно перевести в динамическую вручную; почему это не
-зашито в скрипт — в [`implementation-notes.md`](implementation-notes.md),
-раздел `paths.py / DICT_COORDS`.
+Загрузчик оставляет `dict/coords` смонтированной динамической таблицей,
+поэтому её можно читать и через `select-rows`:
+
+```bash
+yt select-rows "* from [$YT_BASE_PATH/dict/coords] limit 5" --format json
+```
 
 ### 4. Ингестор
 
@@ -306,8 +306,6 @@ pytest
   образа. Он же задаёт `CLUSTER_PYTHON` для сборки `h3.zip`.
 - `spark.shuffle.useOldFetchProtocol=true` — обход конкретной проблемы
   с шафлами, см. [`implementation-notes.md`](implementation-notes.md).
-- Перевод `dict/coords` в динамическую таблицу — шаг 3, тоже не универсальный:
-  он требует `unique_keys` и уникальности пар `(wiki, title)` на твоём дампе.
 
 ## Частые проблемы
 

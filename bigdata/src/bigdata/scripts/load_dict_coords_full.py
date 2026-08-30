@@ -7,6 +7,9 @@ import argparse
 
 import requests
 import yt.wrapper as yt
+from yt import yson
+
+from pathlib import Path
 
 from bigdata.paths import DICT_COORDS, DICT_COORDS_TMP
 from bigdata.runtime import USER_AGENT
@@ -130,6 +133,53 @@ def stream_dump(max_rows: int | None = None):
         yield batch, total_in, total_out, total_skipped
 
 
+
+REDUCER_PATH = Path(__file__).with_name("_dedup_reducer.py")
+
+REDUCER_SOURCE = """
+import sys, json
+prev = None
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    row = json.loads(line)
+    key = (row.get("wiki"), row.get("title"))
+    if key == prev:
+        continue
+    prev = key
+    sys.stdout.write(json.dumps(row, ensure_ascii=False))
+    sys.stdout.write("\n")
+"""
+
+
+def unique_schema():
+    """
+    Схема справочника с `unique_keys=true`. Без него таблицу нельзя перевести
+    в динамическую, а без динамической не работает `lookup_rows`, которым
+    её читает обогащение.
+    """
+    schema = yson.YsonList([
+        {"name": "wiki",  "type": "string", "sort_order": "ascending"},
+        {"name": "title", "type": "string", "sort_order": "ascending"},
+        {"name": "lat",   "type": "double"},
+        {"name": "lon",   "type": "double"},
+    ])
+    schema.attributes["strict"] = True
+    schema.attributes["unique_keys"] = True
+    return schema
+
+
+def _write_reducer(path):
+    """
+    Редьюсер кладётся рядом файлом и запускается питоном кластера, а не
+    отправляется как функция: обёртка `yt.wrapper` шлёт на кластер исходники
+    локального интерпретатора, и при несовпадении версий джоба падает
+    на импорте `yt.wrapper`.
+    """
+    path.write_text(REDUCER_SOURCE.lstrip(), encoding="utf-8", newline=chr(10))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Загрузка координат из дампа Wikidata"
@@ -187,19 +237,34 @@ def main():
     if yt.exists(dict_coords_path):
         yt.remove(dict_coords_path)
 
-    sorted_schema = [
-        {"name": "wiki",  "type": "string", "sort_order": "ascending"},
-        {"name": "title", "type": "string", "sort_order": "ascending"},
-        {"name": "lat",   "type": "double"},
-        {"name": "lon",   "type": "double"},
-    ]
-    yt.create("table", dict_coords_path, attributes={"schema": sorted_schema}, recursive=True)
-
-    yt.run_sort(tmp_path, dict_coords_path, sort_by=["wiki", "title"])
+    sort_path = f"{tmp_path}_sorted"
+    if yt.exists(sort_path):
+        yt.remove(sort_path)
+    yt.run_sort(tmp_path, sort_path, sort_by=["wiki", "title"])
     yt.remove(tmp_path)
 
+    log.info("Дедупликация по (wiki, title) → %s...", dict_coords_path)
+    yt.create("table", dict_coords_path,
+              attributes={"schema": unique_schema()}, recursive=True)
+    _write_reducer(REDUCER_PATH)
+    yt.run_reduce(
+        f"python3 {REDUCER_PATH.name}",
+        sort_path,
+        dict_coords_path,
+        reduce_by=["wiki", "title"],
+        sort_by=["wiki", "title"],
+        format=yt.JsonFormat(control_attributes_mode="none"),
+        local_files=[str(REDUCER_PATH)],
+    )
+    yt.remove(sort_path)
+
+    log.info("Конверсия в динамическую таблицу и монтирование...")
+    yt.alter_table(dict_coords_path, dynamic=True)
+    yt.mount_table(dict_coords_path, sync=True)
+
     final_count = yt.get(f"{dict_coords_path}/@row_count")
-    log.info("✅ Готово! Строк в dict/coords: %s", final_count)
+    log.info("Готово. Строк в dict/coords: %s, tablet_state: %s",
+             final_count, yt.get(f"{dict_coords_path}/@tablet_state"))
 
 
 if __name__ == "__main__":
