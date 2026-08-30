@@ -198,15 +198,15 @@ spark-submit \
   --conf spark.yarn.appMasterEnv.YT_PROXY=$YT_PROXY \
   --conf spark.yarn.appMasterEnv.YT_BASE_PATH=$YT_BASE_PATH \
   --conf spark.pyspark.python=/usr/bin/python3.11 \
-  --py-files yt:///home/wikipulse/lib/spyt_deps.zip,yt:/$YT_BASE_PATH/lib/bigdata.zip \
+  --py-files yt:/$YT_BASE_PATH/lib/bigdata.zip \
   --files yt:/$YT_BASE_PATH/lib/h3.zip \
   yt:/$YT_BASE_PATH/src/spyt_enrich.py
 ```
 
-`spyt_deps.zip` — общий архив зависимостей стенда, на котором писался проект,
-а не часть репозитория: на своём кластере замени путь или убери его из
-`--py-files` (см. «Что нужно поправить под свой кластер»). Остальные два
-`yt:`-пути принадлежат проекту и берутся из `paths.py`.
+Оба `yt:`-пути принадлежат проекту и берутся из `paths.py`. Если на вашем
+кластере зависимости SPYT лежат отдельным архивом, укажите его в переменной
+`SPYT_DEPS_ZIP` — он добавится в `--py-files` первым. По умолчанию переменная
+пуста и в команду ничего не добавляется.
 
 Джоба читает `q_raw` через консьюмер `c_enrich` и работает 24/7, пока её не
 остановить. Правки статей, которых нет в справочнике координат, она молча
@@ -244,7 +244,7 @@ spark-submit \
   --conf spark.yarn.appMasterEnv.YT_BASE_PATH=$YT_BASE_PATH \
   --conf spark.pyspark.python=/usr/bin/python3.11 \
   --conf spark.shuffle.useOldFetchProtocol=true \
-  --py-files yt:///home/wikipulse/lib/spyt_deps.zip,yt:/$YT_BASE_PATH/lib/bigdata.zip \
+  --py-files yt:/$YT_BASE_PATH/lib/bigdata.zip \
   --files yt:/$YT_BASE_PATH/lib/h3.zip \
   yt:/$YT_BASE_PATH/src/spyt_marts.py --hours 24
 ```
@@ -300,10 +300,8 @@ pytest
 
 ## Что нужно поправить под свой кластер
 
-- `SPYT_DEPS_ZIP` в `src/bigdata/jobs/scheduler.py` и `--py-files` в командах
-  выше указывают на `//home/wikipulse/lib/spyt_deps.zip` — это общий архив
-  зависимостей конкретного стенда, на котором писался проект. На своём
-  кластере замени путь или убери его из `--py-files`.
+- `SPYT_DEPS_ZIP` — путь к архиву зависимостей SPYT, если на вашем кластере
+  они не установлены в образе воркеров. По умолчанию пусто.
 - `spark.pyspark.python=/usr/bin/python3.11` — питон воркеров конкретного
   образа. Он же задаёт `CLUSTER_PYTHON` для сборки `h3.zip`.
 - `spark.shuffle.useOldFetchProtocol=true` — обход конкретной проблемы

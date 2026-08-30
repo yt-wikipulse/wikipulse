@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>tech.wikipulse</groupId>
-    <artifactId>wiki-pulse-project</artifactId>
+    <artifactId>wikipulse</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>wiki-pulse-project</name>
+    <name>wikipulse</name>
     <description>WikiPulse backend: live map and dashboard over YTsaurus</description>
     <url>https://github.com/yt-wikipulse/wikipulse</url>
     <licenses>

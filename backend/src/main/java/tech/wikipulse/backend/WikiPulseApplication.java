@@ -6,9 +6,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class WikiPulseProjectApplication {
+public class WikiPulseApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(WikiPulseProjectApplication.class, args);
+        SpringApplication.run(WikiPulseApplication.class, args);
     }
 }

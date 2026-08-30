@@ -13,7 +13,7 @@ from bigdata.runtime import proxy_host, require_env
 from bigdata.scripts.upload_artifacts import upload_job_script
 
 SPYT_MARTS_LOCAL = Path(__file__).with_name("spyt_marts.py")
-SPYT_DEPS_ZIP = "yt:///home/wikipulse/lib/spyt_deps.zip"
+SPYT_DEPS_ZIP = os.environ.get("SPYT_DEPS_ZIP", "")
 
 FAST_INTERVAL = 300
 SLOW_INTERVAL = 3600
@@ -35,7 +35,9 @@ def build_spark_submit(hours: int,
                        top_n: int | None = None,
                        h3_res: int | None = None) -> list[str]:
     host = proxy_host()
-    py_files = ",".join((SPYT_DEPS_ZIP, paths.spark_url(paths.LIB_BIGDATA_ZIP)))
+    py_files = ",".join(
+        part for part in (SPYT_DEPS_ZIP, paths.spark_url(paths.LIB_BIGDATA_ZIP)) if part
+    )
     cmd = [
         "spark-submit",
         "--master", f"ytsaurus://https://{host}",

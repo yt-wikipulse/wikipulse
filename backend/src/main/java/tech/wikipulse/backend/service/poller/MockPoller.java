@@ -3,11 +3,7 @@ package tech.wikipulse.backend.service.poller;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import tech.wikipulse.backend.model.EnrichedEvent;
-import tech.wikipulse.backend.model.dto.DashboardResponse;
-import tech.wikipulse.backend.model.TopGeoPlace;
 import tech.wikipulse.backend.repository.RecentEventsCache;
-import com.uber.h3core.H3Core;
-import com.uber.h3core.util.LatLng;
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
@@ -22,16 +18,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Замена {@link YtQueuePoller} на профиле {@code mock}: вместо очереди YTsaurus
+ * проигрывает по кругу фикстуру настоящих правок Википедии, снятых с боевого стенда.
+ * Гексагоны в фикстуре настоящие — получены соединением со справочником координат,
+ * поэтому карта на этом профиле показывает правки там, где они действительно были.
+ */
 @Component
 @Profile("mock")
 public class MockPoller {
 
     private static final String EDITS_FIXTURE = "fixtures/q_enriched-sample.json";
-    private static final String CELLS_FIXTURE = "fixtures/dashboard-24h.json";
-    private static final int CELL_RESOLUTION = 9;
 
-    private record SampleEdit(String id, String title, String url,
-                              long lengthUpdate, String diffUrl, long eventTs) {}
+    private record SampleEdit(String eventId, String title, String url, String h3R9,
+                              long eventTs, long lengthUpdate, String diffUrl) {}
 
     private final RecentEventsCache cache;
     private final Clock clock;
@@ -39,13 +39,17 @@ public class MockPoller {
     private final long sampleEndTs;
     private final AtomicInteger cursor = new AtomicInteger();
 
-    public MockPoller(RecentEventsCache cache, H3Core h3, Clock clock, ObjectMapper mapper) {
+    public MockPoller(RecentEventsCache cache, Clock clock, ObjectMapper mapper) {
         this.cache = cache;
         this.clock = clock;
-        this.sample = buildSample(h3, mapper);
+        this.sample = buildSample(mapper);
         this.sampleEndTs = sample.stream().mapToLong(EnrichedEvent::eventTs).max().orElse(0L);
     }
 
+    /**
+     * Наполняет кэш при старте, сдвигая времена фикстуры в текущее окно:
+     * иначе снятые в прошлом события сразу окажутся протухшими и карта будет пустой.
+     */
     @PostConstruct
     void backfill() {
         long shift = clock.instant().getEpochSecond() - sampleEndTs;
@@ -60,6 +64,10 @@ public class MockPoller {
         cache.put(replay(next % sample.size(), clock.instant().getEpochSecond(), next / sample.size() + 1));
     }
 
+    /**
+     * На втором и последующих проходах к идентификатору дописывается номер прохода:
+     * кэш дедуплицирует события по {@code event_id}, и без этого повтор не попал бы внутрь.
+     */
     private EnrichedEvent replay(int index, long eventTs, int pass) {
         EnrichedEvent origin = sample.get(index);
         return new EnrichedEvent(
@@ -73,8 +81,7 @@ public class MockPoller {
             origin.diffUrl());
     }
 
-    private static List<EnrichedEvent> buildSample(H3Core h3, ObjectMapper mapper) {
-        List<String> cells = cells(h3, mapper);
+    private static List<EnrichedEvent> buildSample(ObjectMapper mapper) {
         List<SampleEdit> edits = read(mapper, EDITS_FIXTURE, new TypeReference<List<SampleEdit>>() {});
 
         List<EnrichedEvent> events = new ArrayList<>(edits.size());
@@ -82,32 +89,15 @@ public class MockPoller {
             SampleEdit edit = edits.get(i);
             events.add(new EnrichedEvent(
                 i,
-                edit.id(),
+                edit.eventId(),
                 edit.title(),
                 edit.url(),
-                cells.get(Math.floorMod(wiki(edit.id()).hashCode(), cells.size())),
+                edit.h3R9(),
                 edit.eventTs(),
                 edit.lengthUpdate(),
                 edit.diffUrl()));
         }
         return List.copyOf(events);
-    }
-
-    private static List<String> cells(H3Core h3, ObjectMapper mapper) {
-        return read(mapper, CELLS_FIXTURE, new TypeReference<DashboardResponse>() {})
-            .topGeo().stream()
-            .map(TopGeoPlace::h3Parent)
-            .distinct()
-            .map(parent -> {
-                LatLng center = h3.cellToLatLng(h3.stringToH3(parent));
-                return h3.latLngToCellAddress(center.lat, center.lng, CELL_RESOLUTION);
-            })
-            .toList();
-    }
-
-    private static String wiki(String eventId) {
-        int separator = eventId.indexOf('|');
-        return separator < 0 ? eventId : eventId.substring(0, separator);
     }
 
     private static <T> T read(ObjectMapper mapper, String path, TypeReference<T> type) {

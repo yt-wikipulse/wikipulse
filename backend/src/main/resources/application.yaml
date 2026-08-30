@@ -1,6 +1,6 @@
 spring:
   application:
-    name: wiki-pulse-project
+    name: wikipulse
 
   profiles:
     default: yt
