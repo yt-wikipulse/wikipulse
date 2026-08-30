@@ -18,7 +18,6 @@ yt-snapshot/
 *.parquet
 
 # --- IDE и редакторы ---
-
 .idea/
 .vscode/
 *.iml
