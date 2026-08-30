@@ -29,7 +29,7 @@ SPYT-джобы этого репозитория. Инструкция не п�
 версии, а 3.10 и ниже не поддерживаются клиентом. Нужна **Java 17** — её
 требует Spark, на котором работает SPYT.
 
-```
+```bash
 python3 -V
 java -version
 ```
@@ -38,21 +38,21 @@ java -version
 
 **macOS и Linux:**
 
-```
+```bash
 python3.12 -m venv ~/venv-spyt
 source ~/venv-spyt/bin/activate
 ```
 
 **Windows (PowerShell):**
 
-```
+```powershell
 py -3.12 -m venv $HOME\venv-spyt
 $HOME\venv-spyt\Scripts\Activate.ps1
 ```
 
 Дальше одинаково (версии — пример, подставьте свои):
 
-```
+```bash
 pip install --upgrade pip
 pip install ytsaurus-client ytsaurus-spyt==2.11.0 pyspark==4.2.0
 ```
@@ -75,7 +75,7 @@ pip install ytsaurus-client ytsaurus-spyt==2.11.0 pyspark==4.2.0
 
 **macOS и Linux** — файл `~/.yt-env`:
 
-```
+```bash
 source ~/venv-spyt/bin/activate
 export YT_PROXY=<адрес HTTP-прокси кластера>
 export YT_TOKEN=<ваш токен>
@@ -85,7 +85,7 @@ source spyt-env
 
 **Windows (PowerShell)** — файл `$HOME\yt-env.ps1`:
 
-```
+```powershell
 & $HOME\venv-spyt\Scripts\Activate.ps1
 $env:YT_PROXY = "<адрес HTTP-прокси кластера>"
 $env:YT_TOKEN = "<ваш токен>"
@@ -95,7 +95,7 @@ $env:SPARK_CONF_DIR = (python -c "import spyt, os; print(os.path.join(spyt.__pat
 
 Перед работой:
 
-```
+```bash
 source ~/.yt-env          # macOS и Linux
 . $HOME\yt-env.ps1        # Windows
 ```
@@ -110,7 +110,7 @@ SPYT. Без неё `spark-submit` не понимает адрес класте
 
 ## 5. Проверка связности
 
-```
+```bash
 yt whoami
 yt list $YT_BASE_PATH
 ```
@@ -132,13 +132,13 @@ yt list $YT_BASE_PATH
 
 ## 6. Зависимости, которых нет на узлах кластера
 
-Вычислительные узлы кластера не устанавливают пакеты по требованию: что не
-предустановлено, джоба привозит с собой.
+Вычислительные узлы кластера не устанавливают пакеты по требованию: всё, что
+не предустановлено, джоба доставляет сама.
 
-- **Чистый Python** едет через `--py-files` обычным zip-архивом.
+- **Чистый Python** передаётся через `--py-files` обычным zip-архивом.
 - **Пакеты с C-расширениями** (в этом проекте — `h3`) собираются под ту версию
-  Python и ту архитектуру, что стоят на узлах, и едут через `--files`, а джоба
-  распаковывает архив и добавляет его в `sys.path`. В репозитории такого
+  Python и ту архитектуру, что стоят на узлах, и передаются через `--files`,
+  а джоба распаковывает архив и добавляет его в `sys.path`. В репозитории такого
   архива нет: команда `upload-artifacts` собирает `h3.zip` под нужные версию
   Python и платформу и кладёт его в `{YT_BASE_PATH}/lib`.
 - **Версия интерпретатора на узле** задаётся явно, если она отличается от

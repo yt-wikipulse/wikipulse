@@ -54,9 +54,9 @@ pnpm install
 pnpm dev
 ```
 
-Открыть `http://localhost:5173/map`.
+Откройте `http://localhost:5173/map`.
 
-Dev server проксирует `/api` на `http://localhost:8080`, **поэтому бэкенд
+Dev-сервер проксирует `/api` на `http://localhost:8080`, **поэтому бэкенд
 должен быть запущен** — иначе не будет ни данных, ни ключа Карт. Другой адрес
 бэкенда задаётся переменной `BACKEND_URL`. Данные для разработки даёт сам
 бэкенд на профиле `mock`; моковых данных во фронтенде нет.
@@ -80,7 +80,7 @@ Dev server проксирует `/api` на `http://localhost:8080`, **поэт�
 | `pnpm dev` | Vite dev server |
 | `pnpm build` | TypeScript build и production bundle |
 | `pnpm lint` | ESLint |
-| `pnpm preview` | локальный preview production bundle |
+| `pnpm preview` | локальный просмотр production-бандла |
 | `pnpm test` | Vitest, один прогон |
 | `pnpm test:watch` | Vitest в watch-режиме |
 

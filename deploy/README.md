@@ -1,7 +1,7 @@
 # Деплой
 
 Всё приложение поднимается одной командой `docker compose up -d --build`:
-четыре контейнера — бэкенд, ингестор, планировщик и веб с Caddy. SPYT-джобы
+четыре контейнера — бэкенд, ингестор, шедулер и веб с Caddy. SPYT-джобы
 выполняются на кластере YTsaurus и в compose не входят.
 
 Кластера у форка обычно нет. Поднять YTsaurus на своей машине —
@@ -11,10 +11,10 @@
 
 ## Что нужно на машине
 
-Docker с плагином compose. На 4 ГБ памяти стоит добавить swap, иначе сборка
-образов бэкенда и фронта может упереться в OOM:
+Docker с плагином compose. На машине с 4 ГБ памяти добавьте swap, иначе
+сборка образов бэкенда и фронтенда может упереться в OOM:
 
-```
+```bash
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
 sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
@@ -22,7 +22,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ## Переменные
 
-Скопировать `deploy/.env.example` в `deploy/.env` и заполнить: `YT_PROXY`,
+Скопируйте `deploy/.env.example` в `deploy/.env` и заполните: `YT_PROXY`,
 `YT_TOKEN`, `YT_BASE_PATH`, `YMAPS_API_KEY`, `DOMAIN`, `ACME_EMAIL`,
 `WIKIPULSE_CONTACT`. Что обязательно и какие значения по умолчанию —
 [docs/runbooks/configuration.md](../docs/runbooks/configuration.md). Файл
@@ -32,13 +32,13 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 чтобы посмотреть сайт локально, пока домена и сертификата нет.
 
 Обязательные переменные записаны в `compose.yml` как `${YT_PROXY:?}`. Если
-переменной нет или она пустая, compose останавливается и называет её по имени
-вместо того, чтобы поднять контейнеры, которые упадут минутой позже где-то в
-логах. Поэтому `docker compose config` на свежем клоне без `.env` — это не
-поломка, а тот самый отказ. Проверить конфигурацию, ничего не заполняя, можно
+переменной нет или она пустая, compose останавливается и называет её по имени,
+а не поднимает контейнеры, которые упадут минутой позже где-то в логах.
+Поэтому `docker compose config` на свежем клоне без `.env` — это не поломка,
+а тот самый отказ. Проверить конфигурацию, ничего не заполняя, можно
 прямо на шаблоне:
 
-```
+```bash
 docker compose --env-file .env.example config
 ```
 
@@ -50,24 +50,25 @@ docker compose --env-file .env.example config
 **Один раз перед первым запуском** на кластере должны появиться таблицы и
 артефакты SPYT:
 
-```
+```bash
 init-tables        # каталоги, очереди, консьюмеры, витрины
 upload-artifacts   # bigdata.zip, h3.zip и скрипты джоб в {YT_BASE_PATH}/lib и /src
 ```
 
-Обе команды даёт пакет `bigdata` (`pip install -e bigdata`) и выполняются они
-с машины, у которой есть доступ к кластеру. Без `upload-artifacts` контейнер
-`scheduler` упадёт с `ModuleNotFoundError: bigdata`: `spark-submit`
+Обе команды приходят с пакетом `bigdata` (`pip install -e bigdata`) и
+выполняются с машины, у которой есть доступ к кластеру. Без
+`upload-artifacts` контейнер `scheduler` упадёт с
+`ModuleNotFoundError: bigdata`: `spark-submit`
 отправляет джобу на кластер, а модуля там нет. Подробности —
 в [bigdata/README.md](../bigdata/README.md).
 
-```
+```bash
 cd deploy && docker compose up -d --build
 ```
 
 Проверка:
 
-```
+```bash
 docker compose ps
 docker compose logs -f backend
 curl -s "https://<DOMAIN>/api/v1/hexagons/active?min_lng=-180&min_lat=-85&max_lng=180&max_lat=85&zoom=3"
@@ -103,7 +104,7 @@ TLS через `import /etc/caddy/tls/*.caddy` — glob, который при �
 файлов даёт предупреждение, а не ошибку. Чтобы подложить готовые файлы
 сертификата:
 
-```
+```bash
 cp deploy/tls-file.caddy.example deploy/tls-file.caddy
 cp deploy/compose.override.yml.example deploy/compose.override.yml
 ```
@@ -130,8 +131,8 @@ CSP собрана под то, что реально грузит фронте�
 с атрибутом `media`, без JavaScript. Браузер, который `media` на иконках
 не учитывает, берёт светлый вариант.
 
-Если карта не рисуется, смотреть консоль браузера: нарушение CSP видно там
-явно, лечится добавлением домена в нужную директиву.
+Если карта не рисуется, смотрите консоль браузера: нарушение CSP видно там
+явно и лечится добавлением домена в нужную директиву.
 
 Границы доверия и секреты —
 в [docs/architecture/security.md](../docs/architecture/security.md).
@@ -144,7 +145,7 @@ CSP собрана под то, что реально грузит фронте�
 
 **Форкеру этот workflow не нужен.** Пока переменная `DEPLOY_HOST` не задана,
 job не запускается — молча выкладываться на чужую машину пример не будет.
-Кому автовыкладка не нужна совсем — удалить файл.
+Если автовыкладка не нужна совсем, удалите файл.
 
 Настройка в Settings → Secrets and variables → Actions:
 
@@ -160,7 +161,7 @@ job не запускается — молча выкладываться на �
 показывает консоль сервера; workflow берёт его из секрета и `ssh-keyscan`
 не выполняет.
 
-```
+```bash
 ssh-keyscan -t ed25519 <host>
 ```
 
@@ -169,9 +170,9 @@ ssh-keyscan -t ed25519 <host>
 нет, и без исключения выкладка стёрла бы её на сервере. Секреты при этом
 остаются на сервере и через CI не проходят.
 
-Образы собираются на боевой машине: выкладка шлёт исходники и запускает
-`docker compose --build` прямо там. Сервер тратит на сборку память и место,
-а откат возможен только пересборкой с прошлого коммита.
+Образы собираются на боевой машине: выкладка отправляет исходники и
+запускает `docker compose --build` прямо там. Сервер тратит на сборку память
+и место, а откат возможен только пересборкой с прошлого коммита.
 
 ## Образы
 
@@ -186,7 +187,7 @@ capability, кроме `NET_BIND_SERVICE`. У остальных сервисо�
 `deb.debian.org`, сборке нужны зеркала. Они вынесены в `ARG` с дефолтом на
 официальные адреса, чтобы на обычной машине сборка шла напрямую:
 
-```
+```bash
 docker compose build \
   --build-arg NPM_REGISTRY=https://registry.npmmirror.com \
   --build-arg DEBIAN_MIRROR=http://mirror.yandex.ru
@@ -238,15 +239,16 @@ HTTP-прокси кластера доступен отовсюду, поэто
 поэтому его смена требует только `docker compose up -d backend`, без
 пересборки `web`. Бесплатный тариф — 100 загрузок карты в сутки.
 
-**Планировщик тянет за собой Java и SPYT.** Он считает витрины через
+**Шедулер тянет за собой Java и SPYT.** Он считает витрины через
 `spark-submit` и без него падает целиком, уходя в цикл перезапусков. Поэтому
 в `bigdata.Dockerfile` стоят Java 17, `pyspark` и `ytsaurus-spyt` версий из
 гайда кластера, а также `SPARK_CONF_DIR`: без него `spark-submit` не понимает
 адрес кластера и падает с «Master must either be yarn or start with spark,
 k8s, or local». Базовый образ — `bookworm`, а не `slim`: в Debian 13 пакета
 `openjdk-17` уже нет. Образ весит около гигабайта, и каждая пересборка
-оставляет слои в кэше — на диске в 20 ГБ это заметно, чистится через
-`docker system df`, `docker builder prune -f`, `docker image prune -f`.
+оставляет слои в кэше — на диске в 20 ГБ это заметно. Занятое место
+показывает `docker system df`, освобождают его `docker builder prune -f`
+и `docker image prune -f`.
 
 **Осиротевшие контейнеры.** Если сервис убрали из `compose.yml`, его
 контейнер сам не исчезнет и продолжит работать. Поэтому выкладка идёт с
@@ -254,15 +256,15 @@ k8s, or local». Базовый образ — `bookworm`, а не `slim`: в De
 
 ## Диагностика
 
-```
+```bash
 docker compose ps
 docker compose logs --tail 50 backend
 docker compose logs --tail 50 ingestor
 ```
 
-Карта пустая, ошибок нет — проверить, наполняется ли очередь:
+Карта пустая, ошибок нет — проверьте, наполняется ли очередь:
 
-```
+```bash
 yt select-rows "max(event_ts) as t from [$YT_BASE_PATH/q_enriched] group by 1" --format json
 ```
 

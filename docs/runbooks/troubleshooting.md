@@ -43,7 +43,8 @@ cd frontend && pnpm install
 
 Запрос до бэкенда не дошёл или он ответил ошибкой. Две частые причины:
 
-- бэкенд не поднят — проверить `curl` из [local-setup.md](local-setup.md);
+- бэкенд не поднят — проверьте его командой `curl` из
+  [local-setup.md](local-setup.md);
 - открыт `pnpm preview` вместо `pnpm dev`. В `vite.config.ts` прокси `/api`
   объявлен только для `server`, поэтому в preview запросы уходят в никуда.
 
@@ -52,7 +53,7 @@ cd frontend && pnpm install
 
 ### Карта не отрисовывается, вместо неё пустой прямоугольник
 
-Ключ приходит с бэкенда по `GET /api/v1/config` — проверить ответ:
+Ключ приходит с бэкенда по `GET /api/v1/config` — проверьте ответ:
 
 ```bash
 curl -s http://localhost:8080/api/v1/config

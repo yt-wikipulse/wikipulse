@@ -33,3 +33,11 @@
 
 Настройка окружения для запуска SPYT-джоб — в
 [setup/spyt-env.md](../setup/spyt-env.md).
+
+## README компонентов
+
+- [bigdata/README.md](../bigdata/README.md) — команды пайплайна и порядок,
+  в котором их запускают на кластере.
+- [frontend/README.md](../frontend/README.md) — запуск клиента и ключ
+  Яндекс Карт.
+- [deploy/README.md](../deploy/README.md) — Docker Compose, TLS, автовыкладка.

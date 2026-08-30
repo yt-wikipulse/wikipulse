@@ -22,10 +22,10 @@
 | `DOMAIN` | `deploy/compose.yml`, оттуда в `Caddyfile` | да для `docker compose` | нет | `example.com`, `http://localhost` |
 | `ACME_EMAIL` | `deploy/compose.yml`, оттуда в `Caddyfile` | да для `docker compose` | нет | `admin@example.com` |
 | `SPARK_CONF_DIR` | `spark-submit` | да для SPYT-джоб | нет | каталог `conf` внутри пакета `spyt` |
-| `SPYT_DEPS_ZIP` | `bigdata/jobs/scheduler.py` | нет | пусто | архив зависимостей SPYT, уезжает в `--py-files` первым |
+| `SPYT_DEPS_ZIP` | `bigdata/jobs/scheduler.py` | нет | пусто | архив зависимостей SPYT, добавляется в `--py-files` первым |
 | `YT_SECURE_VAULT_YT_TOKEN` | `bigdata` внутри операции на кластере | задаёт YTsaurus, человек — нет | нет | — |
 
-В рантайме фронтенд переменных окружения не использует: ключ карт приезжает
+В рантайме фронтенд переменных окружения не использует: ключ карт приходит
 с бэкенда по `GET /api/v1/config`, а `BACKEND_URL` читает только конфиг Vite
 при `pnpm dev` — прокси объявлен для `server`, а не для `preview`.
 
@@ -34,7 +34,7 @@
 **`YT_PROXY` без схемы означает `https://`.** И бэкенд
 (`repository/YtProxy.java`), и `bigdata` (`runtime.proxy_url`) дописывают её
 одинаково. Локальному кластеру по HTTP схему надо писать явно: без неё
-клиент пойдёт на 443 и не достучится.
+клиент пойдёт на 443 и соединение не установится.
 
 **На профиле `mock` не нужно ничего.** `YT_PROXY` и `YT_TOKEN` подставляются
 в бины `QEnrichedRepository` и `YtAggregatesRepository` с `@Profile("yt")` —
@@ -61,8 +61,8 @@
 | `app.live.hexagon-events-cap` | 50 | максимум событий в массиве `events` одного гексагона; на счётчик `events_count` не влияет |
 | `app.poller.interval-ms` | 500 | период тика `YtQueuePoller` |
 | `app.poller.max-pages-per-tick` | 10 | сколько страниц очереди поллер вычитывает за тик |
-| `app.enrich.fetch-batch` | 1000 | размер страницы чтения `q_enriched`; в файле не объявлен, значение живёт дефолтом в `QEnrichedRepository` |
-| `app.ymaps.api-key` | `${YMAPS_API_KEY:}` | ключ, который уезжает в `GET /api/v1/config` |
+| `app.enrich.fetch-batch` | 1000 | размер страницы чтения `q_enriched`; в файле не объявлен, значение задано по умолчанию в `QEnrichedRepository` |
+| `app.ymaps.api-key` | `${YMAPS_API_KEY:}` | ключ, который отдаётся в `GET /api/v1/config` |
 | `yt.base-path` | `${YT_BASE_PATH://home/wikipulse}` | корень всех путей в YT |
 | `yt.table.*` | `${yt.base-path}/…` | пути таблиц; литералов в коде нет |
 | `spring.jackson.property-naming-strategy` | `SNAKE_CASE` | превращает camelCase-поля записей в snake_case контракта REST |
@@ -71,12 +71,12 @@
 **Лестница зума.** `H3GeoService.resolutionZoom` переводит зум карты в
 резолюцию H3 ступенями: `zoom <= zoom-r3-max` → 3, дальше так же 4, 5, 6,
 `zoom-r6-max < zoom <= zoom-r8-max` → 8, `zoom > zoom-r8-max` → 9. Резолюция
-7 пропущена. Чем ближе приближена карта, тем мельче гексагон.
+7 пропущена. Чем сильнее приближена карта, тем мельче гексагон.
 
 **Тестовый `application.yaml` заменяет основной, а не дополняет.**
 `backend/src/test/resources/application.yaml` попадает в classpath раньше, и
-`classpath:/application.yaml` резолвится в один ресурс. Добавил в основной
-файл ключ, важный для тестов, — продублируй в тестовый.
+`classpath:/application.yaml` резолвится в один ресурс. Ключ, от которого
+зависят тесты, добавляйте сразу в оба файла.
 
 ## Переменные и секреты GitHub Actions
 
