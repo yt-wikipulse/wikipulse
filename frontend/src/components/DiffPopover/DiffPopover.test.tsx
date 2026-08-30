@@ -19,6 +19,10 @@ const EVENT: HexagonEvent = {
   event_ts: 1_787_000_000,
 };
 
+/**
+ * Форма настоящего ответа `action=compare`: строки таблицы без обёртки,
+ * классы ячеек и `diffchange` внутри.
+ */
 const COMPARE_BODY = `
   <tr><td colspan="2" class="diff-lineno">Строка 42:</td></tr>
   <tr>

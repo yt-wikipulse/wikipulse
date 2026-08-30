@@ -11,6 +11,12 @@ type ErrorBoundaryState = {
   failed: boolean;
 };
 
+/**
+ * Граница ошибок вокруг маршрутов, а не вокруг всего приложения: шапка
+ * остаётся живой, и с экрана ошибки можно уйти на другой маршрут. Без границы
+ * любое исключение в рендере уносит весь `#root` в белый экран — React
+ * размонтирует дерево целиком.
+ */
 export class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState

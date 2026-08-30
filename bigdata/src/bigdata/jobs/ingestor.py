@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""
+Ингестор: читает поток правок Wikimedia (SSE) и складывает отфильтрованные
+события в очередь ``q_raw``.
+
+Работает бесконечно и переживает обрывы: соединение с таймаутом 90 секунд,
+пауза 5 секунд после сетевой ошибки и 10 секунд после ошибки YTsaurus.
+Позиция в потоке — заголовок ``Last-Event-ID``, он живёт только в памяти
+процесса, поэтому рестарт продолжает чтение с текущего момента, а не
+с последнего обработанного события.
+"""
 import json
 import time
 import logging
@@ -11,6 +21,11 @@ from bigdata.runtime import USER_AGENT
 
 SSE_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
 BATCH_SIZE = 100
+"""
+Размер пачки для ``insert_rows``. Строки копятся в памяти и пишутся
+с ``durability="sync"``: незаписанная пачка теряется при падении процесса,
+записанная — уже на диске.
+"""
 
 
 logging.basicConfig(
@@ -23,6 +38,11 @@ def normalize_title(title: str) -> str:
     return title.replace("_", " ").strip()
 
 def event_to_row(evt: dict) -> dict | None:
+    """
+    Приводит событие потока к строке ``q_raw`` или возвращает ``None``, если
+    событие отфильтровано: боты, служебные вики, ненулевое пространство имён,
+    типы кроме ``edit`` и ``new``, события без номера новой ревизии.
+    """
     wiki = evt.get("wiki", "")
 
     bot = evt.get("bot", False)

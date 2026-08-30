@@ -14,6 +14,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Реализация {@link RecentEventsCache} в памяти процесса: ячейка — дек событий,
+ * дедуп по {@code event_id} — отдельный Caffeine с тем же сроком жизни.
+ *
+ * <p>Порядок в деке — порядок прихода, а не времени правки: поллер читает
+ * пачками, и более старое событие может приехать после более свежего. Поэтому
+ * фильтрация по окну и вытеснение проходят по ячейке целиком, а сортировка
+ * делается при сборке снимка.
+ *
+ * <p>Окно считается по {@code event_ts} — времени самой правки, а не времени
+ * чтения: отставание пайплайна видно честно, карта пустеет вместо того, чтобы
+ * показывать старое как свежее.
+ */
 @Component
 @Slf4j
 public class InMemoryRecentEventsCache implements RecentEventsCache {
@@ -22,6 +35,11 @@ public class InMemoryRecentEventsCache implements RecentEventsCache {
 
     private final Cache<String, Boolean> seen;
 
+    /**
+     * Допуск на расхождение часов источника. Событие «из будущего» дальше этого
+     * допуска не протухло бы никогда и осталось бы в кэше навсегда, а минута
+     * покрывает обычный дрейф.
+     */
     private static final long CLOCK_SKEW_SECONDS = 60;
 
     private final Clock clock;
@@ -84,6 +102,11 @@ public class InMemoryRecentEventsCache implements RecentEventsCache {
         return Map.copyOf(snapShot);
     }
 
+    /**
+     * Вытеснение по окну. Опустевшие ячейки из мапы не удаляются: пустые списки
+     * отсекает {@code snapshot}, а удаление ключа под конкурентной записью
+     * потребовало бы блокировки ради экономии, которой не видно.
+     */
     @Scheduled(fixedDelay = 60_000)
     void evictExpired() {
         long cutoff = clock.instant().getEpochSecond() - windowSeconds;

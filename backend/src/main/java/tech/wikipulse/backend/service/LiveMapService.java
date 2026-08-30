@@ -35,6 +35,22 @@ public class LiveMapService {
         this.zoomMax = zoomMax;
     }
 
+    /**
+     * Активные гексагоны в видимом прямоугольнике на заданном зуме.
+     *
+     * <p>Свёртка идёт вверх: берётся снимок кэша целиком и каждый ключ
+     * {@code h3_r9} переводится в родителя нужной резолюции. Обратное
+     * направление — развернуть запрошенные ячейки вниз до потомков девятого
+     * уровня — неприменимо: от резолюции 3 до 9 получается около 117 тысяч
+     * потомков на одну ячейку, тогда как обход снимка ограничен окном кэша.
+     *
+     * <p>Невалидный ключ из кэша пропускается с записью в лог: одна битая
+     * строка в очереди не должна гасить всю карту.
+     *
+     * <p>Массив событий гексагона обрезается до {@code app.live.hexagon-events-cap},
+     * а {@code events_count} остаётся полным: счётчик отвечает за заливку карты,
+     * массив — за список в поповере.
+     */
     public ActiveHexagonsResponse active(double minLng, double minLat, double maxLng, double maxLat, int zoom) {
         validateInput(minLng, minLat, maxLng, maxLat, zoom);
 
@@ -76,6 +92,15 @@ public class LiveMapService {
         return new ActiveHexagonsResponse(hexagons);
     }
 
+    /**
+     * Проверка параметров запроса. Стоит в сервисе, а не в контроллере: это
+     * граница доверия, и она держится рядом с местом, где параметры
+     * превращаются в геометрию.
+     *
+     * <p>Прямоугольник, пересекающий 180-й меридиан, приходит с
+     * {@code min_lng > max_lng} и отбивается как невалидный — на этом
+     * меридиане карта пустеет.
+     */
     private void validateInput(double minLng, double minLat, double maxLng, double maxLat, int zoom) {
         if (minLng >= maxLng || minLat >= maxLat) {
             throw new BadRequestException("min_lng/min_lat must be less than max_lng/max_lat");

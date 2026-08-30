@@ -19,6 +19,7 @@ describe("prepareBuckets", () => {
   const DAY = 86400;
   const HOUR = 3600;
 
+  /** Двое суток по три часовых точки — отсюда суммы 6 и 60 после свёртки. */
   const hourly = [
     { bucket_ts: 0, edits_count: 1 },
     { bucket_ts: HOUR, edits_count: 2 },

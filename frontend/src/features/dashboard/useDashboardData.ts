@@ -6,6 +6,10 @@ import { describeError } from "../../lib/errorMessage";
 const TOP_LIMIT = 5;
 
 type DashboardResult = {
+  /**
+   * Ключ запроса, ответ которого сейчас лежит в состоянии. Пока он не совпал
+   * с текущим, показывается загрузка — отдельный флаг для этого не нужен.
+   */
   key: string;
   data: DashboardResponse | null;
   error: string | null;
@@ -17,6 +21,14 @@ const INITIAL_RESULT: DashboardResult = {
   error: null,
 };
 
+/**
+ * Данные дашборда за период. Поллинга нет: витрины пересчитываются раз в час,
+ * обновлять чаще нечего — данные перезапрашиваются при смене периода и по
+ * кнопке повтора.
+ *
+ * При ошибке data сбрасывается в null: прошлый период на экране не остаётся,
+ * иначе подписи под цифрами говорили бы неправду.
+ */
 export function useDashboardData(period: string) {
   const [result, setResult] = useState<DashboardResult>(INITIAL_RESULT);
   const [attempt, setAttempt] = useState(0);

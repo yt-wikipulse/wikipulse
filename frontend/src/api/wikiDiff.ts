@@ -28,6 +28,7 @@ export type WikiDiff = {
   totalLines: number;
 };
 
+/** Больше строк в карточку не влезает, остальное уходит ссылкой в Википедию. */
 export const DIFF_LINES_LIMIT = 8;
 
 type Revisions = {
@@ -35,6 +36,12 @@ type Revisions = {
   toRev: number;
 };
 
+/**
+ * Достаёт пару ревизий из `notify_url` события. Его форма:
+ * `https://ru.wikipedia.org/w/index.php?diff=154475554&oldid=154475304`.
+ * Если ревизий в ссылке нет, возвращает null — тогда последняя пара
+ * доспрашивается у `prop=revisions`.
+ */
 export function parseRevisions(diffUrl: string): Revisions | null {
   let params: URLSearchParams;
 
@@ -58,6 +65,10 @@ export function parseRevisions(diffUrl: string): Revisions | null {
   return { fromRev, toRev };
 }
 
+/**
+ * Адрес Action API того же языкового раздела, что и статья. `origin=*` —
+ * анонимный CORS: без него Википедия не отдаст ответ в браузер.
+ */
 function apiUrl(articleUrl: string, params: Record<string, string>): string {
   const query = new URLSearchParams({
     format: "json",
@@ -124,6 +135,17 @@ function readSegments(cell: Element): DiffSegment[] {
   return segments;
 }
 
+/**
+ * Разбирает тело ответа `action=compare` в строки диффа.
+ *
+ * Ответ приходит набором строк таблицы без обёртки: маркер, удалённая строка,
+ * добавленная. Двухколоночная таблица разворачивается в один поток —
+ * сначала «−», потом «+».
+ *
+ * HTML разбирается DOMParser и рендерится текстом: в нём лежат правки
+ * из Википедии, то есть пользовательский ввод, и innerHTML был бы дырой
+ * на любой правке статьи.
+ */
 export function parseCompareBody(body: string): DiffLine[] {
   const document = new DOMParser().parseFromString(
     `<table><tbody>${body}</tbody></table>`,

@@ -14,6 +14,10 @@ from bigdata.scripts.upload_artifacts import upload_job_script
 
 SPYT_MARTS_LOCAL = Path(__file__).with_name("spyt_marts.py")
 SPYT_DEPS_ZIP = os.environ.get("SPYT_DEPS_ZIP", "")
+"""
+Архив зависимостей SPYT конкретного кластера, если он там есть. Путь
+кластерный, угадать его нельзя — форк задаёт свой или оставляет пустым.
+"""
 
 FAST_INTERVAL = 300
 SLOW_INTERVAL = 3600
@@ -34,6 +38,14 @@ log = logging.getLogger("scheduler")
 def build_spark_submit(hours: int,
                        top_n: int | None = None,
                        h3_res: int | None = None) -> list[str]:
+    """
+    Командная строка ``spark-submit`` для витрин.
+
+    ``spark.shuffle.useOldFetchProtocol=true`` отключает host-local чтение
+    шафлов: sandbox'ы executor'ов на одном узле не видят ``/tmp`` друг друга
+    и чтение падает с ``NoSuchFileException``. Альтернатива —
+    ``--num-executors 1``.
+    """
     host = proxy_host()
     py_files = ",".join(
         part for part in (SPYT_DEPS_ZIP, paths.spark_url(paths.LIB_BIGDATA_ZIP)) if part
@@ -64,6 +76,12 @@ def build_spark_submit(hours: int,
 
 
 def resolve_spark_env() -> dict[str, str]:
+    """
+    Окружение для ``spark-submit`` с его собственным каталогом в начале
+    ``PATH``. ``spark-submit`` — шелл-скрипт, определяющий ``SPARK_HOME``
+    питоном из ``PATH``: если первым там лежит venv без pyspark, поиск
+    падает и запуск умирает с кодом 126.
+    """
     env = os.environ.copy()
     spark_submit = shutil.which("spark-submit")
     if spark_submit:
@@ -135,6 +153,15 @@ def parse_args():
 
 
 def main():
+    """
+    Бесконечный цикл вместо cron: своего планировщика у сервиса нет, процесс
+    сам держит расписание.
+
+    Каждый цикл — архиватор плюс лёгкое окно 24 часа; тяжёлые окна (168 и 720
+    часов) считаются реже, чтобы месячная агрегация не занимала кластер
+    каждые пять минут. Тик привязан к абсолютному времени, поэтому затянувшийся
+    цикл не сдвигает расписание, а пропускает пропущенные тики.
+    """
     args = parse_args()
     require_env("YT_PROXY", "YT_TOKEN")
     log.info("Прокси: %s | база: %s", proxy_host(), paths.BASE)

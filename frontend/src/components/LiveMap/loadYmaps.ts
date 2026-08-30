@@ -2,6 +2,10 @@ import { getConfig } from "../../api/config";
 
 const API_URL = "https://api-maps.yandex.ru/v3/";
 
+/**
+ * Промис единственной загрузки. Второй вызов не должен добавлять второй тег
+ * скрипта; при ошибке кэш сбрасывается, чтобы повтор запросил скрипт заново.
+ */
 let loading: Promise<void> | null = null;
 
 export function readApiKey(raw: string | undefined): string {
@@ -27,6 +31,16 @@ function appendScript(key: string): Promise<void> {
   });
 }
 
+/**
+ * Загружает JS API Яндекс Карт.
+ *
+ * Тег скрипта создаётся из кода, а не лежит в index.html: ключ известен
+ * только бэкенду и приезжает по `GET /api/v1/config`, поэтому подставить его
+ * в `src` можно лишь после ответа.
+ *
+ * Исчерпанный дневной лимит ключа отсюда не виден: скрипт грузится успешно,
+ * а карта не рисуется.
+ */
 export function loadYmaps(): Promise<void> {
   if (loading) {
     return loading;

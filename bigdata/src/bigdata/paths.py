@@ -3,12 +3,23 @@ import os
 DEFAULT_BASE = "//home/wikipulse"
 
 BASE = (os.environ.get("YT_BASE_PATH") or DEFAULT_BASE).rstrip("/")
+"""
+Корень всех объектов проекта в Cypress, задаётся переменной ``YT_BASE_PATH``.
+
+Хвостовой слэш срезается: значение вида ``//home/wikipulse/``, написанное
+руками, иначе дало бы пути с двойным слэшем в середине.
+"""
 
 Q_RAW = f"{BASE}/q_raw"
 Q_ENRICHED = f"{BASE}/q_enriched"
 
 DICT_DIR = f"{BASE}/dict"
 DICT_COORDS = f"{DICT_DIR}/coords"
+"""
+Справочник координат: динамическая смонтированная таблица со схемой,
+у которой ``unique_keys = true``. Обогащение читает её через ``lookup_rows``,
+а этот API работает только со смонтированной динамической таблицей.
+"""
 DICT_COORDS_TMP = f"{DICT_DIR}/coords_tmp"
 
 HISTORY_DIR = f"{BASE}/history"
@@ -36,4 +47,9 @@ SRC_SPYT_MARTS = f"{SRC_DIR}/spyt_marts.py"
 
 
 def spark_url(path: str) -> str:
+    """
+    Путь Cypress в форме, которую понимает SPYT: ``yt:///home/...``. Три
+    слэша — два из абсолютного пути Cypress плюс разделитель схемы; при
+    четырёх (``yt://`` + путь) адрес не резолвится.
+    """
     return f"yt:///{path.lstrip('/')}"

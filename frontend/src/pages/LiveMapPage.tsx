@@ -49,6 +49,9 @@ export function LiveMapPage() {
 
   const mapFailed = mapError !== null;
 
+  /**
+   * Ячейка из `?h3=` — так работает переход из блока «Топ мест» на дашборде.
+   */
   const [searchParams] = useSearchParams();
   const focusH3 = searchParams.get("h3");
 
@@ -63,6 +66,11 @@ export function LiveMapPage() {
 
   const isCompactHeader = useMediaQuery(COMPACT_LAYOUT);
 
+  /**
+   * Состояние «Ближайшей правки» живёт на странице, а не в каркасе: кнопка
+   * и панель принадлежат карте, поэтому уход с маршрута закрывает их сам собой
+   * размонтированием.
+   */
   const [isNearestEditOpen, setIsNearestEditOpen] =
     useState(false);
 
@@ -115,6 +123,15 @@ export function LiveMapPage() {
     [],
   );
 
+  /**
+   * Одна и та же разметка кнопки на оба случая, меняется только место в DOM.
+   * На широком экране кнопка уезжает порталом в слот хедера, ниже брейкпоинта
+   * рендерится на карте в той же правой колонке, что и её панель: в 57 пикселей
+   * хедера три группы на узком экране не помещаются.
+   *
+   * На узком экране подпись не удаляется, а прячется визуально — доступное имя
+   * кнопки должно остаться прежним.
+   */
   const nearestEditButton = (
     <button
       className={styles.liveMapPage__nearestEdit}

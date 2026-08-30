@@ -51,6 +51,22 @@ public class QEnrichedRepository {
         return fetchAfter(lastSeenRowIndex, DEFAULT_BATCH);
     }
 
+    /**
+     * Страница событий после указанного {@code $row_index}.
+     *
+     * <p>У YT запрашивается {@code limit + 1} строка, а отдаётся {@code limit}:
+     * лишняя строка и есть признак {@code hasMore}, без второго запроса и без
+     * {@code count}. Размер порции зажимается в диапазон 1..10 000: запрос
+     * с {@code LIMIT 0} бессмыслен, а слишком большой кладёт бэкенд по памяти.
+     *
+     * <p>{@code $$row_index} — имя, под которым служебная колонка приезжает
+     * в результате {@code SELECT *}: YT экранирует системные колонки вторым
+     * долларом. Если строка его не отдала, индекс достраивается арифметикой
+     * от курсора — неточный курсор лучше пропущенной строки.
+     *
+     * <p>Фильтр {@code [$tablet_index] = 0} — известное ограничение: читается
+     * только нулевой таблет очереди.
+     */
     public EventsPage fetchAfter(long lastSeenRowIndex, int requestedLimit) {
         final int limit = Math.min(clamp(requestedLimit), maxBatchSize);
         final int fetch = limit + 1;
@@ -98,6 +114,10 @@ public class QEnrichedRepository {
         }
     }
 
+    /**
+     * Конец очереди: листает её страницами, ничего не складывая, и возвращает
+     * последний индекс. Нужен поллеру при старте, чтобы не читать историю.
+     */
     public long skipToLatest() {
         EventsPage page = fetchAfter(START, maxBatchSize);
         while (page.hasMore()) {

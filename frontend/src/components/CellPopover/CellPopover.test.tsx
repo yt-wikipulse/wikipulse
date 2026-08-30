@@ -17,6 +17,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/**
+ * `event_ts` растёт вместе с индексом, поэтому самой свежей правкой статьи
+ * оказывается последняя в списке — на этом держится проверка выбора диффа.
+ */
 function hexagonWithTitles(titles: string[]): ActiveHexagon {
   return {
     h3_index: "891f1d48947ffff",

@@ -38,6 +38,10 @@ export function pluralizeLines(count: number): string {
   return plural(count, LINE_FORMS);
 }
 
+/**
+ * Сколько символов исходной строки остаётся вокруг правки. Слева меньше:
+ * сама правка важнее того, что было до неё, и должна попасть в видимую часть.
+ */
 const CONTEXT_BEFORE = 40;
 const CONTEXT_AFTER = 80;
 
@@ -59,6 +63,12 @@ function cut(text: string, keep: number, side: "start" | "end"): DiffSegment[] {
   ];
 }
 
+/**
+ * Оставляет окно вокруг изменённого фрагмента, а не начало строки: строка
+ * статьи бывает на пол-экрана шаблонов и файлов, а изменено в ней одно слово
+ * где-нибудь в конце. Если подсветки нет, строка изменилась целиком —
+ * тогда она просто режется по длине.
+ */
 export function focusOnChange(
   segments: DiffSegment[],
   contextBefore = CONTEXT_BEFORE,

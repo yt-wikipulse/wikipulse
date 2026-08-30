@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""
+Архиватор: переливает ``q_enriched`` в статическую таблицу ``t_history``,
+из которой считаются витрины.
+
+Курсор хранится в атрибуте ``t_history/@archiver_last_row_index``, а не
+в консьюмере очереди, поэтому ``c_archive`` не двигается и автотрим
+``q_enriched`` фактически не срабатывает: очередь растёт, но данные
+не теряются. Курсор пишется после успешной записи страницы, то есть
+доставка at-least-once — дедуп по ``event_id`` делает ``spyt_marts``.
+"""
 import logging
 
 import yt.wrapper as yt
@@ -18,6 +28,7 @@ log = logging.getLogger("archiver")
 
 
 def read_cursor() -> int:
+    """Последний заархивированный ``$row_index``; 0, если атрибута ещё нет."""
     path = f"{T_HISTORY}/@{CURSOR_ATTR}"
     if not yt.exists(path):
         return 0

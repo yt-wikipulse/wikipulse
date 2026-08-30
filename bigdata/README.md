@@ -1,57 +1,13 @@
 # WikiPulse BigData
 
-Пайплайн поверх YTsaurus: поток правок Википедии → очередь → обогащение
-координатами и H3 → история → витрины дашборда.
+Пайплайн поверх YTsaurus: поток правок Википедии → очередь `q_raw` →
+обогащение координатами и H3 → очередь `q_enriched` → история
+`history/t_history` → витрины `marts/*`. Схема потока целиком — в корневом
+[README](../README.md), устройство шагов — в
+[docs/architecture/pipeline.md](../docs/architecture/pipeline.md).
 
-```text
-SSE recentchange
-      │  ingestor            обычный python, вне кластера
-      ▼
-   q_raw ──────────── consumer c_enrich
-      │  spyt_enrich         SPYT structured streaming, на кластере
-      ▼
- q_enriched ──────── consumer c_archive
-      │  archiver            обычный python, курсор в атрибуте таблицы
-      ▼
-history/t_history
-      │  spyt_marts          SPYT batch, на кластере
-      ▼
-marts/{trends,top_articles,top_geo}
-```
-
-Шедулер (`scheduler`) гоняет `archiver` + `spyt_marts` по расписанию. Бэкенд
-в этой схеме читает `q_enriched` (живая карта) и `marts/*` (дашборд) сам,
-эта часть — в корневом [README](../README.md).
-
-## Структура
-
-```text
-bigdata/
-├── pyproject.toml                   ← зависимости и entry points
-├── implementation-notes.md          ← почему сделано именно так
-├── src/bigdata/
-│   ├── paths.py                     ← все пути в Cypress, единственный источник
-│   ├── runtime.py                   ← окружение: прокси, токен, User-Agent, h3
-│   ├── scripts/
-│   │   ├── init_tables.py           ← создать таблицы, очереди, консьюмеров
-│   │   ├── load_dict_coords_full.py ← справочник координат из дампа Wikidata
-│   │   └── upload_artifacts.py      ← собрать и залить артефакты SPYT
-│   └── jobs/
-│       ├── ingestor.py              ← SSE → q_raw
-│       ├── spyt_enrich.py           ← q_raw → q_enriched (на кластере)
-│       ├── archiver.py              ← q_enriched → t_history
-│       ├── spyt_marts.py            ← t_history → витрины (на кластере)
-│       └── scheduler.py             ← archiver + spyt_marts по расписанию
-└── tests/
-    ├── test_paths.py
-    ├── test_runtime.py
-    ├── test_scheduler.py
-    ├── test_spyt_marts.py
-    └── test_upload_artifacts.py
-```
-
-Ни один путь в Cypress не зашит в модули: всё строится в `paths.py` от
-`YT_BASE_PATH`. Меняешь корень — меняешь одну переменную.
+Ни один путь в Cypress не зашит в модули: всё строится в `src/bigdata/paths.py`
+от `YT_BASE_PATH`.
 
 ## Установка
 
@@ -62,12 +18,12 @@ pip install -e .              # клиент YTsaurus, ингестор, арх�
 pip install -e ".[spark]"     # плюс локальный pyspark, если он нужен вне кластера
 ```
 
-`pip install -e .` ставит и CLI `yt` — он приходит с `ytsaurus-client`, отдельно
-его ставить не нужно. Все команды проверки ниже — это он.
+`pip install -e .` ставит и CLI `yt` — он приходит с `ytsaurus-client`. Все
+команды проверки ниже — это он.
 
-`spark-submit` берётся из окружения SPYT, а не из этого пакета: на кластере
-драйвер запускается своим питоном (`spark.pyspark.python`), а локальный
-`pyspark` нужен только для отладки. Как поставить SPYT —
+`pyspark` вынесен в extra `spark`: на кластере он приходит из образа SPYT, а
+локально нужен только для отладки. Сам `spark-submit` берётся из окружения
+SPYT, а не из этого пакета — как его поставить, в
 [`setup/spyt-env.md`](../setup/spyt-env.md).
 
 ## Entry points
@@ -84,21 +40,15 @@ pip install -e ".[spark]"     # плюс локальный pyspark, если о
 | `archiver` | `jobs/archiver.py` | переливает `q_enriched` в `history/t_history` |
 | `scheduler` | `jobs/scheduler.py` | `archiver` + `spyt_marts` по расписанию |
 
-`spyt_enrich.py` и `spyt_marts.py` в этой таблице нет намеренно: они не
-запускаются локально, их запускает `spark-submit` на кластере из
-`{base}/src/`, куда их кладёт `upload-artifacts`.
+`spyt_enrich.py` и `spyt_marts.py` в таблице нет намеренно: локально они не
+запускаются, их запускает `spark-submit` на кластере из `{base}/src/`, куда их
+кладёт `upload-artifacts`.
 
 ## Переменные окружения
 
-| Переменная | Обязательна | По умолчанию | Зачем |
-|---|---|---|---|
-| `YT_PROXY` | да | — | адрес HTTP-прокси кластера, со схемой или без |
-| `YT_TOKEN` | да | — | токен YTsaurus |
-| `YT_BASE_PATH` | нет | `//home/wikipulse` | корень всех таблиц проекта |
-| `WIKIPULSE_CONTACT` | нет | `https://github.com/yt-wikipulse/wikipulse` | контакт в `User-Agent` запросов к Wikimedia |
-
-`WIKIPULSE_CONTACT` — не косметика: Wikimedia требует в `User-Agent` рабочий
-способ связи, и это условие их User-Agent policy, а не пожелание.
+Пакет читает `YT_PROXY`, `YT_TOKEN`, `YT_BASE_PATH` и `WIKIPULSE_CONTACT`.
+Что обязательно и какие значения по умолчанию —
+[docs/runbooks/configuration.md](../docs/runbooks/configuration.md).
 
 В примерах ниже `YT_PROXY` подставляется в `--master` целиком, поэтому задавай
 его со схемой: `export YT_PROXY=https://<proxy-host>`. В путях Cypress
@@ -146,7 +96,7 @@ upload-artifacts --skip-h3   # если h3.zip уже лежит в {base}/lib
 **Без этого шага любая SPYT-джоба падает с `ModuleNotFoundError: bigdata`.**
 Он обязателен и на чистом кластере, и после любой правки джоб или `paths.py`.
 
-`h3.zip` в git не хранится — он собирается здесь и каждый раз заново:
+`h3.zip` в git не хранится, он собирается здесь каждый раз заново:
 
 ```
 pip install h3 --target <tmp> \
@@ -166,15 +116,13 @@ load-dict-coords-full --max-rows 10000   # проверочный прогон
 load-dict-coords-full                    # весь дамп Wikidata, долго
 
 yt get $YT_BASE_PATH/dict/coords/@row_count
-yt read-table "$YT_BASE_PATH/dict/coords[:#10]" --format '<encode_utf8=false>json'
-```
-
-Загрузчик оставляет `dict/coords` смонтированной динамической таблицей,
-поэтому её можно читать и через `select-rows`:
-
-```bash
 yt select-rows "* from [$YT_BASE_PATH/dict/coords] limit 5" --format json
 ```
+
+`dict/coords` — динамическая смонтированная таблица со схемой, у которой
+`unique_keys = true`: обогащение читает её через `lookup_rows`, а этот API
+работает только так. Загрузчик пересобирает таблицу целиком (сортировка,
+дедупликация по `(wiki, title)`, конверсия в динамическую и монтирование).
 
 ### 4. Ингестор
 
@@ -285,18 +233,10 @@ pip install pytest
 pytest
 ```
 
-`pip install -e .` для тестов не нужен — `pythonpath = ["src"]` в
+`pip install -e .` для тестов не нужен: `pythonpath = ["src"]` в
 `pyproject.toml` даёт `pytest` найти пакет без установки. Зависимости из
-`[project]` при этом нужны: модули импортируют `yt.wrapper` и `h3` на верхнем
-уровне, так что либо шаг «Установка» уже сделан, либо ставь их отдельно.
-
-Тесты не ходят ни в кластер, ни в Spark — только чистые функции: вычисление
-путей (`test_paths`), нормализация прокси, фолбэк токена на secure vault и
-`User-Agent` (`test_runtime`), сборка командной строки `spark-submit` — в том
-числе проверка, что токен в неё не попадает (`test_scheduler`), ранжирование
-витрин (`test_spyt_marts`), импорт пакета из собранного `bigdata.zip`
-(`test_upload_artifacts`).
-Прогон занимает пару секунд.
+`[project]` при этом нужны — модули импортируют `yt.wrapper` и `h3` на верхнем
+уровне. Тесты не ходят ни в кластер, ни в Spark: только чистые функции.
 
 ## Что нужно поправить под свой кластер
 
@@ -304,8 +244,9 @@ pytest
   они не установлены в образе воркеров. По умолчанию пусто.
 - `spark.pyspark.python=/usr/bin/python3.11` — питон воркеров конкретного
   образа. Он же задаёт `CLUSTER_PYTHON` для сборки `h3.zip`.
-- `spark.shuffle.useOldFetchProtocol=true` — обход конкретной проблемы
-  с шафлами, см. [`implementation-notes.md`](implementation-notes.md).
+- `spark.shuffle.useOldFetchProtocol=true` — нужен там, где sandbox'ы
+  executor'ов на одном узле не видят `/tmp` друг друга и host-local чтение
+  шафлов падает. Альтернатива — `--num-executors 1`.
 
 ## Частые проблемы
 
@@ -324,8 +265,5 @@ pytest
 нужен `--format '<encode_utf8=false>json'`; в командах выше он уже стоит
 везде, где в выдаче бывает кириллица.
 
-**`select-rows` не работает по `dict/coords` или `history/t_history`** — это
-не поломка: обе таблицы статические, читать их надо через `read-table`.
-
-Почему код написан именно так — в [`implementation-notes.md`](implementation-notes.md);
-комментариев в коде проект не держит.
+**`select-rows` не работает по `history/t_history`** — это не поломка:
+таблица статическая, читать её надо через `read-table`.

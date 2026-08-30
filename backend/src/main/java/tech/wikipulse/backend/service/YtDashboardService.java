@@ -29,6 +29,20 @@ public class YtDashboardService implements DashboardService {
         this.repository = repository;
     }
 
+    /**
+     * Собирает ответ дашборда из трёх витрин.
+     *
+     * <p>Кэшируется готовый ответ, а не походы в репозиторий: в него попадает
+     * и свёртка 720 часовых точек в суточные, которую иначе пришлось бы делать
+     * на каждый запрос. Ключ кэша — {@code period} и {@code limit} вместе:
+     * без {@code limit} в ключе запрос на десять строк получил бы ответ,
+     * собранный для сотни. Исключения не кэшируются, поэтому недоступность YT
+     * не залипает на минуту.
+     *
+     * <p>{@code generated_at} — время сборки ответа, а не время пересчёта
+     * витрин: атрибут {@code @computed_at} у витрин есть, но репозиторий его
+     * не читает.
+     */
     @Override
     @Cacheable("dashboard")
     public DashboardResponse getDashboard(String period, int limit) {
@@ -52,6 +66,10 @@ public class YtDashboardService implements DashboardService {
             topGeoPlaces);
     }
 
+    /**
+     * Период контракта в значение колонки {@code period} витрин топов
+     * ({@code 24h}, {@code 168h}, {@code 720h}).
+     */
     private String translatePeriod(String period) {
         return switch (period) {
             case "24h" -> "24h";
@@ -65,6 +83,12 @@ public class YtDashboardService implements DashboardService {
         return "30d".equals(period) ? DAY_SECONDS : HOUR_SECONDS;
     }
 
+    /**
+     * Период контракта в длительность — нижнюю границу {@code bucket_ts}
+     * для трендов. Второй перевод того же периода нужен потому, что
+     * у {@code marts/trends} колонки периода нет вовсе и отрезок выбирается
+     * только фильтром по времени.
+     */
     private long periodToSeconds(String period) {
         return switch (period) {
             case "24h" -> 24 * HOUR_SECONDS;
@@ -74,6 +98,14 @@ public class YtDashboardService implements DashboardService {
         };
     }
 
+    /**
+     * Свёртка часовых бакетов в суточные для периода {@code 30d}.
+     *
+     * <p>Делается на бэкенде, а не в витрине: {@code marts/trends} хранит только
+     * часовые бакеты, а отдельный суточный пересчёт в пайплайне ради одного
+     * экрана не окупается. Границы суток берутся по UTC — так же считает
+     * фронтенд, когда сворачивает неделю.
+     */
     private List<TrendPoint> processTrends(String period, List<TrendPoint> hourlyPoints) {
         if (!"30d".equals(period)) {
             return hourlyPoints;

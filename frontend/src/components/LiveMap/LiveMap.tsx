@@ -55,9 +55,28 @@ const ZOOM_RANGE = { min: 3, max: 21 };
 
 type DistributionPosition = YMapProps["distributionPosition"];
 
+/**
+ * Где стоит блок Яндекс Карт с копирайтами и кнопкой перехода. Условия
+ * использования JS API требуют, чтобы он всегда был виден и не перекрывался,
+ * а убрать его нельзя.
+ *
+ * На широком экране штатное «bottom left» сталкивается со строкой состояния,
+ * поэтому блок уводится вниз по центру: справа сверху панель ближайшей правки,
+ * справа зум и геолокация, справа снизу копирайт. Ниже брейкпоинта строка
+ * состояния уезжает под хедер и место внизу слева освобождается.
+ *
+ * Позиция меняется через `map.update`, а не пересозданием карты: иначе поворот
+ * экрана уничтожал бы карту вместе со слоями и выделением.
+ */
 const DISTRIBUTION_POSITION_WIDE: DistributionPosition = "bottom";
 const DISTRIBUTION_POSITION_COMPACT: DistributionPosition = "bottom left";
 
+/**
+ * Зум перелёта по ссылке с дашборда. Витрина отдаёт ячейку резолюции 6,
+ * а карта на этом зуме показывает резолюцию 5, поэтому совпадения ячейка
+ * в ячейку не будет: карта летит в центр ячейки и выделяет ту, что оказалась
+ * под ним.
+ */
 const DASHBOARD_FOCUS_ZOOM = 8;
 
 const FOCUS_DURATION_MS = 500;
@@ -156,7 +175,21 @@ export function LiveMap({
   const [popoverPlacement, setPopoverPlacement] =
     useState<PopoverPlacement>("top-center");
 
+  /**
+   * Слушатель карты создаётся один раз за её жизнь и читает свежие данные
+   * через эти ref: иначе его пришлось бы пересоздавать на каждое обновление
+   * гексагонов, выделения или границ.
+   */
   const hexagonsRef = useRef(hexagons);
+
+  /**
+   * Цель последнего `pointerdown`, запомненная на стадии перехвата.
+   *
+   * Поповер ячейки рендерится внутри DOM карты, поэтому клик по нему долетает
+   * до `YMapListener` и тот снимает выделение — поповер закрывался бы сам.
+   * Заглушить событие нельзя: React делегирует обработчики на корень
+   * приложения, и `stopPropagation` убил бы клики внутри самого поповера.
+   */
   const pointerTargetRef = useRef<EventTarget | null>(null);
   const selectedH3Ref = useRef(selectedH3);
   const boundsRef = useRef<LngLatBounds | null>(null);
@@ -347,6 +380,10 @@ export function LiveMap({
 
     fadeRef.current?.();
 
+    /**
+     * Ячейки группируются по цвету заливки: на карту уходит одна фича на цвет,
+     * а не на ячейку — тысячи `YMapFeature` карта не тянет.
+     */
     const groups = new Map<string, string[]>();
 
     for (const hexagon of hexagons) {
@@ -524,6 +561,11 @@ export function LiveMap({
     };
   }, [selectedH3, mapVersion]);
 
+  /**
+   * Ячейка, в которую карта летит по ссылке с дашборда. До первого попадания
+   * делается только перелёт; как только под центром появились данные, ячейка
+   * выделяется и в навигацию пользователя больше не вмешиваемся.
+   */
   const pendingFocusRef = useRef<string | null>(null);
 
   useEffect(() => {

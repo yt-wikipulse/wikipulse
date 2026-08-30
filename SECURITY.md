@@ -12,10 +12,7 @@ vulnerability** in this repository. Do not open a public issue for a
 vulnerability, and do not include real credentials or tokens in the report.
 
 Useful in a report: what an attacker can reach, the steps that reproduce it,
-and the commit you saw it on.
-
-There is no on-call rotation behind this repository and no response deadline is
-promised. If a report is confirmed, the fix and its description land in `main`.
+and the commit you saw it on. A confirmed report is fixed in `main`.
 
 ## What is in scope
 

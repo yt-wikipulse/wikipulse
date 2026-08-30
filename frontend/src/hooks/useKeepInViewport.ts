@@ -2,6 +2,14 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 export type ViewportSide = "right" | "left";
 
+/**
+ * Держит карточку в пределах экрана: выбирает сторону, с которой она
+ * помещается, и сдвигает её вверх ровно на величину перекрытия нижнего края.
+ *
+ * ResizeObserver нужен потому, что карточка растёт по мере загрузки
+ * содержимого: одного измерения при открытии недостаточно. В режиме листа
+ * хук выключают — там карточка и так прижата к низу.
+ */
 export function useKeepInViewport<T extends HTMLElement>(
   enabled: boolean,
   margin = 16,

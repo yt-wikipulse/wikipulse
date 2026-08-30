@@ -17,6 +17,10 @@ import {
   prepareBuckets,
 } from "./DashboardPage.helpers";
 
+/**
+ * Ниже 1280 пикселей карточка графика становится настолько узкой, что шесть
+ * подписей оси налезают друг на друга, поэтому их остаётся четыре.
+ */
 const COMPACT_AXIS = "(max-width: 1279px)";
 const COMPACT_AXIS_LABELS = 4;
 
@@ -50,6 +54,12 @@ export function DashboardPage() {
   const totalEdits = data?.total_edits ?? 0;
   const topArticle = data?.top_articles[0];
   const topPlace = data?.top_geo[0];
+
+  /**
+   * Пустота считается по сумме правок, а не по длине массива: бэкенд добивает
+   * пустые часы нулями, и двадцать четыре нулевых столбика — это тоже
+   * «данных нет».
+   */
   const isEmpty = Boolean(data) && totalEdits === 0;
 
   const viewKey = error
@@ -279,6 +289,10 @@ export function DashboardPage() {
   );
 }
 
+/**
+ * Длина полоски в строке топа — доля от лидера списка, а не от общего числа
+ * правок: иначе у хвоста списка полоска вырождается в точку.
+ */
 function barWidth(value: number, rows: { edits_count: number }[]): number {
   const max = Math.max(...rows.map((row) => row.edits_count), 1);
   return (value / max) * 100;

@@ -12,6 +12,11 @@ type AppShellProps = {
 };
 
 export function AppShell({ showTabs = true }: AppShellProps) {
+  /**
+   * Узел правого слота хедера хранится в state, а не в ref: он появляется
+   * после первого рендера хедера, и странице нужен повторный рендер, чтобы
+   * построить в него портал. Ref такого рендера не вызывает.
+   */
   const [headerSlotNode, setHeaderSlotNode] =
     useState<HTMLElement | null>(null);
 

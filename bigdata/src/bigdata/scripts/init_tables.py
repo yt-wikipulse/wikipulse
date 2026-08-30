@@ -92,6 +92,13 @@ def create_static_table(path, schema, description):
 
 
 def create_dynamic_table(path, schema, description):
+    """
+    Создаёт динамическую таблицу и монтирует её; существующую монтирует,
+    если она не смонтирована.
+
+    Состояние проверяется по ``@tablet_state``, а не по ``@tablet_count``:
+    число таблетов больше нуля и у размонтированной таблицы.
+    """
     if not yt.exists(path):
         yt.create("table", path, attributes={"dynamic": True, "schema": schema},
                   recursive=True)
@@ -107,11 +114,25 @@ def create_dynamic_table(path, schema, description):
 
 
 def enable_auto_trim(path):
+    """
+    Включает автотрим очереди, иначе она растёт вечно.
+
+    Трим удаляет строки, прочитанные всеми vital-консьюмерами, поэтому у
+    очереди обязан быть хотя бы один такой консьюмер: без него условие
+    выполняется впустую и трим срезал бы всё сразу.
+    """
     yt.set(f"{path}/@auto_trim_config", AUTO_TRIM_CONFIG)
     print(f"  auto_trim включён на {path}")
 
 
 def create_consumer(consumer_path, queue_path, description):
+    """
+    Создаёт консьюмера и регистрирует его на очередь как vital.
+
+    Регистрация ищется сравнением полного пути: совпадение по последнему
+    сегменту приняло бы за свой чужой консьюмер с таким же именем
+    в соседнем проекте на том же кластере.
+    """
     if yt.exists(consumer_path):
         registered = any(
             str(reg.get("consumer_path", "")) == consumer_path

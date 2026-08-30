@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+Витрины дашборда: считает ``marts/trends``, ``marts/top_articles`` и
+``marts/top_geo`` по окну из ``t_history``.
+
+Как и ``spyt_enrich``, запускается на кластере одиночным файлом: пакет
+``bigdata`` приезжает архивом в ``--py-files``, ``YT_BASE_PATH`` и
+``YT_PROXY`` — через ``spark.yarn.appMasterEnv.*``.
+"""
 import argparse
 import time
 
@@ -63,6 +71,15 @@ def compute_top_articles(df, top_n: int, period: str) -> list[dict]:
 
 
 def compute_top_geo(df, spark, top_n: int, h3_res: int, period: str) -> list[dict]:
+    """
+    Топ мест: ячейки ``h3_r9`` сворачиваются до ``h3_res`` и агрегируются.
+
+    Уникальные ячейки окна собираются на драйвер и там же переводятся
+    в родителей — UDF на executor'ах потребовал бы ``h3`` в их окружении.
+    Потолок приёма — память драйвера: он держит список всех различных
+    ячеек окна, и на достаточно длинном окне этот список перестанет
+    помещаться.
+    """
     from pyspark.sql import functions as F
 
     distinct_cells = [r["h3_r9"] for r in df.select("h3_r9").distinct().collect()]
@@ -114,6 +131,21 @@ def parse_args():
 
 
 def main():
+    """
+    Пересчитывает три витрины за окно ``--hours``.
+
+    Строки пишутся ``insert_rows(update=True)``, то есть upsert по ключу
+    таблицы: у топов ключ ``(period, rank)``, у трендов ``bucket_ts``.
+    Старые строки не удаляются — витрина за окно, которое сейчас не
+    считают, остаётся лежать как была.
+
+    Пустое окно витрины не трогает: перезаписать их нулями значит стереть
+    последний удачный расчёт из-за одного неудачного запуска.
+
+    После записи на таблицу ставятся отладочные атрибуты ``@computed_at``,
+    ``@window_hours`` и параметры расчёта — по ним видно, когда витрина
+    считалась и с какими аргументами. Бэкенд их не читает.
+    """
     from pyspark.sql import SparkSession
     from pyspark.sql import functions as F
     from pyspark.sql import types as T

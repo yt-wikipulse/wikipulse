@@ -9,6 +9,10 @@ import { describeError } from "../../lib/errorMessage";
 
 const POLL_INTERVAL_MS = 2_500;
 
+/**
+ * Пауза перед запросом после смены вьюпорта: быстрый флик успевает пересечь
+ * несколько клеток сетки bbox, и грузить нужно только последнее положение.
+ */
 const VIEWPORT_SETTLE_MS = 120;
 
 type LiveMapDataState = {
@@ -123,6 +127,7 @@ export function useLiveMapData(
     };
   }, [viewport]);
 
+  /** retry уходит сразу, без задержки: пользователь уже подождал. */
   return {
     ...state,
     retry: () => loadHexagonsRef.current(),

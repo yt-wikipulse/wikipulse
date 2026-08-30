@@ -15,6 +15,11 @@ from bigdata.runtime import require_env
 
 CLUSTER_PYTHON = "3.11"
 CLUSTER_PLATFORM = "manylinux2014_x86_64"
+"""
+Питон и платформа, под которые собирается ``h3.zip``. Обязаны совпадать
+с образом кластера и с ``spark.pyspark.python`` в командах запуска: колесо
+с C-расширением, собранное под другой ABI, на узле не импортируется.
+"""
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 JOB_SCRIPTS = (

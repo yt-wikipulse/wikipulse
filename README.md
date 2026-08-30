@@ -13,24 +13,7 @@ worked example of what an application on YTsaurus looks like end to end —
 queues with consumers and auto-trim, a dictionary looked up from a streaming
 job, a static history table, batch marts recomputed on a schedule, and a REST
 API that serves a browser client from all of it. Every piece is small enough to
-read in one sitting, and every non-obvious decision is written down with the
-reason it was made.
-
-Concretely, that is four moving parts: a plain Python producer that tails the
-Wikimedia event stream into a queue, a SPYT structured-streaming job that joins
-each edit with a coordinate dictionary and assigns it an H3 cell, a pair of
-batch steps that archive the queue and rebuild the dashboard marts, and a
-Spring Boot service that keeps a 30-minute window of the enriched queue in
-memory and folds it into hexagons at whatever resolution the current map zoom
-needs. The client is a React SPA with two routes.
-
-It is also an honest snapshot rather than a polished product. The SPYT jobs are
-deliberately naive — a `lookup_rows` per batch, not a broadcast join — because
-rewriting them without a cluster to verify on would put unverified Spark code
-into an example that people are expected to copy. The known gaps are named in
-the module documents instead of being hidden: `bigdata/implementation-notes.md`
-records, among others, that `dict/coords` has to be converted to a dynamic
-table by hand and that `q_enriched` is not actually trimmed yet.
+read in one sitting.
 
 ## How it works
 
@@ -91,14 +74,15 @@ and then `spyt_marts` every five minutes.
 | A YTsaurus cluster with SPYT | — | everything except the mock profile |
 | A Yandex Maps JavaScript API key | — | for the map to render at all |
 
-Nothing else is needed to see the product: the first step below runs without a
-cluster and without a maps key.
+The first quick-start step below runs without a cluster and without a maps key.
 
 ## Quick start
 
 ### 1. The whole product, with no cluster at all
 
-The backend has a `mock` profile that serves real data from fixtures. Start it:
+The backend has a `mock` profile that replays real edits from fixtures in
+`backend/src/main/resources/fixtures/`; the H3 cells attached to them are
+synthetic. Start it:
 
 ```bash
 cd backend
@@ -119,25 +103,11 @@ Then open <http://localhost:5173/map>. The dev server proxies `/api` to
 `YT_PROXY` and `YT_TOKEN` are not needed here: the beans that read them are
 `@Profile("yt")`, so their placeholders are never resolved. `SPRING_PROFILES_ACTIVE`
 *is* needed — the default profile is `yt`, and that one talks to a cluster over
-RPC.
+RPC. Details of the profile: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
 
-What you get is not invented data. The live map replays 730 real Wikipedia
-edits and the dashboard serves three real marts, all captured from the public
-API of the team's own deployment on 30 August 2026 and committed to
-`backend/src/main/resources/fixtures/`. On startup the whole sample is shifted
-so that its last edit lands on *now*, which makes the snapshot's window line up
-with the map's own 30-minute window — the map is full immediately instead of
-filling up over half an hour. After that one edit is replayed every two seconds.
-
-One thing in the mock is synthetic, and it is worth knowing before you read
-anything into the map: the fixture has no coordinates, because the coordinate
-dictionary is not reachable through the public API. `MockPoller` assigns each
-edit a cell by hashing its wiki over the real `h3_parent` values from the
-dashboard fixture. The edit is real and the cell is real; the link between them
-is not.
-
-Add `YMAPS_API_KEY=<key>` to the backend command to get the actual map tiles
-instead of the error screen — see [Yandex Maps API key](#yandex-maps-api-key).
+Add `YMAPS_API_KEY=<key>` to the backend command to get real map tiles instead
+of the error screen; how to obtain that key and why it needs an HTTP Referer
+restriction is in [`frontend/README.md`](frontend/README.md).
 
 ### 2. Against a real YTsaurus cluster
 
@@ -154,10 +124,10 @@ upload-artifacts   # build and upload bigdata.zip, h3.zip and the job scripts
 ingestor           # Wikimedia SSE → q_raw
 ```
 
-`upload-artifacts` is not optional and not a one-time convenience: without
-`bigdata.zip` and `h3.zip` in `{BASE}/lib`, every SPYT job fails on the cluster
-with `ModuleNotFoundError: bigdata`. The coordinate dictionary, the streaming
-job, the archiver, the marts and the scheduler are all in
+`upload-artifacts` is not optional: without `bigdata.zip` and `h3.zip` in
+`{BASE}/lib`, every SPYT job fails on the cluster with
+`ModuleNotFoundError: bigdata`. The coordinate dictionary, the streaming job,
+the archiver, the marts and the scheduler are all in
 [`bigdata/README.md`](bigdata/README.md), in the order they have to be run.
 
 With the tables filled, the backend needs no profile — `yt` is the default:
@@ -168,9 +138,9 @@ YT_PROXY=$YT_PROXY YT_TOKEN=$YT_TOKEN YT_BASE_PATH=$YT_BASE_PATH \
   YMAPS_API_KEY=<key> ./mvnw spring-boot:run
 ```
 
-The backend reaches YTsaurus over RPC on port 9013, which home networks
-usually block; from a cloud VM it works. The Python parts use the HTTP proxy
-and work from anywhere.
+The backend reaches YTsaurus over RPC on port 9013, which home networks usually
+block; from a cloud VM it works. The Python parts use the HTTP proxy and work
+from anywhere.
 
 ### 3. Everything in containers
 
@@ -186,7 +156,7 @@ to have been run against that cluster before the scheduler can compute
 anything. Caddy serves exactly the host named in `DOMAIN` and gets a
 certificate for it automatically; `DOMAIN=http://localhost` turns HTTPS off for
 a local look. Everything else — TLS with a file certificate, per-host
-`extra_hosts`, security headers, disk space, the traps already hit — is in
+`extra_hosts`, security headers, disk space, known traps — is in
 [`deploy/README.md`](deploy/README.md).
 
 ## Configuration
@@ -194,7 +164,7 @@ a local look. Everything else — TLS with a file certificate, per-host
 Everything the service takes from the outside arrives in environment variables;
 there are no cluster addresses, tokens or Cypress paths in the source. The full
 table — which variable is required, what the defaults are, who reads what — is
-the *Переменные* section of [`deploy/README.md`](deploy/README.md), and
+[`docs/runbooks/configuration.md`](docs/runbooks/configuration.md), and
 [`deploy/.env.example`](deploy/.env.example) is a filled-in template of it.
 
 A fork changes two things: the cluster it talks to (`YT_PROXY`, `YT_TOKEN`) and
@@ -206,62 +176,28 @@ a server and runs compose there. **It stays dormant in a fork:** while the
 never tries to publish itself onto somebody else's machine. Configure your own
 host through repository variables and secrets, or delete the file.
 
-## Yandex Maps API key
-
-The map is the one external dependency that cannot be worked around: the Yandex
-Maps JavaScript API 3.0 does not render without a key. Two properties of that
-key surprise people, and both cost an afternoon when they are discovered by
-debugging:
-
-- **The HTTP Referer restriction is mandatory.** A key with no Referer set does
-  not work anywhere, and the failure comes from inside the API as an
-  uninformative error. The field takes a host and nothing else — no scheme, no
-  `/*` suffix — and it does not accept a bare IP address, so a domain is
-  required; `localhost` is fine for local development.
-- **The free tier allows 100 map loads per day**, and every page load spends
-  one. Reloading the page while developing is enough to exhaust it.
-
-The key is not a secret: the frontend receives it at runtime from
-`GET /api/v1/config` and it is visible in the browser. The Referer restriction
-is the only thing protecting it. The backend reads it from `YMAPS_API_KEY`;
-if it is unset, the API returns an empty string, the map shows a "could not
-load" screen with a retry button, and the rest of the page keeps working.
-
-Details, including which key type to request:
-[`frontend/README.md`](frontend/README.md).
-
 ## Documentation
 
-- [`docs/README.md`](docs/README.md) — index of everything below.
-- [`docs/03-contracts/`](docs/03-contracts/) — the boundaries: YT table schemas
-  and the REST API. If the code disagrees with these, the code is wrong.
-- [`docs/05-runbooks/local-setup.md`](docs/05-runbooks/local-setup.md) — the
-  long form of the first quick-start step.
-- [`setup/spyt-env.md`](setup/spyt-env.md) — pointing a machine at a YTsaurus
-  cluster and running a first SPYT job.
-- `bigdata/implementation-notes.md` and
-  [`docs/02-architecture/frontend-implementation-notes.md`](docs/02-architecture/frontend-implementation-notes.md)
-  — why the code is written the way it is. This project keeps no comments in
-  the source; the reasons live in these documents, anchored to a file and a
-  symbol.
+Written in Russian; issues and pull requests are accepted in Russian or English.
 
-The documentation under `docs/` is written in Russian and has **not** been
-translated. Translating it is separate work that has not been done. This README
-is the only document maintained in both languages; issues and pull requests are
-accepted in either.
+- [`docs/README.md`](docs/README.md) — index of everything below.
+- [`docs/contracts/`](docs/contracts/) — the boundaries: YT table schemas and
+  the REST API. If the code disagrees with these, the code is wrong.
+- [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md) — the long
+  form of the first quick-start step.
+- [`setup/spyt-env.md`](setup/spyt-env.md) — pointing a machine at a YTsaurus
+  cluster and running SPYT jobs from it.
 
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Source files carry no
 license headers; the repository-level files cover them.
 
-Components that this project redistributes rather than merely depends on — the
-h3-py wheel uploaded to the cluster, the Manrope font bundled into the frontend
-build, the Yandex Maps style export — are listed in
-[THIRD-PARTY.md](THIRD-PARTY.md), with the license texts that are not
+Components that this project redistributes rather than merely depends on are
+listed in [THIRD-PARTY.md](THIRD-PARTY.md), with the license texts that are not
 Apache-2.0 in [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt). Ordinary
-Maven, pnpm and pip dependencies are not listed there; they are declared in
-`backend/pom.xml`, `frontend/package.json` and `bigdata/pyproject.toml`.
+Maven, pnpm and pip dependencies are declared in `backend/pom.xml`,
+`frontend/package.json` and `bigdata/pyproject.toml`.
 
 How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 How to report a vulnerability: [SECURITY.md](SECURITY.md).

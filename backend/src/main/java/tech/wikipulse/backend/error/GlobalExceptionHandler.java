@@ -7,6 +7,20 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+/**
+ * Единственное место, где исключение превращается в {@code ProblemDetail}.
+ *
+ * <p>Наследование от {@link ResponseEntityExceptionHandler} несущее: без него
+ * {@code @ExceptionHandler(Exception.class)} перехватывал бы и стандартные
+ * исключения Spring MVC, и сервис отвечал бы {@code 500} на неизвестный путь
+ * и неподдерживаемый метод. Родитель объявляет для них обработчики точнее,
+ * а catch-all остаётся для действительно неожиданного.
+ *
+ * <p>Наружу из {@link YtReadException} и {@code Exception} уходит статичный
+ * текст: пути таблиц, имя кластера и сообщение YT остаются в логе.
+ * {@link BadRequestException} — наоборот, его текст пишется для человека
+ * и уходит в {@code detail} как есть.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
