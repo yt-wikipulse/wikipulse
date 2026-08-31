@@ -8,7 +8,7 @@ history of those edits. Both halves are fed by the same pipeline, and the
 pipeline runs entirely on **YTsaurus + SPYT**: no Kafka, no separate warehouse
 for the marts, no second storage system anywhere in the picture.
 
-https://github.com/user-attachments/assets/e1818830-3797-48b8-95da-d45c75e11fa8
+https://github.com/user-attachments/assets/d1d069de-8686-44cd-8226-4f69991cf4e6
 
 **Live demo:** <https://wiki-pulse.ru>. The stand runs on the `mock`
 profile: the map and the dashboard replay a snapshot of real data from

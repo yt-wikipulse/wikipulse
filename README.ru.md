@@ -7,7 +7,7 @@
 **YTsaurus + SPYT**: без Kafka, без отдельного хранилища под витрины, без
 второй системы хранения где бы то ни было.
 
-https://github.com/user-attachments/assets/e1818830-3797-48b8-95da-d45c75e11fa8
+https://github.com/user-attachments/assets/d1d069de-8686-44cd-8226-4f69991cf4e6
 
 **Живое демо:** <https://wiki-pulse.ru>. Стенд работает на профиле `mock`:
 карта и дашборд проигрывают снапшот настоящих данных за 30 августа 2026.
