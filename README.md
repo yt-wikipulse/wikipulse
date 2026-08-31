@@ -2,13 +2,17 @@
 
 # WikiPulse
 
-A live map of the world where a place lights up while the Wikipedia article
-about it is being edited, next to a dashboard with analytics over the history
-of those edits. Both halves are fed by the same pipeline, and the pipeline runs
-entirely on **YTsaurus + SPYT**: no Kafka, no separate warehouse for the marts,
-no second storage system anywhere in the picture.
+A live map of the world where places light up in real time as the Wikipedia
+articles about them are being edited. Plus a dashboard with analytics over the
+history of those edits. Both halves are fed by the same pipeline, and the
+pipeline runs entirely on **YTsaurus + SPYT**: no Kafka, no separate warehouse
+for the marts, no second storage system anywhere in the picture.
 
-https://github.com/user-attachments/assets/ae7f853a-2940-4482-8193-c351c03d13f1
+https://github.com/user-attachments/assets/e1818830-3797-48b8-95da-d45c75e11fa8
+
+**Live demo:** <https://wiki-pulse.ru>. The stand runs on the `mock`
+profile: the map and the dashboard replay a snapshot of real data from
+30 August 2026.
 
 The point of this repository is the shape of the service, not the map. It is a
 worked example of what an application on YTsaurus looks like end to end —
@@ -52,6 +56,15 @@ project is derived from it — there are no cluster paths written into the sourc
 The two batch steps on the left are driven by `scheduler`, which runs `archiver`
 and then `spyt_marts` every five minutes.
 
+## The frontend
+
+Two screens: a live map where edits from the last 30 minutes are grouped
+into H3 cells, and a dashboard of historical marts. React, TypeScript,
+Vite, the Yandex Maps JS API v3 and `h3-js`.
+
+More detail is in
+[`docs/architecture/frontend.md`](docs/architecture/frontend.md).
+
 ## Repository layout
 
 ```text
@@ -76,7 +89,10 @@ and then `spyt_marts` every five minutes.
 | A YTsaurus cluster with SPYT | — | everything except the mock profile |
 | A Yandex Maps JavaScript API key | — | for the map to render at all |
 
-The first quick-start step below runs without a cluster and without a maps key.
+The first quick-start option below runs without a cluster, but the full
+product needs a Yandex Maps key. It still starts without one and the
+dashboard works in full, but the map shows an error screen instead of
+tiles.
 
 ## Quick start
 
